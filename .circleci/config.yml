@@ -22,9 +22,13 @@ jobs:
       - run:
           name: Version information
           command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - run:
+          name: Generate a lockfile
+          command: cargo update
       - restore_cache:
           keys:
             - cargocache-v2-multi-test:1.58.1-{{ checksum "~/project/Cargo.lock" }}
+            - cargocache-v2-multi-test:1.58.1-
       - run:
           name: Build library for native target
           command: cargo build --locked
@@ -48,9 +52,13 @@ jobs:
       - run:
           name: Version information
           command: rustc --version; cargo --version; rustup --version; rustup target list --installed
+      - run:
+          name: Generate a lockfile
+          command: cargo update
       - restore_cache:
           keys:
             - cargocache-v2-lint-rust:1.58.1-{{ checksum "Cargo.lock" }}
+            - cargocache-v2-lint-rust:1.58.1-
       - run:
           name: Add rustfmt component
           command: rustup component add rustfmt
