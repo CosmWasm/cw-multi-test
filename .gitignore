@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# dependency resolution lock
+/Cargo.lock
+
 # Text file backups
 **/*.rs.bk
 
