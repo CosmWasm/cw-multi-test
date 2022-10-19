@@ -73,7 +73,7 @@ jobs:
           command: rm Cargo.lock
       - restore_cache:
           keys:
-            - cargocache-v2-storage-plus:1.64.0-minimal-{{ checksum "Cargo.toml" }}
+            - cargocache-v2-multi-test:1.64.0-minimal-{{ checksum "Cargo.toml" }}
       - run:
           name: Build library for native target
           command: cargo build -Zminimal-versions --all-features
@@ -84,7 +84,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-v2-storage-plus:1.64.0-minimal-{{ checksum "Cargo.toml" }}
+          key: cargocache-v2-multi-test:1.64.0-minimal-{{ checksum "Cargo.toml" }}
 
   build_maximal:
     docker:
@@ -100,7 +100,7 @@ jobs:
           command: cargo update
       - restore_cache:
           keys:
-            - cargocache-v2-storage-plus:1.64.0-{{ checksum "Cargo.lock" }}
+            - cargocache-v2-multi-test:1.64.0-{{ checksum "Cargo.lock" }}
       - run:
           name: Build library for native target
           command: cargo build --locked --all-features
@@ -111,7 +111,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-v2-storage-plus:1.64.0-{{ checksum "Cargo.lock" }}
+          key: cargocache-v2-multi-test:1.64.0-{{ checksum "Cargo.lock" }}
 
   lint:
     docker:
