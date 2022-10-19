@@ -33,8 +33,7 @@ jobs:
       - image: rust:1.64.0
     working_directory: ~/project
     steps:
-      - checkout:
-          path: ~/project
+      - checkout
       - run:
           name: Version information
           command: rustc --version; cargo --version; rustup --version; rustup target list --installed
@@ -43,7 +42,7 @@ jobs:
           command: cargo update
       - restore_cache:
           keys:
-            - cargocache-v2-multi-test:1.64.0-{{ checksum "~/project/Cargo.lock" }}
+            - cargocache-v2-multi-test:1.64.0-{{ checksum "Cargo.lock" }}
             - cargocache-v2-multi-test:1.64.0-
       - run:
           name: Build library for native target
@@ -58,7 +57,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-v2-multi-test:1.64.0-{{ checksum "~/project/Cargo.lock" }}
+          key: cargocache-v2-multi-test:1.64.0-{{ checksum "Cargo.lock" }}
 
   build_minimal:
     docker:
