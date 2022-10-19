@@ -5,7 +5,7 @@ authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
 description = "Test helpers for multi-contract interactions"
 license = "Apache-2.0"
-repository = "https://github.com/CosmWasm/cw-plus"
+repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
