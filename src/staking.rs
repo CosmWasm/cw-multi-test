@@ -18,7 +18,7 @@ use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};
 
 // Contains some general staking parameters
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct StakingInfo {
     /// The denominator of the staking token
     pub bonded_denom: String,
