@@ -75,10 +75,10 @@ jobs:
           keys:
             - cargocache-v2-storage-plus:1.64.0-minimal-{{ checksum "Cargo.toml" }}
       - run:
-          name: Build library for native target (with iterator and macro)
+          name: Build library for native target
           command: cargo build -Zminimal-versions --all-features
       - run:
-          name: Run unit tests (with iterator and macro)
+          name: Run unit tests
           command: cargo test --workspace -Zminimal-versions --all-features
       - save_cache:
           paths:
@@ -102,10 +102,10 @@ jobs:
           keys:
             - cargocache-v2-storage-plus:1.64.0-{{ checksum "Cargo.lock" }}
       - run:
-          name: Build library for native target (with iterator and macro)
+          name: Build library for native target
           command: cargo build --locked --all-features
       - run:
-          name: Run unit tests (with iterator and macro)
+          name: Run unit tests
           command: cargo test --workspace --locked --all-features
       - save_cache:
           paths:
