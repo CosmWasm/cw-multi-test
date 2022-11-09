@@ -911,17 +911,6 @@ where
             .save(&mut prefixed(storage, NAMESPACE_WASM), address, contract)
             .map_err(Into::into)
     }
-
-    // FIXME: better addr generation
-    // fn next_address(&self, storage: &dyn Storage) -> Addr {
-    //     // FIXME: quite inefficient if we actually had 100s of contracts
-    //     let count = CONTRACTS
-    //         .range_raw(storage, None, None, Order::Ascending)
-    //         .count();
-    //     // we make this longer so it is not rejected by tests
-    //     // it is lowercase to be compatible with the MockApi implementation of cosmwasm-std >= 1.0.0-beta8
-    //     Addr::unchecked(format!("contract{}", count))
-    // }
 }
 
 // TODO: replace with code in utils
