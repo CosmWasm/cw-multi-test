@@ -18,7 +18,7 @@ mod prefixed_storage;
 mod staking;
 mod test_helpers;
 mod transactions;
-mod wasm;
+pub mod wasm;
 
 pub use crate::app::{
     custom_app, next_block, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter, Router,
@@ -29,4 +29,4 @@ pub use crate::contracts::{Contract, ContractWrapper};
 pub use crate::executor::{AppResponse, Executor};
 pub use crate::module::{FailingModule, Module};
 pub use crate::staking::{DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo};
-pub use crate::wasm::{Wasm, WasmKeeper, WasmSudo};
+pub use crate::wasm::{AddressGenerator, Wasm, WasmKeeper, WasmSudo};
