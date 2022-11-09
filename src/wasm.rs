@@ -106,13 +106,21 @@ pub struct WasmKeeper<ExecC, QueryC> {
 }
 
 pub trait AddressGenerator {
-    fn next_address(&self, current_count: usize) -> Addr;
+    fn next_address(&self, storage: &mut dyn Storage) -> Addr;
 }
 #[derive(Debug)]
 struct SimpleAddressGenerator();
 impl AddressGenerator for SimpleAddressGenerator {
-    fn next_address(&self, current_count: usize) -> Addr {
-        Addr::unchecked(format!("contract{}", current_count))
+    fn next_address(&self, storage: &mut dyn Storage) -> Addr {
+        let count = CONTRACTS
+            .range_raw(
+                &prefixed_read(storage, NAMESPACE_WASM),
+                None,
+                None,
+                Order::Ascending,
+            )
+            .count();
+        Addr::unchecked(format!("contract{}", count))
     }
 }
 
@@ -707,16 +715,7 @@ where
             bail!("Cannot init contract with unregistered code id");
         }
 
-        let contract_count = CONTRACTS
-            .range_raw(
-                &prefixed_read(storage, NAMESPACE_WASM),
-                None,
-                None,
-                Order::Ascending,
-            )
-            .count();
-
-        let addr = self.generator.next_address(contract_count);
+        let addr = self.generator.next_address(storage);
 
         let info = ContractData {
             code_id,
