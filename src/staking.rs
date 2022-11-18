@@ -871,7 +871,7 @@ mod test {
     use cosmwasm_std::{
         from_slice,
         testing::{mock_env, MockApi, MockStorage},
-        BalanceResponse, BankQuery,
+        BalanceResponse, BankQuery, GovMsg, IbcMsg, IbcQuery,
     };
 
     /// Type alias for default build `Router` to make its reference in typical scenario
@@ -881,6 +881,8 @@ mod test {
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
+        FailingModule<IbcMsg, IbcQuery, Empty>,
+        FailingModule<GovMsg, Empty, Empty>,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -890,6 +892,8 @@ mod test {
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
+            ibc: FailingModule::new(),
+            gov: FailingModule::new(),
         }
     }
 
