@@ -118,8 +118,8 @@ where
     AppBuilder::new_custom().build(init_fn)
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT> Querier
-    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Querier
+    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -130,6 +130,8 @@ where
     CustomT: Module,
     StakingT: Staking,
     DistrT: Distribution,
+    IbcT: Ibc,
+    GovT: Gov,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         self.router
@@ -138,8 +140,8 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT> Executor<CustomT::ExecT>
-    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Executor<CustomT::ExecT>
+    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -150,6 +152,8 @@ where
     CustomT: Module,
     StakingT: Staking,
     DistrT: Distribution,
+    IbcT: Ibc,
+    GovT: Gov,
 {
     fn execute(
         &mut self,
@@ -668,7 +672,7 @@ where
 
 // Helper functions to call some custom WasmKeeper logic.
 // They show how we can easily add such calls to other custom keepers (CustomT, StakingT, etc)
-impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT>
+impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT>
     App<
         BankT,
         ApiT,
@@ -677,6 +681,8 @@ impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT>
         WasmKeeper<CustomT::ExecT, CustomT::QueryT>,
         StakingT,
         DistrT,
+        IbcT,
+        GovT,
     >
 where
     BankT: Bank,
@@ -685,6 +691,8 @@ where
     CustomT: Module,
     StakingT: Staking,
     DistrT: Distribution,
+    IbcT: Ibc,
+    GovT: Gov,
     CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
@@ -705,8 +713,8 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>
-    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     CustomT::ExecT: std::fmt::Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -717,6 +725,8 @@ where
     CustomT: Module,
     StakingT: Staking,
     DistrT: Distribution,
+    IbcT: Ibc,
+    GovT: Gov,
 {
     pub fn set_block(&mut self, block: BlockInfo) {
         self.block = block;
@@ -939,6 +949,7 @@ where
                 .distribution
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
+            CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }

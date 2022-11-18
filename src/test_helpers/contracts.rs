@@ -6,3 +6,4 @@ pub mod error;
 pub mod hackatom;
 pub mod payout;
 pub mod reflect;
+pub mod stargate;
