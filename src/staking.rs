@@ -1,8 +1,6 @@
 use std::collections::BTreeSet;
 
 use anyhow::{anyhow, bail, Result as AnyResult};
-use schemars::JsonSchema;
-
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_binary, Addr, AllDelegationsResponse, AllValidatorsResponse, Api,
     BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
@@ -10,6 +8,7 @@ use cosmwasm_std::{
     StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::app::CosmosRouter;
@@ -864,17 +863,17 @@ impl Module for DistributionKeeper {
 
 #[cfg(test)]
 mod test {
-    use crate::{app::MockRouter, BankKeeper, FailingModule, Router, WasmKeeper};
-
-    use super::*;
-
     use cosmwasm_std::{
         from_slice,
         testing::{mock_env, MockApi, MockStorage},
-        BalanceResponse, BankQuery, GovMsg, IbcMsg, IbcQuery,
+        BalanceResponse, BankQuery,
     };
+
     use crate::gov::FailingGovKeeper;
     use crate::ibc::FailingIbcKeeper;
+    use crate::{app::MockRouter, BankKeeper, FailingModule, Router, WasmKeeper};
+
+    use super::*;
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<

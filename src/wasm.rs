@@ -1,7 +1,9 @@
 use std::collections::HashMap;
-use std::fmt;
+use std::fmt::Debug;
 use std::ops::Deref;
 
+use anyhow::{bail, Context, Result as AnyResult};
+use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
     ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
@@ -14,12 +16,11 @@ use cosmwasm_std::{
     IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
     IbcReceiveResponse,
 };
+use cw_storage_plus::Map;
 use prost::Message;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-
-use cw_storage_plus::Map;
 
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::contracts::Contract;
@@ -27,9 +28,6 @@ use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use cosmwasm_std::testing::mock_wasmd_attr;
-
-use anyhow::{bail, Context, Result as AnyResult};
 
 // Contract state is kept in Storage, separate from the contracts themselves
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
@@ -37,7 +35,7 @@ const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 pub const NAMESPACE_WASM: &[u8] = b"wasm";
 const CONTRACT_ATTR: &str = "_contract_addr";
 
-#[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
     pub contract_addr: Addr,
     pub msg: Binary,
@@ -121,7 +119,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> Wasm<ExecC, QueryC> for WasmKeeper<ExecC, QueryC>
 where
-    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn query(
@@ -257,7 +255,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
     fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
     where
-        T: Clone + fmt::Debug + PartialEq + JsonSchema,
+        T: Clone + Debug + PartialEq + JsonSchema,
     {
         Self::verify_attributes(&response.attributes)?;
 
@@ -275,7 +273,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC>
 where
-    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     pub fn new() -> Self {
@@ -1062,10 +1060,7 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{
-        coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery,
-        StdError,
-    };
+    use cosmwasm_std::{coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, StdError};
 
     use crate::app::Router;
     use crate::bank::BankKeeper;
