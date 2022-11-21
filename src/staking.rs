@@ -873,6 +873,8 @@ mod test {
         testing::{mock_env, MockApi, MockStorage},
         BalanceResponse, BankQuery, GovMsg, IbcMsg, IbcQuery,
     };
+    use crate::gov::FailingGovKeeper;
+    use crate::ibc::FailingIbcKeeper;
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
@@ -881,8 +883,8 @@ mod test {
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -892,8 +894,8 @@ mod test {
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: FailingIbcKeeper::new(),
+            gov: FailingGovKeeper::new(),
         }
     }
 

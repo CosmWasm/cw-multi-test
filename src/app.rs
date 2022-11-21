@@ -16,8 +16,8 @@ use serde::Serialize;
 use crate::bank::{Bank, BankKeeper, BankSudo};
 use crate::contracts::Contract;
 use crate::executor::{AppResponse, Executor};
-use crate::gov::Gov;
-use crate::ibc::Ibc;
+use crate::gov::{FailingGovKeeper, Gov};
+use crate::ibc::{FailingIbcKeeper, Ibc};
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::transactions::transactional;
@@ -37,7 +37,8 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    FailingModule<IbcMsg, IbcQuery, Empty>,
+    FailingIbcKeeper,
+    FailingGovKeeper,
 >;
 
 /// Router is a persisted state. You can query this.
@@ -51,8 +52,8 @@ pub struct App<
     Wasm = WasmKeeper<Empty, Empty>,
     Staking = StakeKeeper,
     Distr = DistributionKeeper,
-    Ibc = FailingModule<IbcMsg, IbcQuery, Empty>,
-    Gov = FailingModule<GovMsg, Empty, Empty>,
+    Ibc = FailingIbcKeeper,
+    Gov = FailingGovKeeper,
 > {
     router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov>,
     api: Api,
@@ -84,8 +85,8 @@ impl BasicApp {
                 WasmKeeper<Empty, Empty>,
                 StakeKeeper,
                 DistributionKeeper,
-                FailingModule<IbcMsg, IbcQuery, Empty>,
-                FailingModule<GovMsg, Empty, Empty>,
+                FailingIbcKeeper,
+                FailingGovKeeper,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -108,8 +109,8 @@ where
             WasmKeeper<ExecC, QueryC>,
             StakeKeeper,
             DistributionKeeper,
-            FailingModule<IbcMsg, IbcQuery, Empty>,
-            FailingModule<GovMsg, Empty, Empty>,
+            FailingIbcKeeper,
+            FailingGovKeeper,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -176,8 +177,8 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    FailingModule<IbcMsg, IbcQuery, Empty>,
-    FailingModule<GovMsg, Empty, Empty>,
+    FailingIbcKeeper,
+    FailingGovKeeper,
 >;
 
 /// Utility to build App in stages. If particular items wont be set, defaults would be used
@@ -203,8 +204,8 @@ impl Default
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >
 {
     fn default() -> Self {
@@ -221,8 +222,8 @@ impl
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -236,8 +237,8 @@ impl
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: FailingIbcKeeper::new(),
+            gov: FailingGovKeeper::new(),
         }
     }
 }
@@ -251,8 +252,8 @@ impl<ExecC, QueryC>
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >
 where
     ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
@@ -270,8 +271,8 @@ where
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: FailingIbcKeeper::new(),
+            gov: FailingGovKeeper::new(),
         }
     }
 }
