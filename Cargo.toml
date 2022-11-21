@@ -11,6 +11,7 @@ homepage = "https://cosmwasm.com"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default = ["iterator", "staking"]
+ibc3 = ["stargate", "cosmwasm-std/ibc3"]
 iterator = ["cosmwasm-std/iterator"]
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
