@@ -78,7 +78,7 @@ mod test {
     impl Gov for AcceptingModule {}
 
     #[test]
-    fn default_ibc() {
+    fn default_gov() {
         let mut app = App::default();
         let code = app.store_code(contract());
         let contract = app
@@ -97,7 +97,7 @@ mod test {
     }
 
     #[test]
-    fn subsituting_ibc() {
+    fn subsituting_gov() {
         let mut app = AppBuilder::new()
             .with_gov(AcceptingModule)
             .build(|_, _, _| ());
