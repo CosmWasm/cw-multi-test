@@ -13,7 +13,9 @@ mod contracts;
 pub mod custom_handler;
 pub mod error;
 mod executor;
+#[cfg_attr(not(feature = "stargate"), path = "mock_gov.rs")]
 mod gov;
+#[cfg_attr(not(feature = "stargate"), path = "mock_ibc.rs")]
 mod ibc;
 mod module;
 mod prefixed_storage;

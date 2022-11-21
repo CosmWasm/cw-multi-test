@@ -2,9 +2,14 @@ use cosmwasm_std::{Empty, GovMsg};
 
 use crate::{FailingModule, Module};
 
+#[cfg(not(feature = "stargate"))]
+compile_error!("Intended for use only with `stargate` feature enabled!");
+
 pub trait Gov: Module<ExecT = GovMsg, QueryT = Empty, SudoT = Empty> {}
 
 impl Gov for FailingModule<GovMsg, Empty, Empty> {}
+
+pub type FailingGovKeeper = FailingModule<GovMsg, Empty, Empty>;
 
 #[cfg(test)]
 mod test {
