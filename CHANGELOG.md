@@ -7,6 +7,7 @@ changelog will be noisy - not everything is relevant to `cw-multi-test` there.
 
 ## [v0.16.1](https://github.com/CosmWasm/cw-plus/tree/v0.16.1) (2022-11-23)
 
+[Full Changelog](https://github.com/CosmWasm/cw-plus/compare/v0.16.0...v0.16.1)
 - Modules for Stargate (IBC and Gov) messages - failing by default, but possible to exchange
 
 ## [v0.16.0](https://github.com/CosmWasm/cw-plus/tree/v0.16.0) (2022-10-14)
