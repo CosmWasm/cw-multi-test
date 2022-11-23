@@ -1,19 +1,26 @@
 use std::collections::HashMap;
-use std::fmt;
+use std::fmt::Debug;
 use std::ops::Deref;
 
+use anyhow::{bail, Context, Result as AnyResult};
+use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
     ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
     QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
     SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
+#[cfg(feature = "stargate")]
+use cosmwasm_std::{
+    IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
+    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
+    IbcReceiveResponse,
+};
+use cw_storage_plus::Map;
 use prost::Message;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-
-use cw_storage_plus::Map;
 
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::contracts::Contract;
@@ -21,9 +28,6 @@ use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use cosmwasm_std::testing::mock_wasmd_attr;
-
-use anyhow::{bail, Context, Result as AnyResult};
 
 // Contract state is kept in Storage, separate from the contracts themselves
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
@@ -31,7 +35,7 @@ const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 pub const NAMESPACE_WASM: &[u8] = b"wasm";
 const CONTRACT_ATTR: &str = "_contract_addr";
 
-#[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
     pub contract_addr: Addr,
     pub msg: Binary,
@@ -115,7 +119,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> Wasm<ExecC, QueryC> for WasmKeeper<ExecC, QueryC>
 where
-    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn query(
@@ -251,7 +255,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
     fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
     where
-        T: Clone + fmt::Debug + PartialEq + JsonSchema,
+        T: Clone + Debug + PartialEq + JsonSchema,
     {
         Self::verify_attributes(&response.attributes)?;
 
@@ -269,7 +273,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC>
 where
-    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     pub fn new() -> Self {
@@ -795,6 +799,126 @@ where
         )?)
     }
 
+    #[cfg(feature = "stargate")]
+    pub fn call_ibc_channel_open(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        address: Addr,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: IbcChannelOpenMsg,
+    ) -> AnyResult<IbcChannelOpenResponse> {
+        self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.ibc_channel_open(deps, env, msg),
+        )
+    }
+
+    #[cfg(feature = "stargate")]
+    pub fn call_ibc_channel_connect(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        address: Addr,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: IbcChannelConnectMsg,
+    ) -> AnyResult<IbcBasicResponse> {
+        self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.ibc_channel_connect(deps, env, msg),
+        )
+    }
+
+    #[cfg(feature = "stargate")]
+    pub fn call_ibc_channel_close(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        address: Addr,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: IbcChannelCloseMsg,
+    ) -> AnyResult<IbcBasicResponse> {
+        self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.ibc_channel_close(deps, env, msg),
+        )
+    }
+
+    #[cfg(feature = "stargate")]
+    pub fn call_ibc_packet_receive(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        address: Addr,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: IbcPacketReceiveMsg,
+    ) -> AnyResult<IbcReceiveResponse> {
+        self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.ibc_packet_receive(deps, env, msg),
+        )
+    }
+
+    #[cfg(feature = "stargate")]
+    pub fn call_ibc_packet_ack(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        address: Addr,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: IbcPacketAckMsg,
+    ) -> AnyResult<IbcBasicResponse> {
+        self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.ibc_packet_ack(deps, env, msg),
+        )
+    }
+
+    #[cfg(feature = "stargate")]
+    pub fn call_ibc_packet_timeout(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        address: Addr,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: IbcPacketTimeoutMsg,
+    ) -> AnyResult<IbcBasicResponse> {
+        self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.ibc_packet_timeout(deps, env, msg),
+        )
+    }
+
     fn get_env<T: Into<Addr>>(&self, address: T, block: &BlockInfo) -> Env {
         Env {
             block: block.clone(),
@@ -936,13 +1060,12 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{
-        coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery,
-        StdError,
-    };
+    use cosmwasm_std::{coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, StdError};
 
     use crate::app::Router;
     use crate::bank::BankKeeper;
+    use crate::gov::FailingGovKeeper;
+    use crate::ibc::FailingIbcKeeper;
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
     use crate::test_helpers::contracts::{caller, error, payout};
@@ -958,8 +1081,8 @@ mod test {
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -969,8 +1092,8 @@ mod test {
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: FailingIbcKeeper::new(),
+            gov: FailingGovKeeper::new(),
         }
     }
 

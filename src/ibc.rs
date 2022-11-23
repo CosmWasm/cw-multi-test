@@ -2,9 +2,14 @@ use cosmwasm_std::{Empty, IbcMsg, IbcQuery};
 
 use crate::{FailingModule, Module};
 
+#[cfg(not(feature = "stargate"))]
+compile_error!("Intended for use only with `stargate` feature enabled!");
+
 pub trait Ibc: Module<ExecT = IbcMsg, QueryT = IbcQuery, SudoT = Empty> {}
 
 impl Ibc for FailingModule<IbcMsg, IbcQuery, Empty> {}
+
+pub type FailingIbcKeeper = FailingModule<IbcMsg, IbcQuery, Empty>;
 
 #[cfg(test)]
 mod test {

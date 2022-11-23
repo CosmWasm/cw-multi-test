@@ -1,13 +1,12 @@
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use anyhow::bail;
-use anyhow::Result as AnyResult;
+use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
-    Empty, GovMsg, IbcMsg, IbcQuery, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record,
-    Storage, SystemError, SystemResult,
+    Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage, SystemError,
+    SystemResult,
 };
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -16,8 +15,8 @@ use serde::Serialize;
 use crate::bank::{Bank, BankKeeper, BankSudo};
 use crate::contracts::Contract;
 use crate::executor::{AppResponse, Executor};
-use crate::gov::Gov;
-use crate::ibc::Ibc;
+use crate::gov::{FailingGovKeeper, Gov};
+use crate::ibc::{FailingIbcKeeper, Ibc};
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::transactions::transactional;
@@ -37,7 +36,8 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    FailingModule<IbcMsg, IbcQuery, Empty>,
+    FailingIbcKeeper,
+    FailingGovKeeper,
 >;
 
 /// Router is a persisted state. You can query this.
@@ -51,8 +51,8 @@ pub struct App<
     Wasm = WasmKeeper<Empty, Empty>,
     Staking = StakeKeeper,
     Distr = DistributionKeeper,
-    Ibc = FailingModule<IbcMsg, IbcQuery, Empty>,
-    Gov = FailingModule<GovMsg, Empty, Empty>,
+    Ibc = FailingIbcKeeper,
+    Gov = FailingGovKeeper,
 > {
     router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov>,
     api: Api,
@@ -84,8 +84,8 @@ impl BasicApp {
                 WasmKeeper<Empty, Empty>,
                 StakeKeeper,
                 DistributionKeeper,
-                FailingModule<IbcMsg, IbcQuery, Empty>,
-                FailingModule<GovMsg, Empty, Empty>,
+                FailingIbcKeeper,
+                FailingGovKeeper,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -108,8 +108,8 @@ where
             WasmKeeper<ExecC, QueryC>,
             StakeKeeper,
             DistributionKeeper,
-            FailingModule<IbcMsg, IbcQuery, Empty>,
-            FailingModule<GovMsg, Empty, Empty>,
+            FailingIbcKeeper,
+            FailingGovKeeper,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -121,7 +121,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Querier
     for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -143,7 +143,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Executor<CustomT::ExecT>
     for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -176,8 +176,8 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    FailingModule<IbcMsg, IbcQuery, Empty>,
-    FailingModule<GovMsg, Empty, Empty>,
+    FailingIbcKeeper,
+    FailingGovKeeper,
 >;
 
 /// Utility to build App in stages. If particular items wont be set, defaults would be used
@@ -203,8 +203,8 @@ impl Default
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >
 {
     fn default() -> Self {
@@ -221,8 +221,8 @@ impl
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -236,8 +236,8 @@ impl
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: FailingIbcKeeper::new(),
+            gov: FailingGovKeeper::new(),
         }
     }
 }
@@ -251,8 +251,8 @@ impl<ExecC, QueryC>
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        FailingIbcKeeper,
+        FailingGovKeeper,
     >
 where
     ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
@@ -270,8 +270,8 @@ where
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: FailingIbcKeeper::new(),
+            gov: FailingGovKeeper::new(),
         }
     }
 }
@@ -693,7 +693,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
     /// This registers contract code (like uploading wasm bytecode on a chain),
@@ -716,7 +716,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: std::fmt::Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -834,7 +834,7 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
 impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
@@ -948,7 +948,9 @@ where
             CosmosMsg::Distribution(msg) => self
                 .distribution
                 .execute(api, storage, self, block, sender, msg),
+            #[cfg(feature = "stargate")]
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
+            #[cfg(feature = "stargate")]
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
             _ => bail!("Cannot execute {:?}", msg),
         }
@@ -970,6 +972,7 @@ where
             QueryRequest::Bank(req) => self.bank.query(api, storage, &querier, block, req),
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
+            #[cfg(feature = "stargate")]
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
             _ => unimplemented!(),
         }
@@ -1075,7 +1078,7 @@ impl<'a, ExecC, QueryC> RouterQuerier<'a, ExecC, QueryC> {
 
 impl<'a, ExecC, QueryC> Querier for RouterQuerier<'a, ExecC, QueryC>
 where
-    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
@@ -1085,7 +1088,7 @@ where
                 return SystemResult::Err(SystemError::InvalidRequest {
                     error: format!("Parsing query request: {}", e),
                     request: bin_request.into(),
-                })
+                });
             }
         };
         let contract_result: ContractResult<Binary> = self
@@ -1098,7 +1101,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use cosmwasm_std::testing::MockQuerier;
     use cosmwasm_std::{
         coin, coins, to_binary, AllBalanceResponse, Attribute, BankMsg, BankQuery, Coin, Event,
@@ -1110,12 +1112,14 @@ mod test {
     use crate::test_helpers::{CustomMsg, EmptyMsg};
     use crate::transactions::StorageTransaction;
 
+    use super::*;
+
     fn get_balance<BankT, ApiT, StorageT, CustomT, WasmT>(
         app: &App<BankT, ApiT, StorageT, CustomT, WasmT>,
         addr: &Addr,
     ) -> Vec<Coin>
     where
-        CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
         CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
         BankT: Bank,
@@ -1221,7 +1225,7 @@ mod test {
                 creator: owner.clone(),
                 admin: None,
                 label: "Payout".to_owned(),
-                created: app.block_info().height
+                created: app.block_info().height,
             }
         );
 
@@ -1519,13 +1523,13 @@ mod test {
     // this demonstrates that we can mint tokens and send from other accounts via a custom module,
     // as an example of ability to do privileged actions
     mod custom_handler {
-        use super::*;
-
         use anyhow::{bail, Result as AnyResult};
         use cw_storage_plus::Item;
         use serde::{Deserialize, Serialize};
 
         use crate::Executor;
+
+        use super::*;
 
         const LOTTERY: Item<Coin> = Item::new("lottery");
         const PITY: Item<Coin> = Item::new("pity");
@@ -1758,7 +1762,7 @@ mod test {
         rcpt: &Addr,
     ) -> Vec<Coin>
     where
-        CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema,
+        CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema,
         CustomT::QueryT: CustomQuery + DeserializeOwned,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
         BankT: Bank,
@@ -2043,9 +2047,9 @@ mod test {
     }
 
     mod reply_data_overwrite {
-        use super::*;
-
         use echo::EXECUTE_REPLY_BASE_ID;
+
+        use super::*;
 
         fn make_echo_submsg(
             contract: Addr,
@@ -2615,8 +2619,9 @@ mod test {
     }
 
     mod custom_messages {
-        use super::*;
         use crate::custom_handler::CachingCustomHandler;
+
+        use super::*;
 
         #[test]
         fn triggering_custom_msg() {
@@ -2660,9 +2665,11 @@ mod test {
     }
 
     mod protobuf_wrapped_data {
-        use super::*;
-        use crate::test_helpers::contracts::echo::EXECUTE_REPLY_BASE_ID;
         use cw_utils::parse_instantiate_response_data;
+
+        use crate::test_helpers::contracts::echo::EXECUTE_REPLY_BASE_ID;
+
+        use super::*;
 
         #[test]
         fn instantiate_wrapped_properly() {
