@@ -20,7 +20,7 @@ mod prefixed_storage;
 mod staking;
 mod test_helpers;
 mod transactions;
-pub mod wasm;
+mod wasm;
 
 pub use crate::app::{
     custom_app, next_block, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter, Router,
