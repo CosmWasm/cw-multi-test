@@ -102,6 +102,28 @@ pub struct WasmKeeper<ExecC, QueryC> {
     codes: HashMap<usize, Box<dyn Contract<ExecC, QueryC>>>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
+    generator: Box<dyn AddressGenerator>,
+}
+
+pub trait AddressGenerator {
+    fn next_address(&self, storage: &mut dyn Storage) -> Addr;
+}
+
+#[derive(Debug)]
+struct SimpleAddressGenerator();
+
+impl AddressGenerator for SimpleAddressGenerator {
+    fn next_address(&self, storage: &mut dyn Storage) -> Addr {
+        let count = CONTRACTS
+            .range_raw(
+                &prefixed_read(storage, NAMESPACE_WASM),
+                None,
+                None,
+                Order::Ascending,
+            )
+            .count();
+        Addr::unchecked(format!("contract{}", count))
+    }
 }
 
 impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
@@ -109,6 +131,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
         Self {
             codes: HashMap::default(),
             _p: std::marker::PhantomData,
+            generator: Box::new(SimpleAddressGenerator()),
         }
     }
 }
@@ -274,6 +297,15 @@ where
 {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn new_with_custom_address_generator(generator: impl AddressGenerator + 'static) -> Self {
+        let default = Self::default();
+        Self {
+            codes: default.codes,
+            _p: default._p,
+            generator: Box::new(generator),
+        }
     }
 
     pub fn query_smart(
@@ -685,7 +717,7 @@ where
             bail!("Cannot init contract with unregistered code id");
         }
 
-        let addr = self.next_address(&prefixed_read(storage, NAMESPACE_WASM));
+        let addr = self.generator.next_address(storage);
 
         let info = ContractData {
             code_id,
@@ -879,17 +911,6 @@ where
         CONTRACTS
             .save(&mut prefixed(storage, NAMESPACE_WASM), address, contract)
             .map_err(Into::into)
-    }
-
-    // FIXME: better addr generation
-    fn next_address(&self, storage: &dyn Storage) -> Addr {
-        // FIXME: quite inefficient if we actually had 100s of contracts
-        let count = CONTRACTS
-            .range_raw(storage, None, None, Order::Ascending)
-            .count();
-        // we make this longer so it is not rejected by tests
-        // it is lowercase to be compatible with the MockApi implementation of cosmwasm-std >= 1.0.0-beta8
-        Addr::unchecked(format!("contract{}", count))
     }
 }
 
@@ -1525,5 +1546,66 @@ mod test {
 
         // should have no admin now
         assert_admin(&wasm_storage, &keeper, &contract_addr, None);
+    }
+
+    #[test]
+    fn by_default_uses_simple_address_generator() {
+        let mut keeper = WasmKeeper::<Empty, Empty>::new();
+        let code_id = keeper.store_code(payout::contract());
+
+        let mut wasm_storage = MockStorage::new();
+
+        let contract_addr = keeper
+            .register_contract(
+                &mut wasm_storage,
+                code_id,
+                Addr::unchecked("foobar"),
+                Addr::unchecked("admin"),
+                "label".to_owned(),
+                1000,
+            )
+            .unwrap();
+
+        assert_eq!(
+            "contract0", contract_addr,
+            "default address generator returned incorrect address"
+        )
+    }
+
+    struct TestAddressGenerator {
+        addr_to_return: Addr,
+    }
+    impl AddressGenerator for TestAddressGenerator {
+        fn next_address(&self, _: &mut dyn Storage) -> Addr {
+            self.addr_to_return.clone()
+        }
+    }
+
+    #[test]
+    fn can_use_custom_address_generator() {
+        let expected_addr = Addr::unchecked("new_test_addr");
+        let mut keeper =
+            WasmKeeper::<Empty, Empty>::new_with_custom_address_generator(TestAddressGenerator {
+                addr_to_return: expected_addr.clone(),
+            });
+        let code_id = keeper.store_code(payout::contract());
+
+        let mut wasm_storage = MockStorage::new();
+
+        let contract_addr = keeper
+            .register_contract(
+                &mut wasm_storage,
+                code_id,
+                Addr::unchecked("foobar"),
+                Addr::unchecked("admin"),
+                "label".to_owned(),
+                1000,
+            )
+            .unwrap();
+
+        assert_eq!(
+            expected_addr, contract_addr,
+            "custom address generator returned incorrect address"
+        )
     }
 }
