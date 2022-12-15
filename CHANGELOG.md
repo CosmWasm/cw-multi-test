@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.16.2](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.2) (2022-12-15)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/0.16.1...v0.16.2)
+
+**Merged pull requests:**
+
+- Update `cw-utils` and `cw-storage-plus` to 1.0 [\#15](https://github.com/CosmWasm/cw-multi-test/pull/15) ([ueco-jb](https://github.com/ueco-jb))
+
+## [0.16.1](https://github.com/CosmWasm/cw-multi-test/tree/0.16.1) (2022-11-23)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.1...0.16.1)
+
 # Old changelog
 
 Until `v0.16.0`, this project lived in a different repo with other projects. The below
