@@ -1547,4 +1547,65 @@ mod test {
         // should have no admin now
         assert_admin(&wasm_storage, &keeper, &contract_addr, None);
     }
+
+    #[test]
+    fn by_default_uses_simple_address_generator() {
+        let mut keeper = WasmKeeper::<Empty, Empty>::new();
+        let code_id = keeper.store_code(payout::contract());
+
+        let mut wasm_storage = MockStorage::new();
+
+        let contract_addr = keeper
+            .register_contract(
+                &mut wasm_storage,
+                code_id,
+                Addr::unchecked("foobar"),
+                Addr::unchecked("admin"),
+                "label".to_owned(),
+                1000,
+            )
+            .unwrap();
+
+        assert_eq!(
+            "contract0", contract_addr,
+            "default address generator returned incorrect address"
+        )
+    }
+
+    struct TestAddressGenerator {
+        addr_to_return: Addr,
+    }
+    impl AddressGenerator for TestAddressGenerator {
+        fn next_address(&self, _: &mut dyn Storage) -> Addr {
+            self.addr_to_return.clone()
+        }
+    }
+
+    #[test]
+    fn can_use_custom_address_generator() {
+        let expected_addr = Addr::unchecked("new_test_addr");
+        let mut keeper =
+            WasmKeeper::<Empty, Empty>::new_with_custom_address_generator(TestAddressGenerator {
+                addr_to_return: expected_addr.clone(),
+            });
+        let code_id = keeper.store_code(payout::contract());
+
+        let mut wasm_storage = MockStorage::new();
+
+        let contract_addr = keeper
+            .register_contract(
+                &mut wasm_storage,
+                code_id,
+                Addr::unchecked("foobar"),
+                Addr::unchecked("admin"),
+                "label".to_owned(),
+                1000,
+            )
+            .unwrap();
+
+        assert_eq!(
+            expected_addr, contract_addr,
+            "custom address generator returned incorrect address"
+        )
+    }
 }
