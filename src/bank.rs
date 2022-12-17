@@ -4,10 +4,11 @@ use schemars::JsonSchema;
 
 use cosmwasm_std::{
     coin, to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery, Binary,
-    BlockInfo, Coin, Event, Querier, Storage,
+    BlockInfo, Coin, Event, Querier, Storage, Order, Uint128,
 };
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
+use serde::{Serialize, Deserialize};
 
 use crate::app::CosmosRouter;
 use crate::executor::AppResponse;
@@ -25,6 +26,16 @@ pub enum BankSudo {
         to_address: String,
         amount: Vec<Coin>,
     },
+}
+
+// TODO: remove this when I figure out how non_exhaustive works
+#[cfg(feature = "cosmwasm_1_1")]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct SupplyResponse {
+    /// Always returns a Coin with the requested denom.
+    /// This will be of zero amount if the denom does not exist.
+    pub amount: Coin,
 }
 
 pub trait Bank: Module<ExecT = BankMsg, QueryT = BankQuery, SudoT = BankSudo> {}
@@ -48,6 +59,7 @@ impl BankKeeper {
         self.set_balance(&mut bank_storage, account, amount)
     }
 
+    // this is an "admin" function to let us adjust bank accounts
     fn set_balance(
         &self,
         bank_storage: &mut dyn Storage,
@@ -61,10 +73,26 @@ impl BankKeeper {
             .map_err(Into::into)
     }
 
-    // this is an "admin" function to let us adjust bank accounts
     fn get_balance(&self, bank_storage: &dyn Storage, account: &Addr) -> AnyResult<Vec<Coin>> {
         let val = BALANCES.may_load(bank_storage, account)?;
         Ok(val.unwrap_or_default().into_vec())
+    }
+
+    fn get_supply(&self, bank_storage: &dyn Storage, denom: String) -> AnyResult<Coin> {
+        let supply: Uint128 = BALANCES
+            .range(bank_storage, None, None, Order::Ascending)
+            .into_iter()
+            .map(|a| a.unwrap().1)
+            .fold(Uint128::zero(),  |accum, item| {
+                let mut subtotal = Uint128::zero();
+                for coin in item.into_vec() {
+                    if coin.denom == denom {
+                        subtotal = subtotal + coin.amount;
+                    }
+                }
+                accum + subtotal
+            });
+        Ok(coin(supply.into(), denom))
     }
 
     fn send(
@@ -203,6 +231,11 @@ impl Module for BankKeeper {
                     .find(|c| c.denom == denom)
                     .unwrap_or_else(|| coin(0, denom));
                 let res = BalanceResponse { amount };
+                Ok(to_binary(&res)?)
+            }
+            BankQuery::Supply { denom } => {
+                let amount = self.get_supply(&bank_storage, denom)?;
+                let res = SupplyResponse { amount };
                 Ok(to_binary(&res)?)
             }
             q => bail!("Unsupported bank query: {:?}", q),
