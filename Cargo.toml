@@ -10,11 +10,12 @@ homepage = "https://cosmwasm.com"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["iterator", "staking"]
+default = ["iterator", "staking", "cosmwasm_1_1"]
 iterator = ["cosmwasm-std/iterator"]
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
 backtrace = ["anyhow/backtrace"]
+cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
 
 [dependencies]
 cw-utils = "1.0"
