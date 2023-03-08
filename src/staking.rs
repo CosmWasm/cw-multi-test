@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use anyhow::{anyhow, bail, Result as AnyResult};
 use schemars::JsonSchema;
@@ -7,7 +7,7 @@ use cosmwasm_std::{
     coin, ensure, ensure_eq, to_binary, Addr, AllDelegationsResponse, AllValidatorsResponse, Api,
     BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
     DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier, StakingMsg,
-    StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    StakingQuery, StdResult, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use serde::{Deserialize, Serialize};
@@ -74,6 +74,14 @@ impl ValidatorInfo {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+struct Unbonding {
+    pub delegator: Addr,
+    pub validator: Addr,
+    pub amount: Uint128,
+    pub payout_at: Timestamp,
+}
+
 const STAKING_INFO: Item<StakingInfo> = Item::new("staking_info");
 /// (staker_addr, validator_addr) -> shares
 const STAKES: Map<(&Addr, &Addr), Shares> = Map::new("stakes");
@@ -83,7 +91,7 @@ const VALIDATORS: Deque<Validator> = Deque::new("validators");
 /// Contains additional info for each validator
 const VALIDATOR_INFO: Map<&Addr, ValidatorInfo> = Map::new("validator_info");
 /// The queue of unbonding operations. This is needed because unbonding has a waiting time. See [`StakeKeeper`]
-const UNBONDING_QUEUE: Deque<(Addr, Timestamp, u128)> = Deque::new("unbonding_queue");
+const UNBONDING_QUEUE: Deque<Unbonding> = Deque::new("unbonding_queue");
 
 pub const NAMESPACE_STAKING: &[u8] = b"staking";
 
@@ -557,11 +565,12 @@ impl Module for StakeKeeper {
                 let staking_info = Self::get_staking_info(&staking_storage)?;
                 UNBONDING_QUEUE.push_back(
                     &mut staking_storage,
-                    &(
-                        sender.clone(),
-                        block.time.plus_seconds(staking_info.unbonding_time),
-                        amount.amount.u128(),
-                    ),
+                    &Unbonding {
+                        delegator: sender.clone(),
+                        validator,
+                        amount: amount.amount,
+                        payout_at: block.time.plus_seconds(staking_info.unbonding_time),
+                    },
                 )?;
                 Ok(AppResponse { events, data: None })
             }
@@ -628,13 +637,14 @@ impl Module for StakeKeeper {
                     let front = UNBONDING_QUEUE.front(&staking_storage)?;
                     match front {
                         // assuming the queue is sorted by payout_at
-                        Some((_, payout_at, _)) if payout_at <= block.time => {
+                        Some(Unbonding { payout_at, .. }) if payout_at <= block.time => {
                             // remove from queue
-                            let (delegator, _, amount) =
-                                UNBONDING_QUEUE.pop_front(&mut staking_storage)?.unwrap();
+                            let Unbonding {
+                                delegator, amount, ..
+                            } = UNBONDING_QUEUE.pop_front(&mut staking_storage)?.unwrap();
 
                             let staking_info = Self::get_staking_info(&staking_storage)?;
-                            if amount > 0 {
+                            if !amount.is_zero() {
                                 router.execute(
                                     api,
                                     storage,
@@ -642,7 +652,10 @@ impl Module for StakeKeeper {
                                     self.module_addr.clone(),
                                     BankMsg::Send {
                                         to_address: delegator.into_string(),
-                                        amount: vec![coin(amount, &staking_info.bonded_denom)],
+                                        amount: vec![coin(
+                                            amount.u128(),
+                                            &staking_info.bonded_denom,
+                                        )],
                                     }
                                     .into(),
                                 )?;
@@ -673,6 +686,16 @@ impl Module for StakeKeeper {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
 
+                let mut unbondings = HashMap::new();
+                for ub in UNBONDING_QUEUE
+                    .iter(&staking_storage)?
+                    .collect::<StdResult<Vec<_>>>()?
+                    .into_iter()
+                    .filter(|ub| ub.delegator == delegator)
+                {
+                    *unbondings.entry(ub.validator.into_string()).or_default() += ub.amount;
+                }
+
                 let res: AnyResult<Vec<Delegation>> = validators
                     .into_iter()
                     .filter_map(|validator| {
@@ -685,10 +708,17 @@ impl Module for StakeKeeper {
                             )
                             .transpose()?;
 
-                        Some(amount.map(|amount| Delegation {
-                            delegator,
-                            validator: validator.address,
-                            amount,
+                        Some(amount.map(|mut amount| {
+                            // include unbonding amounts
+                            amount.amount += unbondings
+                                .get(&validator.address)
+                                .copied()
+                                .unwrap_or(Uint128::zero());
+                            Delegation {
+                                delegator,
+                                validator: validator.address,
+                                amount,
+                            }
                         }))
                     })
                     .collect();
@@ -722,8 +752,18 @@ impl Module for StakeKeeper {
                     &validator_info,
                 )?;
                 let staking_info = Self::get_staking_info(&staking_storage)?;
+
+                // include unbonding amounts
+                let unbonding_amounts: Uint128 = UNBONDING_QUEUE
+                    .iter(&staking_storage)?
+                    .collect::<StdResult<Vec<_>>>()?
+                    .into_iter()
+                    .filter(|ub| ub.delegator == delegator && ub.validator == validator)
+                    .map(|ub| ub.amount)
+                    .sum();
+
                 let amount = coin(
-                    (shares.stake * Uint128::new(1)).u128(),
+                    (shares.stake * Uint128::new(1)).u128() + unbonding_amounts.u128(),
                     staking_info.bonded_denom,
                 );
                 let full_delegation_response = DelegationResponse {
@@ -1763,6 +1803,25 @@ mod test {
                 StakingMsg::Delegate {
                     validator: validator1.to_string(),
                     amount: coin(150, "TOKEN"),
+                },
+            )
+            .unwrap();
+            // unstake some again
+            execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator1.to_string(),
+                    amount: coin(50, "TOKEN"),
+                },
+            )
+            .unwrap();
+            execute_stake(
+                &mut test_env,
+                delegator2.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator1.to_string(),
+                    amount: coin(50, "TOKEN"),
                 },
             )
             .unwrap();
