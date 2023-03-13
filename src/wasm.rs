@@ -161,7 +161,9 @@ where
             WasmQuery::ContractInfo { contract_addr } => {
                 let addr = api.addr_validate(&contract_addr)?;
                 let contract = self.load_contract(storage, &addr)?;
-                let mut res = ContractInfoResponse::new(contract.code_id as u64, contract.creator);
+                let mut res = ContractInfoResponse::default();
+                res.code_id = contract.code_id as u64;
+                res.creator = contract.creator.to_string();
                 res.admin = contract.admin.map(|x| x.into());
                 to_binary(&res).map_err(Into::into)
             }
@@ -1114,7 +1116,9 @@ mod test {
             .query(&api, &wasm_storage, &querier, &block, query)
             .unwrap();
 
-        let mut expected = ContractInfoResponse::new(code_id as u64, "foobar");
+        let mut expected = ContractInfoResponse::default();
+        expected.code_id = code_id as u64;
+        expected.creator = "foobar".to_string();
         expected.admin = Some("admin".to_owned());
         assert_eq!(expected, from_slice(&info).unwrap());
     }
