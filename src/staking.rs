@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, VecDeque};
 
 use anyhow::{anyhow, bail, Result as AnyResult};
 use schemars::JsonSchema;
@@ -48,6 +48,9 @@ struct Shares {
 impl Shares {
     /// Calculates the share of validator rewards that should be given to this staker.
     pub fn share_of_rewards(&self, validator: &ValidatorInfo, rewards: Decimal) -> Decimal {
+        if validator.stake.is_zero() {
+            return Decimal::zero();
+        }
         rewards * self.stake / validator.stake
     }
 }
@@ -74,6 +77,14 @@ impl ValidatorInfo {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+struct Unbonding {
+    pub delegator: Addr,
+    pub validator: Addr,
+    pub amount: Uint128,
+    pub payout_at: Timestamp,
+}
+
 const STAKING_INFO: Item<StakingInfo> = Item::new("staking_info");
 /// (staker_addr, validator_addr) -> shares
 const STAKES: Map<(&Addr, &Addr), Shares> = Map::new("stakes");
@@ -83,7 +94,7 @@ const VALIDATORS: Deque<Validator> = Deque::new("validators");
 /// Contains additional info for each validator
 const VALIDATOR_INFO: Map<&Addr, ValidatorInfo> = Map::new("validator_info");
 /// The queue of unbonding operations. This is needed because unbonding has a waiting time. See [`StakeKeeper`]
-const UNBONDING_QUEUE: Deque<(Addr, Timestamp, u128)> = Deque::new("unbonding_queue");
+const UNBONDING_QUEUE: Item<VecDeque<Unbonding>> = Item::new("unbonding_queue");
 
 pub const NAMESPACE_STAKING: &[u8] = b"staking";
 
@@ -404,8 +415,17 @@ impl StakeKeeper {
             validator_info.stake = validator_info.stake.checked_add(amount)?;
         }
 
+        // check if any unbonding stake is left
+        let unbonding = UNBONDING_QUEUE
+            .may_load(staking_storage)?
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|ub| &ub.delegator == delegator && &ub.validator == validator)
+            .map(|ub| ub.amount)
+            .sum::<Uint128>();
+
         // save updated values
-        if shares.stake.is_zero() {
+        if shares.stake.is_zero() && unbonding.is_zero() {
             // no more stake, so remove
             STAKES.remove(staking_storage, (delegator, validator));
             validator_info.stakers.remove(delegator);
@@ -460,6 +480,18 @@ impl StakeKeeper {
                 )?;
             }
         }
+        // go through the queue to slash all pending unbondings
+        let mut unbonding_queue = UNBONDING_QUEUE
+            .may_load(staking_storage)?
+            .unwrap_or_default();
+        unbonding_queue
+            .iter_mut()
+            .filter(|ub| &ub.validator == validator)
+            .for_each(|mut ub| {
+                ub.amount = ub.amount * remaining_percentage;
+            });
+        UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
+
         VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
         Ok(())
     }
@@ -555,14 +587,16 @@ impl Module for StakeKeeper {
                 )?;
                 // add tokens to unbonding queue
                 let staking_info = Self::get_staking_info(&staking_storage)?;
-                UNBONDING_QUEUE.push_back(
-                    &mut staking_storage,
-                    &(
-                        sender.clone(),
-                        block.time.plus_seconds(staking_info.unbonding_time),
-                        amount.amount.u128(),
-                    ),
-                )?;
+                let mut unbonding_queue = UNBONDING_QUEUE
+                    .may_load(&staking_storage)?
+                    .unwrap_or_default();
+                unbonding_queue.push_back(Unbonding {
+                    delegator: sender.clone(),
+                    validator,
+                    amount: amount.amount,
+                    payout_at: block.time.plus_seconds(staking_info.unbonding_time),
+                });
+                UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
                 Ok(AppResponse { events, data: None })
             }
             StakingMsg::Redelegate {
@@ -623,18 +657,49 @@ impl Module for StakeKeeper {
                 Ok(AppResponse::default())
             }
             StakingSudo::ProcessQueue {} => {
+                let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+                let mut unbonding_queue = UNBONDING_QUEUE
+                    .may_load(&staking_storage)?
+                    .unwrap_or_default();
                 loop {
                     let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                    let front = UNBONDING_QUEUE.front(&staking_storage)?;
-                    match front {
+                    match unbonding_queue.front() {
                         // assuming the queue is sorted by payout_at
-                        Some((_, payout_at, _)) if payout_at <= block.time => {
+                        Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
                             // remove from queue
-                            let (delegator, _, amount) =
-                                UNBONDING_QUEUE.pop_front(&mut staking_storage)?.unwrap();
+                            let Unbonding {
+                                delegator,
+                                validator,
+                                amount,
+                                ..
+                            } = unbonding_queue.pop_front().unwrap();
+
+                            // remove staking entry if it is empty
+                            let delegation = self
+                                .get_stake(&staking_storage, &delegator, &validator)?
+                                .map(|mut stake| {
+                                    // add unbonding amounts
+                                    stake.amount += unbonding_queue
+                                        .iter()
+                                        .filter(|u| {
+                                            u.delegator == delegator && u.validator == validator
+                                        })
+                                        .map(|u| u.amount)
+                                        .sum::<Uint128>();
+                                    stake
+                                });
+                            match delegation {
+                                Some(delegation) if delegation.amount.is_zero() => {
+                                    STAKES.remove(&mut staking_storage, (&delegator, &validator));
+                                }
+                                None => {
+                                    STAKES.remove(&mut staking_storage, (&delegator, &validator))
+                                }
+                                _ => {}
+                            }
 
                             let staking_info = Self::get_staking_info(&staking_storage)?;
-                            if amount > 0 {
+                            if !amount.is_zero() {
                                 router.execute(
                                     api,
                                     storage,
@@ -642,7 +707,10 @@ impl Module for StakeKeeper {
                                     self.module_addr.clone(),
                                     BankMsg::Send {
                                         to_address: delegator.into_string(),
-                                        amount: vec![coin(amount, &staking_info.bonded_denom)],
+                                        amount: vec![coin(
+                                            amount.u128(),
+                                            &staking_info.bonded_denom,
+                                        )],
                                     }
                                     .into(),
                                 )?;
@@ -651,6 +719,8 @@ impl Module for StakeKeeper {
                         _ => break,
                     }
                 }
+                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
                 Ok(AppResponse::default())
             }
         }
@@ -673,6 +743,16 @@ impl Module for StakeKeeper {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
 
+                let mut unbondings = HashMap::new();
+                for ub in UNBONDING_QUEUE
+                    .may_load(&staking_storage)?
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|ub| ub.delegator == delegator)
+                {
+                    *unbondings.entry(ub.validator.into_string()).or_default() += ub.amount;
+                }
+
                 let res: AnyResult<Vec<Delegation>> = validators
                     .into_iter()
                     .filter_map(|validator| {
@@ -685,10 +765,17 @@ impl Module for StakeKeeper {
                             )
                             .transpose()?;
 
-                        Some(amount.map(|amount| Delegation {
-                            delegator,
-                            validator: validator.address,
-                            amount,
+                        Some(amount.map(|mut amount| {
+                            // include unbonding amounts, mimicing the behaviour of the Cosmos SDK
+                            amount.amount += unbondings
+                                .get(&validator.address)
+                                .copied()
+                                .unwrap_or(Uint128::zero());
+                            Delegation {
+                                delegator,
+                                validator: validator.address,
+                                amount,
+                            }
                         }))
                     })
                     .collect();
@@ -706,13 +793,10 @@ impl Module for StakeKeeper {
                 };
                 let delegator = api.addr_validate(&delegator)?;
 
-                let shares = match STAKES.load(&staking_storage, (&delegator, &validator_addr)) {
-                    Ok(stakes) => stakes,
-                    Err(_) => {
-                        let response = DelegationResponse { delegation: None };
-                        return Ok(to_binary(&response)?);
-                    }
-                };
+                let shares = STAKES
+                    .may_load(&staking_storage, (&delegator, &validator_addr))?
+                    .unwrap_or_default();
+
                 let validator_info = VALIDATOR_INFO.load(&staking_storage, &validator_addr)?;
                 let reward = Self::get_rewards_internal(
                     &staking_storage,
@@ -722,22 +806,40 @@ impl Module for StakeKeeper {
                     &validator_info,
                 )?;
                 let staking_info = Self::get_staking_info(&staking_storage)?;
+
+                // include unbonding amounts, mimicing the behaviour of the Cosmos SDK
+                let unbonding_amounts: Uint128 = UNBONDING_QUEUE
+                    .may_load(&staking_storage)?
+                    .unwrap_or_default()
+                    .into_iter()
+                    .filter(|ub| ub.delegator == delegator && ub.validator == validator)
+                    .map(|ub| ub.amount)
+                    .sum();
+
                 let amount = coin(
-                    (shares.stake * Uint128::new(1)).u128(),
+                    (shares.stake * Uint128::new(1))
+                        .checked_add(unbonding_amounts)?
+                        .u128(),
                     staking_info.bonded_denom,
                 );
-                let full_delegation_response = DelegationResponse {
-                    delegation: Some(FullDelegation {
-                        delegator,
-                        validator,
-                        amount: amount.clone(),
-                        can_redelegate: amount, // TODO: not implemented right now
-                        accumulated_rewards: if reward.amount.is_zero() {
-                            vec![]
-                        } else {
-                            vec![reward]
-                        },
-                    }),
+
+                let full_delegation_response = if amount.amount.is_zero() {
+                    // no delegation
+                    DelegationResponse { delegation: None }
+                } else {
+                    DelegationResponse {
+                        delegation: Some(FullDelegation {
+                            delegator,
+                            validator,
+                            amount: amount.clone(),
+                            can_redelegate: amount, // TODO: not implemented right now
+                            accumulated_rewards: if reward.amount.is_zero() {
+                                vec![]
+                            } else {
+                                vec![reward]
+                            },
+                        }),
+                    }
                 };
 
                 let res = to_binary(&full_delegation_response)?;
@@ -1766,6 +1868,25 @@ mod test {
                 },
             )
             .unwrap();
+            // unstake some again
+            execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator1.to_string(),
+                    amount: coin(50, "TOKEN"),
+                },
+            )
+            .unwrap();
+            execute_stake(
+                &mut test_env,
+                delegator2.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator1.to_string(),
+                    amount: coin(50, "TOKEN"),
+                },
+            )
+            .unwrap();
 
             // query all delegations
             let response1: AllDelegationsResponse = query_stake(
@@ -1807,6 +1928,436 @@ mod test {
                     accumulated_rewards: vec![],
                     can_redelegate: coin(150, "TOKEN"),
                 },
+            );
+        }
+
+        #[test]
+        fn delegation_queries_unbonding() {
+            // run all staking queries
+            let (mut test_env, validator) =
+                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let delegator1 = Addr::unchecked("delegator1");
+            let delegator2 = Addr::unchecked("delegator2");
+
+            // init balances
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "TOKEN")])
+                .unwrap();
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator2, vec![coin(150, "TOKEN")])
+                .unwrap();
+
+            // delegate some tokens with delegator1 and delegator2
+            execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap();
+            execute_stake(
+                &mut test_env,
+                delegator2.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(150, "TOKEN"),
+                },
+            )
+            .unwrap();
+            // unstake some of delegator1's stake
+            execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(50, "TOKEN"),
+                },
+            )
+            .unwrap();
+            // unstake all of delegator2's stake
+            execute_stake(
+                &mut test_env,
+                delegator2.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(150, "TOKEN"),
+                },
+            )
+            .unwrap();
+
+            // query all delegations
+            let response1: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator1.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegations,
+                vec![Delegation {
+                    delegator: delegator1.clone(),
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                }]
+            );
+            let response2: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator2.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response2.delegation.unwrap(),
+                FullDelegation {
+                    delegator: delegator2.clone(),
+                    validator: validator.to_string(),
+                    amount: coin(150, "TOKEN"),
+                    accumulated_rewards: vec![],
+                    can_redelegate: coin(150, "TOKEN"),
+                },
+            );
+
+            // wait until unbonding time is over
+            test_env.block.time = test_env.block.time.plus_seconds(60);
+            test_env
+                .router
+                .staking
+                .sudo(
+                    &test_env.api,
+                    &mut test_env.store,
+                    &test_env.router,
+                    &test_env.block,
+                    StakingSudo::ProcessQueue {},
+                )
+                .unwrap();
+
+            // query all delegations again
+            let response1: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator1.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegations,
+                vec![Delegation {
+                    delegator: delegator1.clone(),
+                    validator: validator.to_string(),
+                    amount: coin(50, "TOKEN"),
+                }],
+                "delegator1 should have less now"
+            );
+            let response2: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator2.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response2.delegation, None,
+                "delegator2 should have nothing left"
+            );
+
+            // unstake rest of delegator1's stake in two steps
+            execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(25, "TOKEN"),
+                },
+            )
+            .unwrap();
+            test_env.block.time = test_env.block.time.plus_seconds(10);
+            execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(25, "TOKEN"),
+                },
+            )
+            .unwrap();
+
+            // query all delegations again
+            let response1: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator1.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            let response2: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator1.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegation.unwrap().amount.amount.u128(),
+                50,
+                "delegator1 should still have 50 tokens unbonding"
+            );
+            assert_eq!(response2.delegations[0].amount.amount.u128(), 50);
+
+            // wait until unbonding time is over
+            test_env.block.time = test_env.block.time.plus_seconds(60);
+            test_env
+                .router
+                .staking
+                .sudo(
+                    &test_env.api,
+                    &mut test_env.store,
+                    &test_env.router,
+                    &test_env.block,
+                    StakingSudo::ProcessQueue {},
+                )
+                .unwrap();
+
+            // query all delegations again
+            let response1: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator1.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            let response2: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator1.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegation, None,
+                "delegator1 should have nothing left"
+            );
+            assert!(response2.delegations.is_empty());
+        }
+
+        #[test]
+        fn partial_unbonding_keeps_stake() {
+            let (mut test_env, validator) =
+                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let delegator = Addr::unchecked("delegator1");
+
+            // init balance
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "TOKEN")])
+                .unwrap();
+
+            // delegate all tokens
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap();
+            // unstake in multiple steps
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(50, "TOKEN"),
+                },
+            )
+            .unwrap();
+            test_env.block.time = test_env.block.time.plus_seconds(10);
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(30, "TOKEN"),
+                },
+            )
+            .unwrap();
+            test_env.block.time = test_env.block.time.plus_seconds(10);
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(20, "TOKEN"),
+                },
+            )
+            .unwrap();
+
+            // wait for first unbonding to complete (but not the others) and process queue
+            test_env.block.time = test_env.block.time.plus_seconds(40);
+            test_env
+                .router
+                .staking
+                .sudo(
+                    &test_env.api,
+                    &mut test_env.store,
+                    &test_env.router,
+                    &test_env.block,
+                    StakingSudo::ProcessQueue {},
+                )
+                .unwrap();
+
+            // query delegations
+            // we now have 0 stake, 50 unbonding and 50 completed unbonding
+            let response1: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            let response2: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegation,
+                Some(FullDelegation {
+                    delegator: delegator.clone(),
+                    validator: validator.to_string(),
+                    amount: coin(50, "TOKEN"),
+                    can_redelegate: coin(50, "TOKEN"),
+                    accumulated_rewards: vec![],
+                })
+            );
+            assert_eq!(
+                response2.delegations,
+                vec![Delegation {
+                    delegator: delegator.clone(),
+                    validator: validator.to_string(),
+                    amount: coin(50, "TOKEN"),
+                }]
+            );
+
+            // wait for the rest to complete
+            test_env.block.time = test_env.block.time.plus_seconds(20);
+            test_env
+                .router
+                .staking
+                .sudo(
+                    &test_env.api,
+                    &mut test_env.store,
+                    &test_env.router,
+                    &test_env.block,
+                    StakingSudo::ProcessQueue {},
+                )
+                .unwrap();
+
+            // query delegations again
+            let response1: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            let response2: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegation, None,
+                "delegator should have nothing left"
+            );
+            assert!(response2.delegations.is_empty());
+        }
+
+        #[test]
+        fn delegation_queries_slashed() {
+            // run all staking queries
+            let (mut test_env, validator) =
+                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let delegator = Addr::unchecked("delegator");
+
+            // init balance
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator, vec![coin(333, "TOKEN")])
+                .unwrap();
+
+            // delegate some tokens
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(333, "TOKEN"),
+                },
+            )
+            .unwrap();
+            // unstake some
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(111, "TOKEN"),
+                },
+            )
+            .unwrap();
+
+            // slash validator
+            test_env
+                .router
+                .staking
+                .sudo(
+                    &test_env.api,
+                    &mut test_env.store,
+                    &test_env.router,
+                    &test_env.block,
+                    StakingSudo::Slash {
+                        validator: "testvaloper1".to_string(),
+                        percentage: Decimal::percent(50),
+                    },
+                )
+                .unwrap();
+
+            // query all delegations
+            let response1: AllDelegationsResponse = query_stake(
+                &test_env,
+                StakingQuery::AllDelegations {
+                    delegator: delegator.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response1.delegations[0],
+                Delegation {
+                    delegator: delegator.clone(),
+                    validator: validator.to_string(),
+                    amount: coin(166, "TOKEN"),
+                }
             );
         }
     }
