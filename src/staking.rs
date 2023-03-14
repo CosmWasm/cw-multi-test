@@ -766,7 +766,7 @@ impl Module for StakeKeeper {
                             .transpose()?;
 
                         Some(amount.map(|mut amount| {
-                            // include unbonding amounts
+                            // include unbonding amounts, mimicing the behaviour of the Cosmos SDK
                             amount.amount += unbondings
                                 .get(&validator.address)
                                 .copied()
@@ -807,7 +807,7 @@ impl Module for StakeKeeper {
                 )?;
                 let staking_info = Self::get_staking_info(&staking_storage)?;
 
-                // include unbonding amounts
+                // include unbonding amounts, mimicing the behaviour of the Cosmos SDK
                 let unbonding_amounts: Uint128 = UNBONDING_QUEUE
                     .may_load(&staking_storage)?
                     .unwrap_or_default()
