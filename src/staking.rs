@@ -95,8 +95,14 @@ const VALIDATORS: Deque<Validator> = Deque::new("validators");
 const VALIDATOR_INFO: Map<&Addr, ValidatorInfo> = Map::new("validator_info");
 /// The queue of unbonding operations. This is needed because unbonding has a waiting time. See [`StakeKeeper`]
 const UNBONDING_QUEUE: Item<VecDeque<Unbonding>> = Item::new("unbonding_queue");
+/// (addr) -> addr. Maps addresses to the address they have delegated
+/// to receive their staking rewards. A missing key => no delegation
+/// has been set.
+const WITHDRAW_ADDRESS: Map<&Addr, Addr> = Map::new("withdraw_address");
 
 pub const NAMESPACE_STAKING: &[u8] = b"staking";
+// https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/types/keys.go#L16
+pub const NAMESPACE_DISTRIBUTION: &[u8] = b"distribution";
 
 // We need to expand on this, but we will need this to properly test out staking
 #[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
@@ -887,6 +893,31 @@ impl DistributionKeeper {
 
         Ok(rewards)
     }
+
+    pub fn get_withdraw_address(storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
+        Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator)? {
+            Some(a) => a,
+            None => delegator.clone(),
+        })
+    }
+
+    // https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
+    pub fn set_withdraw_address(
+        storage: &mut dyn Storage,
+        delegator: &Addr,
+        withdraw_address: &Addr,
+    ) -> AnyResult<()> {
+        if delegator == withdraw_address {
+            WITHDRAW_ADDRESS.remove(storage, delegator);
+            Ok(())
+        } else {
+            // technically we should require that this address is not
+            // the address of a module. TODO: how?
+            WITHDRAW_ADDRESS
+                .save(storage, delegator, withdraw_address)
+                .map_err(|e| e.into())
+        }
+    }
 }
 
 impl Distribution for DistributionKeeper {}
@@ -912,14 +943,16 @@ impl Module for DistributionKeeper {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator_addr)?;
 
                 let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+                let distribution_storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
+                let receiver = Self::get_withdraw_address(&distribution_storage, &sender)?;
                 // directly mint rewards to delegator
                 router.sudo(
                     api,
                     storage,
                     block,
                     BankSudo::Mint {
-                        to_address: sender.to_string(),
+                        to_address: receiver.into_string(),
                         amount: vec![Coin {
                             amount: rewards,
                             denom: staking_info.bonded_denom.clone(),
@@ -936,6 +969,18 @@ impl Module for DistributionKeeper {
                         format!("{}{}", rewards, staking_info.bonded_denom),
                     )];
                 Ok(AppResponse { events, data: None })
+            }
+            DistributionMsg::SetWithdrawAddress { address } => {
+                let address = api.addr_validate(&address)?;
+                // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/msg_server.go#L38
+                let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
+                Self::set_withdraw_address(storage, &sender, &address)?;
+                Ok(AppResponse {
+                    data: None,
+                    // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
+                    events: vec![Event::new("set_withdraw_address")
+                        .add_attribute("withdraw_address", address)],
+                })
             }
             m => bail!("Unsupported distribution message: {:?}", m),
         }
@@ -1390,7 +1435,7 @@ mod test {
     }
 
     mod msg {
-        use cosmwasm_std::{from_slice, Addr, BondedDenomResponse, Decimal, StakingQuery};
+        use cosmwasm_std::{coins, from_slice, Addr, BondedDenomResponse, Decimal, StakingQuery};
         use serde::de::DeserializeOwned;
 
         use super::*;
@@ -1488,6 +1533,7 @@ mod test {
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
             let delegator1 = Addr::unchecked("delegator1");
+            let reward_receiver = Addr::unchecked("rewardreceiver");
 
             // fund delegator1 account
             test_env
@@ -1531,6 +1577,16 @@ mod test {
             // wait a year
             test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
 
+            // change the withdrawal address
+            execute_distr(
+                &mut test_env,
+                delegator1.clone(),
+                DistributionMsg::SetWithdrawAddress {
+                    address: reward_receiver.to_string(),
+                },
+            )
+            .unwrap();
+
             // withdraw rewards
             execute_distr(
                 &mut test_env,
@@ -1540,6 +1596,13 @@ mod test {
                 },
             )
             .unwrap();
+
+            // withdrawal address received rewards.
+            assert_balances(
+                &test_env,
+                // one year, 10%apr, 10%commision, 100 tokens staked
+                vec![(reward_receiver, 100 / 10 * 9 / 10)],
+            );
 
             // redelegate to validator2
             execute_stake(
@@ -1553,11 +1616,8 @@ mod test {
             )
             .unwrap();
 
-            // should have same amount as before
-            assert_balances(
-                &test_env,
-                vec![(delegator1.clone(), 900 + 100 / 10 * 9 / 10)],
-            );
+            // should have same amount as before (rewards receiver received rewards).
+            assert_balances(&test_env, vec![(delegator1.clone(), 900)]);
 
             let delegations: AllDelegationsResponse = query_stake(
                 &test_env,
@@ -1603,9 +1663,86 @@ mod test {
                 .unwrap();
 
             // check bank balance
+            assert_balances(&test_env, vec![(delegator1.clone(), 1000)]);
+        }
+
+        #[test]
+        fn can_set_withdraw_address() {
+            let (mut test_env, validator) =
+                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+
+            let delegator = Addr::unchecked("delegator");
+            let reward_receiver = Addr::unchecked("rewardreceiver");
+
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator, coins(100, "TOKEN"))
+                .unwrap();
+
+            // Stake 100 tokens to the validator.
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap();
+
+            // Change rewards receiver.
+            execute_distr(
+                &mut test_env,
+                delegator.clone(),
+                DistributionMsg::SetWithdrawAddress {
+                    address: reward_receiver.to_string(),
+                },
+            )
+            .unwrap();
+
+            // A year passes.
+            test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+
+            // Withdraw rewards to reward receiver.
+            execute_distr(
+                &mut test_env,
+                delegator.clone(),
+                DistributionMsg::WithdrawDelegatorReward {
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+
+            // Change reward receiver back to delegator.
+            execute_distr(
+                &mut test_env,
+                delegator.clone(),
+                DistributionMsg::SetWithdrawAddress {
+                    address: delegator.to_string(),
+                },
+            )
+            .unwrap();
+
+            // Another year passes.
+            test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+
+            // Withdraw rewards to delegator.
+            execute_distr(
+                &mut test_env,
+                delegator.clone(),
+                DistributionMsg::WithdrawDelegatorReward {
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+
+            // one year, 10%apr, 10%commision, 100 tokens staked
+            let rewards_yr = 100 / 10 * 9 / 10;
+
             assert_balances(
                 &test_env,
-                vec![(delegator1.clone(), 1000 + 100 / 10 * 9 / 10)],
+                vec![(reward_receiver, rewards_yr), (delegator, rewards_yr)],
             );
         }
 
