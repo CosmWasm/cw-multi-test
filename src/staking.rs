@@ -406,13 +406,20 @@ impl StakeKeeper {
         let mut validator_info = VALIDATOR_INFO
             .may_load(staking_storage, validator)?
             .unwrap_or_else(|| ValidatorInfo::new(block.time));
-        let mut shares = STAKES
-            .may_load(staking_storage, (delegator, validator))?
-            .unwrap_or_default();
+        let shares = STAKES.may_load(staking_storage, (delegator, validator))?;
+        let mut shares = if sub {
+            // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1005-L1007
+            // and https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L31
+            shares.ok_or_else(|| anyhow!("no delegation for (address, validator) tuple"))?
+        } else {
+            shares.unwrap_or_default()
+        };
+
         let amount_dec = Decimal::from_ratio(amount, 1u128);
         if sub {
+            // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1019-L1022
             if amount_dec > shares.stake {
-                bail!("insufficient stake");
+                bail!("invalid shares amount");
             }
             shares.stake -= amount_dec;
             validator_info.stake = validator_info.stake.checked_sub(amount)?;
@@ -536,6 +543,11 @@ impl Module for StakeKeeper {
             StakingMsg::Delegate { validator, amount } => {
                 let validator = api.addr_validate(&validator)?;
 
+                // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L202-L207
+                if amount.amount.is_zero() {
+                    bail!("invalid delegation amount");
+                }
+
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L251-L256
                 let events = vec![Event::new("delegate")
                     .add_attribute("validator", &validator)
@@ -568,6 +580,11 @@ impl Module for StakeKeeper {
             StakingMsg::Undelegate { validator, amount } => {
                 let validator = api.addr_validate(&validator)?;
                 self.validate_denom(&staking_storage, &amount)?;
+
+                // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
+                if amount.amount.is_zero() {
+                    bail!("invalid shares amount");
+                }
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L378-L383
                 let events = vec![Event::new("unbond")
@@ -1747,7 +1764,7 @@ mod test {
             )
             .unwrap_err();
 
-            assert_eq!(e.to_string(), "insufficient stake");
+            assert_eq!(e.to_string(), "invalid shares amount");
 
             // add second validator
             let validator2 = Addr::unchecked("validator2");
@@ -1778,7 +1795,22 @@ mod test {
                 },
             )
             .unwrap_err();
-            assert_eq!(e.to_string(), "insufficient stake");
+            assert_eq!(e.to_string(), "invalid shares amount");
+
+            // undelegate from non-existing delegation
+            let e = execute_stake(
+                &mut test_env,
+                delegator1.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator2.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap_err();
+            assert_eq!(
+                e.to_string(),
+                "no delegation for (address, validator) tuple"
+            );
         }
 
         #[test]
@@ -1845,14 +1877,14 @@ mod test {
         }
 
         #[test]
-        fn zero_staking_allowed() {
+        fn zero_staking_forbidden() {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
             let delegator = Addr::unchecked("delegator1");
 
             // delegate 0
-            execute_stake(
+            let err = execute_stake(
                 &mut test_env,
                 delegator.clone(),
                 StakingMsg::Delegate {
@@ -1860,10 +1892,11 @@ mod test {
                     amount: coin(0, "TOKEN"),
                 },
             )
-            .unwrap();
+            .unwrap_err();
+            assert_eq!(err.to_string(), "invalid delegation amount");
 
             // undelegate 0
-            execute_stake(
+            let err = execute_stake(
                 &mut test_env,
                 delegator,
                 StakingMsg::Undelegate {
@@ -1871,7 +1904,8 @@ mod test {
                     amount: coin(0, "TOKEN"),
                 },
             )
-            .unwrap();
+            .unwrap_err();
+            assert_eq!(err.to_string(), "invalid shares amount");
         }
 
         #[test]
