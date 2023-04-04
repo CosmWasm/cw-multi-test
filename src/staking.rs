@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeSet, VecDeque};
 
 use anyhow::{anyhow, bail, Result as AnyResult};
 use schemars::JsonSchema;
@@ -421,17 +421,8 @@ impl StakeKeeper {
             validator_info.stake = validator_info.stake.checked_add(amount)?;
         }
 
-        // check if any unbonding stake is left
-        let unbonding = UNBONDING_QUEUE
-            .may_load(staking_storage)?
-            .unwrap_or_default()
-            .into_iter()
-            .filter(|ub| &ub.delegator == delegator && &ub.validator == validator)
-            .map(|ub| ub.amount)
-            .sum::<Uint128>();
-
         // save updated values
-        if shares.stake.is_zero() && unbonding.is_zero() {
+        if shares.stake.is_zero() {
             // no more stake, so remove
             STAKES.remove(staking_storage, (delegator, validator));
             validator_info.stakers.remove(delegator);
@@ -749,16 +740,6 @@ impl Module for StakeKeeper {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
 
-                let mut unbondings = HashMap::new();
-                for ub in UNBONDING_QUEUE
-                    .may_load(&staking_storage)?
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter(|ub| ub.delegator == delegator)
-                {
-                    *unbondings.entry(ub.validator.into_string()).or_default() += ub.amount;
-                }
-
                 let res: AnyResult<Vec<Delegation>> = validators
                     .into_iter()
                     .filter_map(|validator| {
@@ -771,17 +752,10 @@ impl Module for StakeKeeper {
                             )
                             .transpose()?;
 
-                        Some(amount.map(|mut amount| {
-                            // include unbonding amounts, mimicing the behaviour of the Cosmos SDK
-                            amount.amount += unbondings
-                                .get(&validator.address)
-                                .copied()
-                                .unwrap_or(Uint128::zero());
-                            Delegation {
-                                delegator,
-                                validator: validator.address,
-                                amount,
-                            }
+                        Some(amount.map(|amount| Delegation {
+                            delegator,
+                            validator: validator.address,
+                            amount,
                         }))
                     })
                     .collect();
@@ -813,19 +787,8 @@ impl Module for StakeKeeper {
                 )?;
                 let staking_info = Self::get_staking_info(&staking_storage)?;
 
-                // include unbonding amounts, mimicing the behaviour of the Cosmos SDK
-                let unbonding_amounts: Uint128 = UNBONDING_QUEUE
-                    .may_load(&staking_storage)?
-                    .unwrap_or_default()
-                    .into_iter()
-                    .filter(|ub| ub.delegator == delegator && ub.validator == validator)
-                    .map(|ub| ub.amount)
-                    .sum();
-
                 let amount = coin(
-                    (shares.stake * Uint128::new(1))
-                        .checked_add(unbonding_amounts)?
-                        .u128(),
+                    (shares.stake * Uint128::new(1)).u128(),
                     staking_info.bonded_denom,
                 );
 
