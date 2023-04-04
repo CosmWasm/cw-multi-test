@@ -1435,7 +1435,9 @@ mod test {
     }
 
     mod msg {
-        use cosmwasm_std::{coins, from_slice, Addr, BondedDenomResponse, Decimal, StakingQuery};
+        use cosmwasm_std::{
+            coins, from_slice, Addr, BondedDenomResponse, Decimal, QuerierWrapper, StakingQuery,
+        };
         use serde::de::DeserializeOwned;
 
         use super::*;
@@ -2039,7 +2041,7 @@ mod test {
                     Delegation {
                         delegator: delegator1.clone(),
                         validator: validator1.to_string(),
-                        amount: coin(100, "TOKEN"),
+                        amount: coin(50, "TOKEN"),
                     },
                     Delegation {
                         delegator: delegator1.clone(),
@@ -2061,9 +2063,9 @@ mod test {
                 FullDelegation {
                     delegator: delegator2.clone(),
                     validator: validator1.to_string(),
-                    amount: coin(150, "TOKEN"),
+                    amount: coin(100, "TOKEN"),
                     accumulated_rewards: vec![],
-                    can_redelegate: coin(150, "TOKEN"),
+                    can_redelegate: coin(100, "TOKEN"),
                 },
             );
         }
@@ -2141,7 +2143,7 @@ mod test {
                 vec![Delegation {
                     delegator: delegator1.clone(),
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(50, "TOKEN"),
                 }]
             );
             let response2: DelegationResponse = query_stake(
@@ -2152,60 +2154,7 @@ mod test {
                 },
             )
             .unwrap();
-            assert_eq!(
-                response2.delegation.unwrap(),
-                FullDelegation {
-                    delegator: delegator2.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(150, "TOKEN"),
-                    accumulated_rewards: vec![],
-                    can_redelegate: coin(150, "TOKEN"),
-                },
-            );
-
-            // wait until unbonding time is over
-            test_env.block.time = test_env.block.time.plus_seconds(60);
-            test_env
-                .router
-                .staking
-                .sudo(
-                    &test_env.api,
-                    &mut test_env.store,
-                    &test_env.router,
-                    &test_env.block,
-                    StakingSudo::ProcessQueue {},
-                )
-                .unwrap();
-
-            // query all delegations again
-            let response1: AllDelegationsResponse = query_stake(
-                &test_env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response1.delegations,
-                vec![Delegation {
-                    delegator: delegator1.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
-                }],
-                "delegator1 should have less now"
-            );
-            let response2: DelegationResponse = query_stake(
-                &test_env,
-                StakingQuery::Delegation {
-                    delegator: delegator2.to_string(),
-                    validator: validator.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response2.delegation, None,
-                "delegator2 should have nothing left"
-            );
+            assert_eq!(response2.delegation, None);
 
             // unstake rest of delegator1's stake in two steps
             execute_stake(
@@ -2245,51 +2194,14 @@ mod test {
             )
             .unwrap();
             assert_eq!(
-                response1.delegation.unwrap().amount.amount.u128(),
-                50,
-                "delegator1 should still have 50 tokens unbonding"
-            );
-            assert_eq!(response2.delegations[0].amount.amount.u128(), 50);
-
-            // wait until unbonding time is over
-            test_env.block.time = test_env.block.time.plus_seconds(60);
-            test_env
-                .router
-                .staking
-                .sudo(
-                    &test_env.api,
-                    &mut test_env.store,
-                    &test_env.router,
-                    &test_env.block,
-                    StakingSudo::ProcessQueue {},
-                )
-                .unwrap();
-
-            // query all delegations again
-            let response1: DelegationResponse = query_stake(
-                &test_env,
-                StakingQuery::Delegation {
-                    delegator: delegator1.to_string(),
-                    validator: validator.to_string(),
-                },
-            )
-            .unwrap();
-            let response2: AllDelegationsResponse = query_stake(
-                &test_env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
                 response1.delegation, None,
-                "delegator1 should have nothing left"
+                "delegator1 should have no delegations left"
             );
-            assert!(response2.delegations.is_empty());
+            assert_eq!(response2.delegations, vec![]);
         }
 
         #[test]
-        fn partial_unbonding_keeps_stake() {
+        fn partial_unbonding_reduces_stake() {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
             let delegator = Addr::unchecked("delegator1");
@@ -2373,24 +2285,8 @@ mod test {
                 },
             )
             .unwrap();
-            assert_eq!(
-                response1.delegation,
-                Some(FullDelegation {
-                    delegator: delegator.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
-                    can_redelegate: coin(50, "TOKEN"),
-                    accumulated_rewards: vec![],
-                })
-            );
-            assert_eq!(
-                response2.delegations,
-                vec![Delegation {
-                    delegator: delegator.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
-                }]
-            );
+            assert_eq!(response1.delegation, None);
+            assert_eq!(response2.delegations, vec![]);
 
             // wait for the rest to complete
             test_env.block.time = test_env.block.time.plus_seconds(20);
@@ -2493,9 +2389,31 @@ mod test {
                 Delegation {
                     delegator: delegator.clone(),
                     validator: validator.to_string(),
-                    amount: coin(166, "TOKEN"),
+                    amount: coin(111, "TOKEN"),
                 }
             );
+
+            // wait until unbonding is complete and check if amount was slashed
+            test_env.block.time = test_env.block.time.plus_seconds(60);
+            test_env
+                .router
+                .staking
+                .sudo(
+                    &test_env.api,
+                    &mut test_env.store,
+                    &test_env.router,
+                    &test_env.block,
+                    StakingSudo::ProcessQueue {},
+                )
+                .unwrap();
+            let balance = QuerierWrapper::<Empty>::new(&test_env.router.querier(
+                &test_env.api,
+                &test_env.store,
+                &test_env.block,
+            ))
+            .query_balance(delegator, "TOKEN")
+            .unwrap();
+            assert_eq!(balance.amount.u128(), 55);
         }
     }
 }
