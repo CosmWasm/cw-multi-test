@@ -272,7 +272,8 @@ impl StakeKeeper {
 
         let mut validator_info = VALIDATOR_INFO
             .may_load(staking_storage, validator)?
-            .ok_or_else(|| anyhow!("validator {} not found", validator))?;
+            // https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L15
+            .ok_or_else(|| anyhow!("validator does not exist"))?;
 
         let validator_obj = VALIDATOR_MAP.load(staking_storage, validator)?;
 
@@ -457,7 +458,7 @@ impl StakeKeeper {
         // update stake of validator and stakers
         let mut validator_info = VALIDATOR_INFO
             .may_load(staking_storage, validator)?
-            .ok_or_else(|| anyhow!("validator {} not found", validator))?;
+            .unwrap();
 
         let remaining_percentage = Decimal::one() - percentage;
         validator_info.stake = validator_info.stake * remaining_percentage;
@@ -562,19 +563,17 @@ impl Module for StakeKeeper {
                     amount.clone(),
                 )?;
                 // move money from sender account to this module (note we can control sender here)
-                if !amount.amount.is_zero() {
-                    router.execute(
-                        api,
-                        storage,
-                        block,
-                        sender,
-                        BankMsg::Send {
-                            to_address: self.module_addr.to_string(),
-                            amount: vec![amount],
-                        }
-                        .into(),
-                    )?;
-                }
+                router.execute(
+                    api,
+                    storage,
+                    block,
+                    sender,
+                    BankMsg::Send {
+                        to_address: self.module_addr.to_string(),
+                        amount: vec![amount],
+                    }
+                    .into(),
+                )?;
                 Ok(AppResponse { events, data: None })
             }
             StakingMsg::Undelegate { validator, amount } => {
@@ -1873,7 +1872,47 @@ mod test {
                     },
                 )
                 .unwrap_err();
-            assert_eq!(e.to_string(), "validator nonexistingvaloper not found");
+            assert_eq!(e.to_string(), "validator does not exist");
+        }
+
+        #[test]
+        fn non_existent_validator() {
+            let (mut test_env, _) =
+                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+
+            let delegator = Addr::unchecked("delegator1");
+            let validator = "testvaloper2";
+
+            // init balances
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "TOKEN")])
+                .unwrap();
+
+            // try to delegate
+            let err = execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap_err();
+            assert_eq!(err.to_string(), "validator does not exist");
+
+            // try to undelegate
+            let err = execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Undelegate {
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap_err();
+            assert_eq!(err.to_string(), "validator does not exist");
         }
 
         #[test]
@@ -2323,7 +2362,7 @@ mod test {
         }
 
         #[test]
-        fn delegation_queries_slashed() {
+        fn delegations_slashed() {
             // run all staking queries
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
