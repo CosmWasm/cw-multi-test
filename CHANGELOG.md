@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.16.3](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.3) (2023-04-06)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.2...v0.16.3)
+
+**Closed issues:**
+
+- Staking / Undelegation calculation issue [\#31](https://github.com/CosmWasm/cw-multi-test/issues/31)
+
+**Merged pull requests:**
+
+- Delegation query fixes [\#32](https://github.com/CosmWasm/cw-multi-test/pull/32) ([chipshort](https://github.com/chipshort))
+- Fix use of deprecated fn [\#28](https://github.com/CosmWasm/cw-multi-test/pull/28) ([chipshort](https://github.com/chipshort))
+- Fix delegation queries [\#25](https://github.com/CosmWasm/cw-multi-test/pull/25) ([chipshort](https://github.com/chipshort))
+- Add message SetWithdrawAddress to distribution module [\#23](https://github.com/CosmWasm/cw-multi-test/pull/23) ([0xekez](https://github.com/0xekez))
+- Ibc exposure [\#19](https://github.com/CosmWasm/cw-multi-test/pull/19) ([hashedone](https://github.com/hashedone))
+- minor: Expose `Ibc` trait for use by other crates [\#18](https://github.com/CosmWasm/cw-multi-test/pull/18) ([KirilMihaylov](https://github.com/KirilMihaylov))
+
 ## [v0.16.2](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.2) (2022-12-15)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.1...v0.16.2)
