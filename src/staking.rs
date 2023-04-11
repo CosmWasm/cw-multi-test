@@ -2450,5 +2450,51 @@ mod test {
             .unwrap();
             assert_eq!(balance.amount.u128(), 55);
         }
+
+        #[test]
+        fn rewards_initial_wait() {
+            let (mut test_env, validator) =
+                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::zero()));
+            let delegator = Addr::unchecked("delegator");
+
+            // init balance
+            test_env
+                .router
+                .bank
+                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "TOKEN")])
+                .unwrap();
+
+            // wait a year before staking
+            const YEAR: u64 = 60 * 60 * 24 * 365;
+            test_env.block.time = test_env.block.time.plus_seconds(YEAR);
+
+            // delegate some tokens
+            execute_stake(
+                &mut test_env,
+                delegator.clone(),
+                StakingMsg::Delegate {
+                    validator: validator.to_string(),
+                    amount: coin(100, "TOKEN"),
+                },
+            )
+            .unwrap();
+
+            // wait another year
+            test_env.block.time = test_env.block.time.plus_seconds(YEAR);
+
+            // query rewards
+            let response: DelegationResponse = query_stake(
+                &test_env,
+                StakingQuery::Delegation {
+                    delegator: delegator.to_string(),
+                    validator: validator.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(
+                response.delegation.unwrap().accumulated_rewards,
+                vec![coin(10, "TOKEN")] // 10% of 100
+            );
+        }
     }
 }
