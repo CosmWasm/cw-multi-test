@@ -289,13 +289,12 @@ impl StakeKeeper {
             validator_info.stake,
         );
 
-        // update validator info and delegators
+        // update validator info
+        validator_info.last_rewards_calculation = block.time;
+        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+
+        // update delegators
         if !new_rewards.is_zero() {
-            validator_info.last_rewards_calculation = block.time;
-
-            // save updated validator
-            VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
-
             let validator_addr = api.addr_validate(&validator_obj.address)?;
             // update all delegators
             for staker in validator_info.stakers.iter() {
