@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.16.4](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.4) (2023-04-12)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.3...v0.16.4)
+
+**Closed issues:**
+
+- Staking rewards accrue differently when redelegated [\#30](https://github.com/CosmWasm/cw-multi-test/issues/30)
+
+**Merged pull requests:**
+
+- Staking rewards fix [\#34](https://github.com/CosmWasm/cw-multi-test/pull/34) ([chipshort](https://github.com/chipshort))
+
 ## [v0.16.3](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.3) (2023-04-06)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.2...v0.16.3)
