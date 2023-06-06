@@ -520,7 +520,10 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
         }
     }
 
-    /// Overwrites default ibc interface
+    /// Overwrites default ibc interface.
+    ///
+    /// If you wish to simply ignore/drop all returned IBC Messages, you can use the `IbcAcceptingModule` type.
+    ///     builder.with_ibc(IbcAcceptingModule::new())
     pub fn with_ibc<NewIbc: Ibc>(
         self,
         ibc: NewIbc,
