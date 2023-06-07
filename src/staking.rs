@@ -488,6 +488,7 @@ impl StakeKeeper {
         let mut unbonding_queue = UNBONDING_QUEUE
             .may_load(staking_storage)?
             .unwrap_or_default();
+        #[allow(clippy::op_ref)]
         unbonding_queue
             .iter_mut()
             .filter(|ub| &ub.validator == validator)
