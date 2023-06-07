@@ -29,7 +29,10 @@ pub use crate::app::{
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
 pub use crate::contracts::{Contract, ContractWrapper};
 pub use crate::executor::{AppResponse, Executor};
+pub use crate::gov::Gov;
 pub use crate::ibc::{Ibc, IbcAcceptingModule};
 pub use crate::module::{FailingModule, Module};
-pub use crate::staking::{DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo};
+pub use crate::staking::{
+    Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
+};
 pub use crate::wasm::{AddressGenerator, Wasm, WasmKeeper, WasmSudo};
