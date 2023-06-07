@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.16.5](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.5) (2023-06-07)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.4...v0.16.5)
+
+**Closed issues:**
+
+- Expose Distribution and Gov traits [\#42](https://github.com/CosmWasm/cw-multi-test/issues/42)
+- Expose gov::Gov trait [\#21](https://github.com/CosmWasm/cw-multi-test/issues/21)
+
+**Merged pull requests:**
+
+- Staking rewards fix [\#41](https://github.com/CosmWasm/cw-multi-test/pull/41) ([chipshort](https://github.com/chipshort))
+- Expose Gov and Distribution traits [\#43](https://github.com/CosmWasm/cw-multi-test/pull/43) ([chipshort](https://github.com/chipshort))
+
 ## [v0.16.4](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.4) (2023-04-12)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.3...v0.16.4)
