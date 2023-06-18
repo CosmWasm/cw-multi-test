@@ -99,7 +99,7 @@ impl BasicApp {
 /// Outside of `App` implementation to make type elision better.
 pub fn custom_app<ExecC, QueryC, F>(init_fn: F) -> BasicApp<ExecC, QueryC>
 where
-    ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: cosmwasm_std::CustomMsg + DeserializeOwned + 'static,
     QueryC: Debug + CustomQuery + DeserializeOwned + 'static,
     F: FnOnce(
         &mut Router<
@@ -255,7 +255,7 @@ impl<ExecC, QueryC>
         FailingModule<GovMsg, Empty, Empty>,
     >
 where
-    ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: cosmwasm_std::CustomMsg + DeserializeOwned + 'static,
     QueryC: Debug + CustomQuery + DeserializeOwned + 'static,
 {
     /// Creates builder with default components designed to work with custom exec and query
@@ -696,7 +696,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: cosmwasm_std::CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
     /// This registers contract code (like uploading wasm bytecode on a chain),
@@ -1540,6 +1540,8 @@ mod test {
             // we transfer PITY from lucky_winner to runner_up
             runner_up: String,
         }
+
+        impl cosmwasm_std::CustomMsg for CustomMsg{}
 
         struct CustomHandler {}
 

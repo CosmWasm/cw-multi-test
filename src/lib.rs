@@ -10,6 +10,7 @@ mod app;
 mod bank;
 #[allow(clippy::type_complexity)]
 mod contracts;
+pub mod wasm_contract;
 pub mod custom_handler;
 pub mod error;
 mod executor;

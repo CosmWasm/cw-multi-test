@@ -17,4 +17,6 @@ pub enum CustomMsg {
     SetAge { age: u32 },
 }
 
+impl cosmwasm_std::CustomMsg for CustomMsg{}
+
 const COUNT: Item<u32> = Item::new("count");
