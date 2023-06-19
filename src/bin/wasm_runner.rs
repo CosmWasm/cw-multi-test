@@ -143,7 +143,6 @@ impl DualStorage{
 	}
 
 	pub fn get_all_storage(&mut self) -> AnyResult<Vec<(Vec<u8>, Vec<u8>)>>{
-
 		let iterator_id = self.local_storage.scan(None, None, Order::Ascending).0?;
 		let all_records = self.local_storage.all(iterator_id);
 
@@ -152,7 +151,6 @@ impl DualStorage{
 }
 
 impl Storage for DualStorage{
-
     fn get(&self, key: &[u8]) -> BackendResult<Option<Vec<u8>>>{
     	// First we try to get the value locally
     	let (mut value, gas_info) = self.local_storage.get(key);
@@ -164,7 +162,6 @@ impl Storage for DualStorage{
     		}
     	}
     	(value, gas_info)
-
     }
 
 	#[cfg(feature = "iterator")]

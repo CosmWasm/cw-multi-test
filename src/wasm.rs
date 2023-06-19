@@ -1,4 +1,3 @@
-use cosmwasm_std::CustomMsg;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
@@ -22,16 +21,9 @@ use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use crate::wasm_contract::WasmContract;
 use cosmwasm_std::testing::mock_wasmd_attr;
 
 use anyhow::{bail, Context, Result as AnyResult};
-
-use cw_orch::daemon::queriers::CosmWasm;
-use cw_orch::prelude::queriers::DaemonQuerier;
-use cw_orch::daemon::GrpcChannel;
-use tokio::runtime::Runtime;
-use ibc_chain_registry::chain::ChainData;
 
 // Contract state is kept in Storage, separate from the contracts themselves
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
@@ -105,9 +97,6 @@ pub trait Wasm<ExecC, QueryC> {
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
-
-    wasm_querier: Option<CosmWasm>,
-
     /// code is in-memory lookup that stands in for wasm code
     /// this can only be edited on the WasmRouter, and just read in caches
     codes: HashMap<usize, Box<dyn Contract<ExecC, QueryC>>>,
@@ -140,7 +129,6 @@ impl AddressGenerator for SimpleAddressGenerator {
 impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
     fn default() -> Self {
         Self {
-            wasm_querier: None,
             codes: HashMap::default(),
             _p: std::marker::PhantomData,
             generator: Box::new(SimpleAddressGenerator()),
@@ -150,7 +138,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> Wasm<ExecC, QueryC> for WasmKeeper<ExecC, QueryC>
 where
-    ExecC: cosmwasm_std::CustomMsg + DeserializeOwned + 'static,
+    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn query(
@@ -216,17 +204,9 @@ where
     }
 }
 
-/// We use this constant to differentiate the local code_ids from the distant ones
-const CODE_ID_PREFIX: usize = 75000;
-
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     pub fn store_code(&mut self, code: Box<dyn Contract<ExecC, QueryC>>) -> usize {
-        let idx = self.codes.len() + 1 + CODE_ID_PREFIX;
-        self.codes.insert(idx, code);
-        idx
-    }
-
-    pub fn store_code_at(&mut self, idx: usize, code: Box<dyn Contract<ExecC, QueryC>>) -> usize {
+        let idx = self.codes.len() + 1;
         self.codes.insert(idx, code);
         idx
     }
@@ -314,29 +294,16 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC>
 where
-    ExecC: CustomMsg + DeserializeOwned + 'static,
+    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn new_with_chain(c: ChainData) -> anyhow::Result<Self>{
-        let default = Self::default();
-        let rt = Runtime::new()?;
-        let channel = rt.block_on(GrpcChannel::connect(&c.apis.grpc, &c.chain_id))?;
-        Ok(Self {
-            wasm_querier: Some(CosmWasm::new(channel)),
-            codes: default.codes,
-            _p: default._p,
-            generator: default.generator
-        })
-    }
-
     pub fn new_with_custom_address_generator(generator: impl AddressGenerator + 'static) -> Self {
         let default = Self::default();
         Self {
-            wasm_querier: None,
             codes: default.codes,
             _p: default._p,
             generator: Box::new(generator),
@@ -900,26 +867,8 @@ where
         action(handler, deps, env)
     }
 
-    fn optional_store_code_handler(&mut self, code_id: usize, address: String) -> AnyResult<()>{
-         // First we look for the code_id locally
-        if self
-            .codes
-            .get(&code_id).is_none() {
-
-            // If it can't be found locally, we look for it online
-            let rt = Runtime::new()?;
-            let code = rt.block_on(self.wasm_querier.as_ref().unwrap().code_data(code_id.try_into().unwrap()))?;
-
-            // We create the contract
-            let contract = WasmContract::new(code, address);
-            // We save the contract in storage
-            self.store_code_at(code_id, Box::new(contract));
-        };
-        Ok(())
-    }
-
     fn with_storage<F, T>(
-        &mut self,
+        &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
@@ -932,13 +881,11 @@ where
         ExecC: DeserializeOwned,
     {
         let contract = self.load_contract(storage, &address)?;
-
-        // Because we need to look for online codes, we decomopse this line in 2 steps
-        self.optional_store_code_handler(contract.code_id, address.to_string())?;
         let handler = self
             .codes
             .get(&contract.code_id)
             .ok_or(Error::UnregisteredCodeId(contract.code_id))?;
+
         // We don't actually need a transaction here, as it is already embedded in a transactional.
         // execute_submsg or App.execute_multi.
         // However, we need to get write and read access to the same storage in two different objects,

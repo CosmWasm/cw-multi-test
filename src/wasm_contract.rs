@@ -32,8 +32,8 @@ use cosmwasm_std::{
 use anyhow::{anyhow, Result as AnyResult};
 
 // Here we create a cosmwasm-vm instance with the right definition()
-pub fn mutable_cosmwasm_vm_instance<'a, T, Q: CustomQuery>(
-    deps: DepsMut<Q>,
+pub fn mutable_cosmwasm_vm_instance<'a, T, Q: CustomQuery + 'a>(
+    deps: DepsMut<'a, Q>,
     wasm: &[u8],
 ) -> Instance<MockApi, &'a mut dyn cosmwasm_std::Storage, cosmwasm_std::QuerierWrapper<'a, Q>>
 where 
@@ -110,7 +110,7 @@ impl<T,Q> Contract<T, Q> for WasmContract
         msg: Vec<u8>,
     ) -> AnyResult<Response<T>> {
 
-        let instance = mutable_cosmwasm_vm_instance::<T, Q>(deps, &self.code);
+        let mut instance = mutable_cosmwasm_vm_instance::<T, Q>(deps, &self.code);
 
         call_execute(&mut instance, &env, &info, &msg).unwrap().into_result().map_err(|err| anyhow!(err))
     }
@@ -122,20 +122,20 @@ impl<T,Q> Contract<T, Q> for WasmContract
         info: MessageInfo,
         msg: Vec<u8>,
     ) -> AnyResult<Response<T>> {
-        let instance = mutable_cosmwasm_vm_instance::<T, Q>(deps, &self.code);
+        let mut instance = mutable_cosmwasm_vm_instance::<T, Q>(deps, &self.code);
 
         call_instantiate(&mut instance, &env, &info, &msg).unwrap().into_result().map_err(|err| anyhow!(err))
     }
 
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
-        let instance = cosmwasm_vm_instance::<T, Q>(deps, &self.code);
+        let mut instance = cosmwasm_vm_instance::<T, Q>(deps, &self.code);
 
         call_query(&mut instance, &env, &msg).unwrap().into_result().map_err(|err| anyhow!(err))
     }
 
     // this returns an error if the contract doesn't implement sudo
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>> {
-        let instance = mutable_cosmwasm_vm_instance::<T, Q>(deps, &self.code);
+        let mut instance = mutable_cosmwasm_vm_instance::<T, Q>(deps, &self.code);
 
         call_sudo(&mut instance, &env, &msg).unwrap().into_result().map_err(|err| anyhow!(err))
     }
