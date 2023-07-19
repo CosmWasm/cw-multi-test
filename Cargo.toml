@@ -28,11 +28,6 @@ anyhow = "1.0.41"
 thiserror = "1.0"
 derivative = "2"
 
-# We don't use the following dependencies directly. They're dependencies of our dependencies.
-# We specify them to tighten their version requirements so that builds with `-Zminimal-versions` work.
-# Once we bump `cosmwasm-*` deps to a version after `1.1.5`, we can remove these.
-k256 = { version = "0.11.1", features = ["ecdsa"] }
-
 [dev-dependencies]
 # We don't use the following dependencies directly. They're dependencies of our dependencies.
 # We specify them to tighten their version requirements so that builds with `-Zminimal-versions` work.
