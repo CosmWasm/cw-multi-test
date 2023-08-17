@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 
 use cosmwasm_std::{
     coin, to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery, Binary,
-    BlockInfo, Coin, Event, Querier, Storage,
+    BlockInfo, Coin, Event, Order, Querier, Storage, SupplyResponse, Uint128,
 };
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
@@ -18,7 +18,6 @@ const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
 
 pub const NAMESPACE_BANK: &[u8] = b"bank";
 
-// WIP
 #[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
 pub enum BankSudo {
     Mint {
@@ -48,6 +47,7 @@ impl BankKeeper {
         self.set_balance(&mut bank_storage, account, amount)
     }
 
+    // this is an "admin" function to let us adjust bank accounts
     fn set_balance(
         &self,
         bank_storage: &mut dyn Storage,
@@ -61,10 +61,25 @@ impl BankKeeper {
             .map_err(Into::into)
     }
 
-    // this is an "admin" function to let us adjust bank accounts
     fn get_balance(&self, bank_storage: &dyn Storage, account: &Addr) -> AnyResult<Vec<Coin>> {
         let val = BALANCES.may_load(bank_storage, account)?;
         Ok(val.unwrap_or_default().into_vec())
+    }
+
+    fn get_supply(&self, bank_storage: &dyn Storage, denom: String) -> AnyResult<Coin> {
+        let supply: Uint128 = BALANCES
+            .range(bank_storage, None, None, Order::Ascending)
+            .map(|a| a.unwrap().1)
+            .fold(Uint128::zero(), |accum, item| {
+                let mut subtotal = Uint128::zero();
+                for coin in item.into_vec() {
+                    if coin.denom == denom {
+                        subtotal += coin.amount;
+                    }
+                }
+                accum + subtotal
+            });
+        Ok(coin(supply.into(), denom))
     }
 
     fn send(
@@ -203,6 +218,12 @@ impl Module for BankKeeper {
                     .find(|c| c.denom == denom)
                     .unwrap_or_else(|| coin(0, denom));
                 let res = BalanceResponse { amount };
+                Ok(to_binary(&res)?)
+            }
+            BankQuery::Supply { denom } => {
+                let amount = self.get_supply(&bank_storage, denom)?;
+                let mut res = SupplyResponse::default();
+                res.amount = amount;
                 Ok(to_binary(&res)?)
             }
             q => bail!("Unsupported bank query: {:?}", q),
