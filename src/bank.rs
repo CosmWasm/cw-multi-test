@@ -317,6 +317,13 @@ mod test {
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
         let res: BalanceResponse = from_slice(&raw).unwrap();
         assert_eq!(res.amount, coin(0, "eth"));
+
+        let req = BankQuery::Supply {
+            denom: "eth".into(),
+        };
+        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+        let res: SupplyResponse = from_slice(&raw).unwrap();
+        assert_eq!(res.amount, coin(100, "eth"));
     }
 
     #[test]
