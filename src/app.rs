@@ -671,6 +671,15 @@ where
     {
         query_fn(&self.router, &self.api, &self.storage)
     }
+
+    /// This registers contract code (like uploading wasm bytecode on a chain),
+    /// so it can later be used to instantiate a contract.
+    pub fn store_code(
+        &mut self,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> AnyResult<u64> {
+        self.init_modules(|router, _, _| router.wasm.store_code(code))
+    }
 }
 
 // Helper functions to call some custom WasmKeeper logic.
@@ -699,12 +708,6 @@ where
     CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
-    /// This registers contract code (like uploading wasm bytecode on a chain),
-    /// so it can later be used to instantiate a contract.
-    pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
-        self.init_modules(|router, _, _| router.wasm.store_code(code) as u64)
-    }
-
     /// This allows to get `ContractData` for specific contract
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
         self.read_module(|router, _, storage| router.wasm.load_contract(storage, address))
