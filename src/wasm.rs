@@ -94,6 +94,8 @@ pub trait Wasm<ExecC, QueryC> {
         block: &BlockInfo,
         msg: Binary,
     ) -> AnyResult<AppResponse>;
+
+    fn store_code(&mut self, code: Box<dyn Contract<ExecC, QueryC>>) -> AnyResult<u64>;
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
@@ -201,6 +203,10 @@ where
         let res = self.call_sudo(contract.clone(), api, storage, router, block, msg.to_vec())?;
         let (res, msgs) = self.build_app_response(&contract, custom_event, res);
         self.process_response(api, router, storage, block, contract, res, msgs)
+    }
+
+    fn store_code(&mut self, code: Box<dyn Contract<ExecC, QueryC>>) -> AnyResult<u64> {
+        self.store_code(code).try_into().map_err(Into::into)
     }
 }
 
