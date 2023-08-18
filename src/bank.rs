@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 
 use cosmwasm_std::{
     coin, to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery, Binary,
-    BlockInfo, Coin, Event, Order, Querier, Storage, SupplyResponse, Uint128,
+    BlockInfo, Coin, Event, Order, Querier, StdResult, Storage, SupplyResponse, Uint128,
 };
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
@@ -69,7 +69,9 @@ impl BankKeeper {
     fn get_supply(&self, bank_storage: &dyn Storage, denom: String) -> AnyResult<Coin> {
         let supply: Uint128 = BALANCES
             .range(bank_storage, None, None, Order::Ascending)
-            .map(|a| a.unwrap().1)
+            .collect::<StdResult<Vec<_>>>()?
+            .into_iter()
+            .map(|a| a.1)
             .fold(Uint128::zero(), |accum, item| {
                 let mut subtotal = Uint128::zero();
                 for coin in item.into_vec() {
@@ -262,6 +264,7 @@ mod test {
         let mut store = MockStorage::new();
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
+        let router = MockRouter::default();
 
         let owner = Addr::unchecked("owner");
         let rcpt = Addr::unchecked("receiver");
@@ -311,19 +314,43 @@ mod test {
         assert_eq!(res.amount, coin(0, "foobar"));
 
         let req = BankQuery::Balance {
-            address: rcpt.into(),
+            address: rcpt.clone().into(),
             denom: "eth".into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
         let res: BalanceResponse = from_slice(&raw).unwrap();
         assert_eq!(res.amount, coin(0, "eth"));
 
+        // Query total supply of a denom
         let req = BankQuery::Supply {
             denom: "eth".into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
         let res: SupplyResponse = from_slice(&raw).unwrap();
         assert_eq!(res.amount, coin(100, "eth"));
+
+        // Mint tokens for recipient account
+        let msg = BankSudo::Mint {
+            to_address: rcpt.to_string(),
+            amount: norm.clone(),
+        };
+        bank.sudo(&api, &mut store, &router, &block, msg).unwrap();
+
+        // Check that the recipient account has the expected balance
+        let req = BankQuery::AllBalances {
+            address: rcpt.into(),
+        };
+        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+        let res: AllBalanceResponse = from_slice(&raw).unwrap();
+        assert_eq!(res.amount, norm);
+
+        // Check that the total supply of a denom is updated
+        let req = BankQuery::Supply {
+            denom: "eth".into(),
+        };
+        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+        let res: SupplyResponse = from_slice(&raw).unwrap();
+        assert_eq!(res.amount, coin(200, "eth"));
     }
 
     #[test]
