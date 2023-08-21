@@ -80,7 +80,7 @@ mod test {
     #[test]
     fn default_gov() {
         let mut app = App::default();
-        let code = app.store_code(contract());
+        let code = app.store_code(contract()).unwrap();
         let contract = app
             .instantiate_contract(
                 code,
@@ -101,7 +101,7 @@ mod test {
         let mut app = AppBuilder::new()
             .with_gov(AcceptingModule)
             .build(|_, _, _| ());
-        let code = app.store_code(contract());
+        let code = app.store_code(contract()).unwrap();
         let contract = app
             .instantiate_contract(
                 code,
