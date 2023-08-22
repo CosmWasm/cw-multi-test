@@ -1249,7 +1249,10 @@ mod test {
         // the call to payout does emit this as well as custom attributes
         let payout_exec = &res.events[0];
         assert_eq!(payout_exec.ty.as_str(), "execute");
-        assert_eq!(payout_exec.attributes, [("_contract_addr", &contract_addr)]);
+        assert_eq!(
+            payout_exec.attributes,
+            [("_contract_address", &contract_addr)]
+        );
 
         // next is a custom wasm event
         let custom_attrs = res.custom_attrs(1);
@@ -1334,19 +1337,22 @@ mod test {
         // reflect only returns standard wasm-execute event
         let ref_exec = &res.events[0];
         assert_eq!(ref_exec.ty.as_str(), "execute");
-        assert_eq!(ref_exec.attributes, [("_contract_addr", &reflect_addr)]);
+        assert_eq!(ref_exec.attributes, [("_contract_address", &reflect_addr)]);
 
         // the call to payout does emit this as well as custom attributes
         let payout_exec = &res.events[1];
         assert_eq!(payout_exec.ty.as_str(), "execute");
-        assert_eq!(payout_exec.attributes, [("_contract_addr", &payout_addr)]);
+        assert_eq!(
+            payout_exec.attributes,
+            [("_contract_address", &payout_addr)]
+        );
 
         let payout = &res.events[2];
         assert_eq!(payout.ty.as_str(), "wasm");
         assert_eq!(
             payout.attributes,
             [
-                ("_contract_addr", payout_addr.as_str()),
+                ("_contract_address", payout_addr.as_str()),
                 ("action", "payout")
             ]
         );
@@ -1418,7 +1424,7 @@ mod test {
         // standard wasm-execute event
         let exec = &res.events[0];
         assert_eq!(exec.ty.as_str(), "execute");
-        assert_eq!(exec.attributes, [("_contract_addr", &reflect_addr)]);
+        assert_eq!(exec.attributes, [("_contract_address", &reflect_addr)]);
         // only transfer event from bank
         let transfer = &res.events[1];
         assert_eq!(transfer.ty.as_str(), "transfer");
@@ -1713,11 +1719,11 @@ mod test {
 
         // expected events: execute, transfer, reply, custom wasm (set in reply)
         assert_eq!(4, res.events.len(), "{:?}", res.events);
-        res.assert_event(&Event::new("execute").add_attribute("_contract_addr", &reflect_addr));
+        res.assert_event(&Event::new("execute").add_attribute("_contract_address", &reflect_addr));
         res.assert_event(&Event::new("transfer").add_attribute("amount", "7eth"));
         res.assert_event(
             &Event::new("reply")
-                .add_attribute("_contract_addr", reflect_addr.as_str())
+                .add_attribute("_contract_address", reflect_addr.as_str())
                 .add_attribute("mode", "handle_success"),
         );
         res.assert_event(&Event::new("wasm-custom").add_attribute("from", "reply"));
@@ -2289,8 +2295,10 @@ mod test {
             assert_eq!(res.data, None);
             // ensure expected events
             assert_eq!(res.events.len(), 3, "{:?}", res.events);
-            res.assert_event(&Event::new("execute").add_attribute("_contract_addr", &reflect_addr));
-            res.assert_event(&Event::new("execute").add_attribute("_contract_addr", &echo_addr));
+            res.assert_event(
+                &Event::new("execute").add_attribute("_contract_address", &reflect_addr),
+            );
+            res.assert_event(&Event::new("execute").add_attribute("_contract_address", &echo_addr));
             res.assert_event(&Event::new("wasm-echo"));
         }
 
