@@ -29,7 +29,8 @@ use anyhow::{bail, Context, Result as AnyResult};
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 
 pub const NAMESPACE_WASM: &[u8] = b"wasm";
-const CONTRACT_ATTR: &str = "_contract_addr";
+/// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
+const CONTRACT_ATTR: &str = "_contract_address";
 
 #[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
