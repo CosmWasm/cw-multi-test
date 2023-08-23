@@ -43,6 +43,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
 /// Router is a persisted state. You can query this.
 /// Execution generally happens on the RouterCache, which then can be atomically committed or rolled back.
 /// We offer .execute() as a wrapper around cache, execute, commit/rollback process.
+#[derive(Clone)]
 pub struct App<
     Bank = BankKeeper,
     Api = MockApi,
@@ -821,6 +822,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
     // this can remain crate-only as all special functions are wired up to app currently
     // we need to figure out another format for wasm, as some like sudo need to be called after init
