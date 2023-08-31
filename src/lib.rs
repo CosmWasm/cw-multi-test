@@ -21,6 +21,7 @@ mod staking;
 mod test_helpers;
 mod transactions;
 mod wasm;
+mod api;
 
 pub use crate::app::{
     custom_app, next_block, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter, Router,
