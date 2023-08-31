@@ -430,7 +430,9 @@ where
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
         let msg = from_slice(&msg)?;
         match &self.migrate_fn {
-            Some(migrate) => migrate(deps, env, msg).map_err(|err| anyhow!(err)),
+            Some(migrate) => {
+                migrate(deps, env, msg).map_err(|err| anyhow!(err))
+            },
             None => bail!("migrate not implemented for contract"),
         }
     }

@@ -10,12 +10,13 @@ homepage = "https://cosmwasm.com"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["iterator", "staking", "cosmwasm_1_1"]
+default = ["iterator", "staking", "cosmwasm_1_2"]
 iterator = ["cosmwasm-std/iterator"]
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
 backtrace = ["anyhow/backtrace"]
 cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
+cosmwasm_1_2 = ["cosmwasm-std/cosmwasm_1_2"]
 
 [dependencies]
 cw-utils = "1.0"
@@ -33,6 +34,7 @@ derivative = "2"
 # We specify them to tighten their version requirements so that builds with `-Zminimal-versions` work.
 # Once we bump `cosmwasm-*` deps to a version after `1.1.5`, we can remove these.
 k256 = { version = "0.11.1", features = ["ecdsa"] }
+sha256 = "1.4.0"
 
 [dev-dependencies]
 # We don't use the following dependencies directly. They're dependencies of our dependencies.

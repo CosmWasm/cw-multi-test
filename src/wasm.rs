@@ -6,7 +6,7 @@ use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
     ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
     QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
-    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery, CodeInfoResponse, HexBinary,
 };
 use prost::Message;
 use schemars::JsonSchema;
@@ -31,6 +31,7 @@ const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 pub const NAMESPACE_WASM: &[u8] = b"wasm";
 /// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
 const CONTRACT_ATTR: &str = "_contract_address";
+const CODE_CREATOR: &str= "CODE_CREATOR";
 
 #[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
@@ -106,6 +107,10 @@ pub struct WasmKeeper<ExecC, QueryC> {
     generator: Box<dyn AddressGenerator>,
 }
 
+pub fn mock_checksum(code_id: u64) -> String{
+    sha256::digest(format!("code_checksum_{}", code_id))
+}
+
 pub trait AddressGenerator {
     fn next_address(&self, storage: &mut dyn Storage) -> Addr;
 }
@@ -166,6 +171,16 @@ where
                 res.code_id = contract.code_id as u64;
                 res.creator = contract.creator.to_string();
                 res.admin = contract.admin.map(|x| x.into());
+                to_binary(&res).map_err(Into::into)
+            }
+            WasmQuery::CodeInfo { code_id } => {
+                self.codes.get(&usize::try_from(code_id)?).ok_or(anyhow::anyhow!("code_id not found in contract storage"))?; // This makes sure we have some contract stored
+                
+                let mut res = CodeInfoResponse::default();
+                res.code_id = code_id;
+                res.creator  = CODE_CREATOR.to_string();
+                res.checksum = HexBinary::from_hex(&mock_checksum(code_id))?;
+
                 to_binary(&res).map_err(Into::into)
             }
             query => bail!(Error::UnsupportedWasmQuery(query)),
