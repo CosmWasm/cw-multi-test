@@ -15,7 +15,7 @@ use cosmwasm_std::{Order, Record};
 use anyhow::Result as AnyResult;
 
 #[cfg(feature = "iterator")]
-/// The BTreeMap specific key-value pair reference type, as returned by BTreeMap<Vec<u8>, T>::range.
+/// The BTreeMap specific key-value pair reference type, as returned by `BTreeMap<Vec<u8>, T>::range`.
 /// This is internal as it can change any time if the map implementation is swapped out.
 type BTreeMapPairRef<'a, T = Vec<u8>> = (&'a Vec<u8>, &'a T);
 
