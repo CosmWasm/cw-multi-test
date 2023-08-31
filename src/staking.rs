@@ -492,7 +492,7 @@ impl StakeKeeper {
         unbonding_queue
             .iter_mut()
             .filter(|ub| &ub.validator == validator)
-            .for_each(|mut ub| {
+            .for_each(|ub| {
                 ub.amount = ub.amount * remaining_percentage;
             });
         UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
