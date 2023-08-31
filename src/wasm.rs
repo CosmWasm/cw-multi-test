@@ -8,6 +8,10 @@ use cosmwasm_std::{
     QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
     SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
+
+#[cfg(feature = "cosmwasm_1_2")]
+use cosmwasm_std::{CodeInfoResponse, HexBinary};
+
 use prost::Message;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -32,7 +36,7 @@ pub const NAMESPACE_WASM: &[u8] = b"wasm";
 /// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
 const CONTRACT_ATTR: &str = "_contract_address";
 
-#[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, fmt::Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
     pub contract_addr: Addr,
     pub msg: Binary,
@@ -47,8 +51,8 @@ impl WasmSudo {
     }
 }
 
-/// Contract Data includes information about contract, equivalent of `ContractInfo` in wasmd
-/// interface.
+/// Contract data includes information about contract,
+/// equivalent of `ContractInfo` in **wasmd** interface.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ContractData {
     /// Identifier of stored contract code
@@ -168,6 +172,15 @@ where
                 res.admin = contract.admin.map(|x| x.into());
                 to_binary(&res).map_err(Into::into)
             }
+            #[cfg(feature = "cosmwasm_1_2")]
+            WasmQuery::CodeInfo { code_id } => {
+                let mut res = CodeInfoResponse::default();
+                res.code_id = code_id;
+                res.creator = "".to_string(); //TODO set the creator
+                res.checksum = HexBinary::from_hex("a03A").unwrap(); //TODO calculate the hash
+                to_binary(&res).map_err(Into::into)
+            }
+            #[cfg(feature = "cosmwasm_1_1")]
             query => bail!(Error::UnsupportedWasmQuery(query)),
         }
     }
@@ -556,7 +569,7 @@ where
     /// This is designed to be handled internally as part of larger process flows.
     ///
     /// The `data` on `AppResponse` is data returned from `reply` call, not from execution of
-    /// submessage itself. In case if `reply` is not called, no `data` is set.
+    /// sub-message itself. In case if `reply` is not called, no `data` is set.
     fn execute_submsg(
         &self,
         api: &dyn Api,
@@ -592,7 +605,7 @@ where
                 // append the events
                 r.events.extend_from_slice(&reply_res.events);
             } else {
-                // reply is not called, no data should be rerturned
+                // reply is not called, no data should be returned
                 r.data = None;
             }
 
@@ -695,10 +708,10 @@ where
 
         // recurse in all messages
         let data = messages.into_iter().try_fold(data, |data, resend| {
-            let subres =
+            let sub_res =
                 self.execute_submsg(api, router, storage, block, contract.clone(), resend)?;
-            events.extend_from_slice(&subres.events);
-            Ok::<_, anyhow::Error>(subres.data.or(data))
+            events.extend_from_slice(&sub_res.events);
+            Ok::<_, anyhow::Error>(sub_res.data.or(data))
         })?;
 
         Ok(AppResponse { events, data })
@@ -1510,7 +1523,7 @@ mod test {
         // should still be admin
         assert_admin(&wasm_storage, &keeper, &contract_addr, Some(admin.clone()));
 
-        // admin should be allowed to transfers adminship
+        // admin should be allowed to transfer administration permissions
         let res = keeper
             .execute_wasm(
                 &api,
