@@ -837,7 +837,7 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
 impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,

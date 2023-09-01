@@ -176,11 +176,10 @@ where
             WasmQuery::CodeInfo { code_id } => {
                 let mut res = CodeInfoResponse::default();
                 res.code_id = code_id;
-                res.creator = "aabbcc123".to_string(); //TODO set the creator
+                res.creator = "abc123".to_string(); //TODO set the creator
                 res.checksum = HexBinary::from_hex("a03A").unwrap(); //TODO calculate the hash
                 to_binary(&res).map_err(Into::into)
             }
-            #[cfg(feature = "cosmwasm_1_1")]
             other => bail!(Error::UnsupportedWasmQuery(other)),
         }
     }
