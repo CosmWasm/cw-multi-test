@@ -81,7 +81,9 @@ mod test {
     #[test]
     fn default_gov() {
         let mut app = App::default();
-        let code = app.store_code(stargate::creator(), stargate::contract());
+        let code = app
+            .store_code(stargate::creator(), stargate::contract())
+            .unwrap();
         let contract = app
             .instantiate_contract(
                 code,
@@ -98,11 +100,13 @@ mod test {
     }
 
     #[test]
-    fn subsituting_gov() {
+    fn substituting_gov() {
         let mut app = AppBuilder::new()
             .with_gov(AcceptingModule)
             .build(|_, _, _| ());
-        let code = app.store_code(stargate::creator(), stargate::contract());
+        let code = app
+            .store_code(stargate::creator(), stargate::contract())
+            .unwrap();
         let contract = app
             .instantiate_contract(
                 code,
