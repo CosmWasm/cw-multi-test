@@ -159,6 +159,6 @@ jobs:
           command: |
             mkdir -p cov
             docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin \
-              sh -c "cargo tarpaulin --workspace --skip-clean --frozen --out Xml --output-dir cov"
+              sh -c "cargo tarpaulin --workspace --all-features --skip-clean --frozen --out Xml --output-dir cov"
       - codecov/upload:
           file: cov/cobertura.xml
