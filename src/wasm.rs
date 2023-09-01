@@ -119,7 +119,6 @@ pub trait AddressGenerator {
     fn next_address(&self, storage: &mut dyn Storage) -> Addr;
 }
 
-#[derive(Debug)]
 struct SimpleAddressGenerator();
 
 impl AddressGenerator for SimpleAddressGenerator {
@@ -1022,6 +1021,10 @@ mod test {
         FailingModule<GovMsg, Empty, Empty>,
     >;
 
+    fn mock_wasm_keeper() -> WasmKeeper<Empty, Empty> {
+        WasmKeeper::new()
+    }
+
     fn mock_router() -> BasicRouter {
         Router {
             wasm: WasmKeeper::new(),
@@ -1038,7 +1041,7 @@ mod test {
     fn register_contract() {
         let api = MockApi::default();
         let mut wasm_storage = MockStorage::new();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(error::creator(), error::contract(false))
@@ -1132,8 +1135,8 @@ mod test {
     #[test]
     fn query_contract_info() {
         let api = MockApi::default();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
         let mut wasm_storage = MockStorage::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(Addr::unchecked("buzz"), payout::contract())
@@ -1175,8 +1178,8 @@ mod test {
     #[cfg(feature = "cosmwasm_1_2")]
     fn query_code_info() {
         let api = MockApi::default();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
         let wasm_storage = MockStorage::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(payout::creator(), payout::contract())
@@ -1205,8 +1208,8 @@ mod test {
     #[cfg(feature = "cosmwasm_1_2")]
     fn querying_invalid_code_info_must_fail() {
         let api = MockApi::default();
-        let wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
         let wasm_storage = MockStorage::new();
+        let wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
 
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
@@ -1220,7 +1223,7 @@ mod test {
     #[test]
     fn can_dump_raw_wasm_state() {
         let api = MockApi::default();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(Addr::unchecked("buzz"), payout::contract())
@@ -1273,7 +1276,7 @@ mod test {
     #[test]
     fn contract_send_coins() {
         let api = MockApi::default();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(Addr::unchecked("buzz"), payout::contract())
@@ -1386,7 +1389,7 @@ mod test {
     #[test]
     fn multi_level_wasm_cache() {
         let api = MockApi::default();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(Addr::unchecked("buzz"), payout::contract())
@@ -1552,7 +1555,7 @@ mod test {
     #[test]
     fn update_clear_admin_works() {
         let api = MockApi::default();
-        let mut wasm_keeper: WasmKeeper<Empty, Empty> = WasmKeeper::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper
             .store_code(caller::creator(), caller::contract())
@@ -1666,7 +1669,7 @@ mod test {
 
     #[test]
     fn by_default_uses_simple_address_generator() {
-        let mut wasm_keeper = WasmKeeper::<Empty, Empty>::new();
+        let mut wasm_keeper = mock_wasm_keeper();
         let code_id = wasm_keeper
             .store_code(payout::creator(), payout::contract())
             .unwrap();
@@ -1727,5 +1730,43 @@ mod test {
             expected_addr, contract_addr,
             "custom address generator returned incorrect address"
         )
+    }
+
+    #[test]
+    fn wasm_sudo_can_be_debugged() {
+        let contract_data = ContractData {
+            code_id: 10,
+            creator: Addr::unchecked("foobar"),
+            admin: Some(Addr::unchecked("admin")),
+            label: "label".to_owned(),
+            created: 100,
+        };
+        assert_eq!(
+            r#"WasmSudo { contract_addr: Addr("contract"), msg: Binary(7b22636f64655f6964223a31302c2263726561746f72223a22666f6f626172222c2261646d696e223a2261646d696e222c226c6162656c223a226c6162656c222c2263726561746564223a3130307d) }"#,
+            format!(
+                "{:?}",
+                WasmSudo {
+                    contract_addr: Addr::unchecked("contract"),
+                    msg: to_binary(&contract_data).unwrap(),
+                }
+            )
+        );
+    }
+
+    #[test]
+    fn contract_data_can_be_debugged() {
+        assert_eq!(
+            r#"ContractData { code_id: 10, creator: Addr("foobar"), admin: Some(Addr("admin")), label: "label", created: 100 }"#,
+            format!(
+                "{:?}",
+                ContractData {
+                    code_id: 10,
+                    creator: Addr::unchecked("foobar"),
+                    admin: Some(Addr::unchecked("admin")),
+                    label: "label".to_owned(),
+                    created: 100,
+                }
+            )
+        );
     }
 }
