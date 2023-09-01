@@ -1,4 +1,3 @@
-use std::str::from_utf8;
 
 use cosmwasm_std::{Api, StdError, StdResult, CanonicalAddr, Addr, VerificationError, RecoverPubkeyError};
 
