@@ -10,7 +10,8 @@ impl Gov for FailingModule<GovMsg, Empty, Empty> {}
 mod test {
     use cosmwasm_std::{Addr, Binary, Empty, GovMsg};
 
-    use crate::test_helpers::contracts::stargate::{contract, ExecMsg};
+    use crate::test_helpers::contracts::stargate;
+    use crate::test_helpers::contracts::stargate::ExecMsg;
     use crate::{App, AppBuilder, AppResponse, Executor, Module};
 
     use super::Gov;
@@ -80,7 +81,7 @@ mod test {
     #[test]
     fn default_gov() {
         let mut app = App::default();
-        let code = app.store_code(contract());
+        let code = app.store_code(stargate::creator(), stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,
@@ -101,7 +102,7 @@ mod test {
         let mut app = AppBuilder::new()
             .with_gov(AcceptingModule)
             .build(|_, _, _| ());
-        let code = app.store_code(contract());
+        let code = app.store_code(stargate::creator(), stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,

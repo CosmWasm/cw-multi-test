@@ -1,7 +1,7 @@
 //! Simplified contract which when executed releases the funds to beneficiary
 
 use cosmwasm_std::{
-    to_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+    to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
@@ -88,4 +88,9 @@ where
     let contract =
         ContractWrapper::new_with_empty(execute, instantiate, query).with_migrate_empty(migrate);
     Box::new(contract)
+}
+
+/// Returns the address of the creator of this contract.
+pub fn creator() -> Addr {
+    Addr::unchecked("hackatom_contract_creator")
 }

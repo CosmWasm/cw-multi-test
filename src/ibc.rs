@@ -72,7 +72,8 @@ impl Ibc for IbcAcceptingModule {}
 mod test {
     use cosmwasm_std::{Addr, Empty};
 
-    use crate::test_helpers::contracts::stargate::{contract, ExecMsg};
+    use crate::test_helpers::contracts::stargate;
+    use crate::test_helpers::contracts::stargate::ExecMsg;
     use crate::{App, AppBuilder, Executor};
 
     use super::*;
@@ -80,7 +81,7 @@ mod test {
     #[test]
     fn default_ibc() {
         let mut app = App::default();
-        let code = app.store_code(contract());
+        let code = app.store_code(stargate::creator(), stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,
@@ -97,11 +98,11 @@ mod test {
     }
 
     #[test]
-    fn subsituting_ibc() {
+    fn substituting_ibc() {
         let mut app = AppBuilder::new()
             .with_ibc(IbcAcceptingModule)
             .build(|_, _, _| ());
-        let code = app.store_code(contract());
+        let code = app.store_code(stargate::creator(), stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,

@@ -121,7 +121,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Querier
     for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -143,7 +143,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Executor<CustomT::ExecT>
     for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -155,11 +155,7 @@ where
     IbcT: Ibc,
     GovT: Gov,
 {
-    fn execute(
-        &mut self,
-        sender: Addr,
-        msg: cosmwasm_std::CosmosMsg<CustomT::ExecT>,
-    ) -> AnyResult<AppResponse> {
+    fn execute(&mut self, sender: Addr, msg: CosmosMsg<CustomT::ExecT>) -> AnyResult<AppResponse> {
         let mut all = self.execute_multi(sender, vec![msg])?;
         let res = all.pop().unwrap();
         Ok(res)
@@ -696,13 +692,16 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
     /// This registers contract code (like uploading wasm bytecode on a chain),
     /// so it can later be used to instantiate a contract.
-    pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
-        let creator = Addr::unchecked("buzz"); // FIXME
+    pub fn store_code(
+        &mut self,
+        creator: Addr,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> u64 {
         self.init_modules(|router, _, _| router.wasm.store_code(creator, code) as u64)
     }
 
@@ -720,7 +719,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: std::fmt::Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -758,7 +757,7 @@ where
     pub fn execute_multi(
         &mut self,
         sender: Addr,
-        msgs: Vec<cosmwasm_std::CosmosMsg<CustomT::ExecT>>,
+        msgs: Vec<CosmosMsg<CustomT::ExecT>>,
     ) -> AnyResult<Vec<AppResponse>> {
         // we need to do some caching of storage here, once in the entry point:
         // meaning, wrap current state, all writes go to a cache, only when execute
@@ -923,7 +922,7 @@ pub trait CosmosRouter {
 impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> CosmosRouter
     for Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
@@ -1202,7 +1201,7 @@ mod test {
         });
 
         // set up contract
-        let code_id = app.store_code(payout::contract());
+        let code_id = app.store_code(payout::creator(), payout::contract());
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1288,7 +1287,7 @@ mod test {
         });
 
         // set up payout contract
-        let payout_id = app.store_code(payout::contract());
+        let payout_id = app.store_code(payout::creator(), payout::contract());
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1304,7 +1303,7 @@ mod test {
             .unwrap();
 
         // set up reflect contract
-        let reflect_id = app.store_code(reflect::contract());
+        let reflect_id = app.store_code(reflect::creator(), reflect::contract());
         let reflect_addr = app
             .instantiate_contract(reflect_id, owner, &EmptyMsg {}, &[], "Reflect", None)
             .unwrap();
@@ -1392,7 +1391,7 @@ mod test {
         });
 
         // set up reflect contract
-        let reflect_id = app.store_code(reflect::contract());
+        let reflect_id = app.store_code(reflect::creator(), reflect::contract());
         let reflect_addr = app
             .instantiate_contract(
                 reflect_id,
@@ -1485,7 +1484,7 @@ mod test {
                 .unwrap();
         });
 
-        let payout_id = app.store_code(payout::contract());
+        let payout_id = app.store_code(payout::creator(), payout::contract());
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1686,7 +1685,7 @@ mod test {
         });
 
         // set up reflect contract
-        let reflect_id = app.store_code(reflect::contract());
+        let reflect_id = app.store_code(reflect::creator(), reflect::contract());
         let reflect_addr = app
             .instantiate_contract(
                 reflect_id,
@@ -1887,7 +1886,7 @@ mod test {
                 .unwrap();
         });
 
-        let contract_id = app.store_code(hackatom::contract());
+        let contract_id = app.store_code(hackatom::creator(), hackatom::contract());
         let contract = app
             .instantiate_contract(
                 contract_id,
@@ -1937,7 +1936,7 @@ mod test {
         });
 
         // create a hackatom contract with some funds
-        let contract_id = app.store_code(hackatom::contract());
+        let contract_id = app.store_code(hackatom::creator(), hackatom::contract());
         let contract = app
             .instantiate_contract(
                 contract_id,
@@ -2005,7 +2004,7 @@ mod test {
         let mut app = App::default();
 
         // create a hackatom contract with some funds
-        let contract_id = app.store_code(hackatom::contract());
+        let contract_id = app.store_code(hackatom::creator(), hackatom::contract());
         let contract = app
             .instantiate_contract(
                 contract_id,
@@ -2103,7 +2102,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2129,7 +2128,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2161,7 +2160,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2188,7 +2187,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2215,7 +2214,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2254,7 +2253,7 @@ mod test {
             });
 
             // set up reflect contract
-            let reflect_id = app.store_code(reflect::contract());
+            let reflect_id = app.store_code(reflect::creator(), reflect::contract());
             let reflect_addr = app
                 .instantiate_contract(
                     reflect_id,
@@ -2267,7 +2266,7 @@ mod test {
                 .unwrap();
 
             // set up echo contract
-            let echo_id = app.store_code(echo::custom_contract());
+            let echo_id = app.store_code(echo::creator(), echo::custom_contract());
             let echo_addr = app
                 .instantiate_contract(echo_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2309,7 +2308,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2356,7 +2355,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2388,7 +2387,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2435,7 +2434,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2486,7 +2485,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2516,7 +2515,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2546,7 +2545,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2575,7 +2574,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2604,7 +2603,7 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            let contract_id = app.store_code(echo::creator(), echo::contract());
             let contract = app
                 .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2644,7 +2643,7 @@ mod test {
                 .with_custom(custom_handler)
                 .build(no_init);
 
-            let contract_id = app.store_code(echo::custom_contract());
+            let contract_id = app.store_code(echo::creator(), echo::custom_contract());
             let contract = app
                 .instantiate_contract(contract_id, owner, &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2690,7 +2689,7 @@ mod test {
             });
 
             // set up reflect contract
-            let code_id = app.store_code(reflect::contract());
+            let code_id = app.store_code(reflect::creator(), reflect::contract());
             let init_msg = to_binary(&EmptyMsg {}).unwrap();
             let msg = WasmMsg::Instantiate {
                 admin: None,
@@ -2719,7 +2718,7 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up echo contract
-            let code_id = app.store_code(echo::contract());
+            let code_id = app.store_code(echo::creator(), echo::contract());
             let msg = echo::InitMessage::<Empty> {
                 data: Some("food".into()),
                 sub_msg: None,
@@ -2747,7 +2746,7 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up echo contract
-            let code_id = app.store_code(echo::contract());
+            let code_id = app.store_code(echo::creator(), echo::contract());
             let msg = echo::InitMessage::<Empty> {
                 data: Some("food".into()),
                 ..Default::default()
@@ -2798,7 +2797,7 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up reflect contract
-            let code_id = app.store_code(echo::contract());
+            let code_id = app.store_code(echo::creator(), echo::contract());
             let echo_addr = app
                 .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "label", None)
                 .unwrap();
@@ -2823,7 +2822,7 @@ mod test {
             let mut app = App::default();
 
             // set up contract
-            let code_id = app.store_code(error::contract(false));
+            let code_id = app.store_code(error::creator(), error::contract(false));
             let msg = EmptyMsg {};
             let err = app
                 .instantiate_contract(code_id, owner, &msg, &[], "error", None)
@@ -2848,7 +2847,7 @@ mod test {
             let mut app = App::default();
 
             // set up contract
-            let code_id = app.store_code(error::contract(true));
+            let code_id = app.store_code(error::creator(), error::contract(true));
             let msg = EmptyMsg {};
             let contract_addr = app
                 .instantiate_contract(code_id, owner, &msg, &[], "error", None)
@@ -2877,8 +2876,8 @@ mod test {
             let owner = Addr::unchecked("owner");
             let mut app = App::default();
 
-            let error_code_id = app.store_code(error::contract(true));
-            let caller_code_id = app.store_code(caller::contract());
+            let error_code_id = app.store_code(error::creator(), error::contract(true));
+            let caller_code_id = app.store_code(caller::creator(), caller::contract());
 
             // set up contracts
             let msg = EmptyMsg {};
@@ -2917,8 +2916,8 @@ mod test {
             let owner = Addr::unchecked("owner");
             let mut app = App::default();
 
-            let error_code_id = app.store_code(error::contract(true));
-            let caller_code_id = app.store_code(caller::contract());
+            let error_code_id = app.store_code(error::creator(), error::contract(true));
+            let caller_code_id = app.store_code(caller::creator(), caller::contract());
 
             // set up contracts
             let msg = EmptyMsg {};

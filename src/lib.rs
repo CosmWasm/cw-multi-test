@@ -2,7 +2,7 @@
 //! This allows us to run unit tests that involve contract -> contract,
 //! and contract -> bank interactions. This is not intended to be a full blockchain app
 //! but to simulate the Cosmos SDK x/wasm module close enough to gain confidence in
-//! multi-contract deployements before testing them on a live blockchain.
+//! multi-contract deployments before testing them on a live blockchain.
 //!
 //! To understand the design of this module, please refer to `../DESIGN.md`
 

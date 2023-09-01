@@ -1,9 +1,9 @@
+use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    Binary, CosmosMsg, Deps, DepsMut, Empty, Env, GovMsg, IbcMsg, MessageInfo, Response, StdResult,
+    Addr, Binary, CosmosMsg, Deps, DepsMut, Empty, Env, GovMsg, IbcMsg, MessageInfo, Response,
+    StdResult,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::{Contract, ContractWrapper};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecMsg {
@@ -40,4 +40,9 @@ fn query(_deps: Deps, _env: Env, _msg: Empty) -> StdResult<Binary> {
 pub fn contract() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(execute, instantiate, query);
     Box::new(contract)
+}
+
+/// Returns the address of the creator of this contract.
+pub fn creator() -> Addr {
+    Addr::unchecked("stargate_contract_creator")
 }
