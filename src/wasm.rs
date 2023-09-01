@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::Deref;
 
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
@@ -874,7 +873,7 @@ where
 
         let deps = Deps {
             storage: storage.as_ref(),
-            api: api.deref(),
+            api,
             querier: QuerierWrapper::new(querier),
         };
         action(handler, deps, env)
@@ -910,7 +909,7 @@ where
 
             let deps = DepsMut {
                 storage: contract_storage.as_mut(),
-                api: api.deref(),
+                api,
                 querier: QuerierWrapper::new(&querier),
             };
             action(handler, deps, env)
