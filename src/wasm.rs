@@ -1741,15 +1741,10 @@ mod test {
             label: "label".to_owned(),
             created: 100,
         };
+        let wasm_sudo = WasmSudo::new(&Addr::unchecked("contract"), &contract_data);
         assert_eq!(
             r#"WasmSudo { contract_addr: Addr("contract"), msg: Binary(7b22636f64655f6964223a31302c2263726561746f72223a22666f6f626172222c2261646d696e223a2261646d696e222c226c6162656c223a226c6162656c222c2263726561746564223a3130307d) }"#,
-            format!(
-                "{:?}",
-                WasmSudo {
-                    contract_addr: Addr::unchecked("contract"),
-                    msg: to_binary(&contract_data).unwrap(),
-                }
-            )
+            format!("{:?}", wasm_sudo)
         );
     }
 
