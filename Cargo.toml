@@ -29,6 +29,7 @@ prost = "0.11"
 anyhow = "1.0"
 thiserror = "1.0"
 derivative = "2"
+sha2 = "0.10"
 
 [dev-dependencies]
 # We don't use the following dependency directly,
