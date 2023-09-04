@@ -1,5 +1,6 @@
-
-use cosmwasm_std::{Api, StdError, StdResult, CanonicalAddr, Addr, VerificationError, RecoverPubkeyError};
+use cosmwasm_std::{
+    Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult, VerificationError,
+};
 
 #[derive(Copy, Clone, Default)]
 pub struct MockSimpleApi {}
@@ -18,14 +19,12 @@ impl Api for MockSimpleApi {
     }
 
     fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
-
         // Very straigthfoward canonicalization, we simply serialize the address to bytes
         Ok(input.chars().map(|c| c as u8).collect::<Vec<_>>().into())
     }
 
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-
-        let address: String = canonical.0.0.iter().map(|&c| c as char).collect();
+        let address: String = canonical.0 .0.iter().map(|&c| c as char).collect();
 
         Ok(Addr::unchecked(address))
     }
@@ -36,7 +35,11 @@ impl Api for MockSimpleApi {
         signature: &[u8],
         public_key: &[u8],
     ) -> Result<bool, VerificationError> {
-        cosmwasm_std::testing::MockApi::default().secp256k1_verify(message_hash, signature, public_key)
+        cosmwasm_std::testing::MockApi::default().secp256k1_verify(
+            message_hash,
+            signature,
+            public_key,
+        )
     }
 
     fn secp256k1_recover_pubkey(
@@ -45,7 +48,11 @@ impl Api for MockSimpleApi {
         signature: &[u8],
         recovery_param: u8,
     ) -> Result<Vec<u8>, RecoverPubkeyError> {
-        cosmwasm_std::testing::MockApi::default().secp256k1_recover_pubkey(message_hash, signature, recovery_param)
+        cosmwasm_std::testing::MockApi::default().secp256k1_recover_pubkey(
+            message_hash,
+            signature,
+            recovery_param,
+        )
     }
 
     fn ed25519_verify(
@@ -63,7 +70,11 @@ impl Api for MockSimpleApi {
         signatures: &[&[u8]],
         public_keys: &[&[u8]],
     ) -> Result<bool, VerificationError> {
-        cosmwasm_std::testing::MockApi::default().ed25519_batch_verify(messages, signatures, public_keys)
+        cosmwasm_std::testing::MockApi::default().ed25519_batch_verify(
+            messages,
+            signatures,
+            public_keys,
+        )
     }
 
     fn debug(&self, message: &str) {

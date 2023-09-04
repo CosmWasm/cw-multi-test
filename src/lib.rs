@@ -6,6 +6,7 @@
 //!
 //! To understand the design of this module, please refer to `../DESIGN.md`
 
+mod api;
 mod app;
 mod bank;
 #[allow(clippy::type_complexity)]
@@ -21,7 +22,6 @@ mod staking;
 mod test_helpers;
 mod transactions;
 mod wasm;
-mod api;
 
 pub use crate::app::{
     custom_app, next_block, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter, Router,
@@ -37,3 +37,4 @@ pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
 pub use crate::wasm::{AddressGenerator, Wasm, WasmKeeper, WasmSudo};
+pub use api::MockSimpleApi;

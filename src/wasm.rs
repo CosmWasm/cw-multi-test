@@ -821,11 +821,17 @@ where
 
             // Then we get the new address
             let contract = api.addr_canonicalize(creator.as_str())?;
-            api.addr_humanize(&instantiate2_address(
+            let contract_addr = api.addr_humanize(&instantiate2_address(
                 &code_info.checksum,
                 &contract,
                 &salt,
-            )?)?
+            )?)?;
+            // We verify the contract address doesn't exist yet
+            if CONTRACTS.has(&prefixed(storage, NAMESPACE_WASM), &contract_addr) {
+                bail!("Contract address already exists, can't instantiate2 a second time");
+            }
+
+            contract_addr
         } else {
             self.generator.next_address(storage)
         };
@@ -1080,6 +1086,7 @@ mod test {
     use crate::test_helpers::contracts::{caller, error, payout};
     use crate::test_helpers::EmptyMsg;
     use crate::transactions::StorageTransaction;
+    use crate::MockSimpleApi;
 
     use super::*;
 
@@ -1770,5 +1777,103 @@ mod test {
             expected_addr, contract_addr,
             "custom address generator returned incorrect address"
         )
+    }
+
+    #[test]
+    fn code_data_query() -> anyhow::Result<()> {
+        let mut router = mock_router();
+        let api = MockApi::default();
+        let block_info = mock_env().block;
+
+        let code_id = router.wasm.store_code(error::contract(false));
+        let wasm_storage = MockStorage::new();
+        let querier = router.querier(&api, &wasm_storage, &block_info);
+
+        let code_info: CodeInfoResponse = from_binary(&router.wasm.query(
+            &api,
+            &wasm_storage,
+            &querier,
+            &block_info,
+            WasmQuery::CodeInfo {
+                code_id: code_id as u64,
+            },
+        )?)?;
+
+        assert_eq!(code_info.code_id as usize, code_id);
+        assert_eq!(code_info.creator, CODE_CREATOR);
+        assert_eq!(
+            code_info.checksum,
+            HexBinary::from_hex(&mock_checksum(code_id as u64))?
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn instantiate2() -> anyhow::Result<()> {
+        let mut router = mock_router();
+        let api = MockSimpleApi::default();
+        let block_info = mock_env().block;
+
+        let code_id = router.wasm.store_code(error::contract(true));
+        let mut wasm_storage = MockStorage::new();
+
+        let response = router.wasm.execute(
+            &api,
+            &mut wasm_storage,
+            &router,
+            &block_info,
+            Addr::unchecked("sender"),
+            WasmMsg::Instantiate2 {
+                admin: None,
+                code_id: code_id as u64,
+                label: "test contract".to_string(),
+                msg: to_binary(&EmptyMsg {})?,
+                funds: vec![],
+                salt: to_binary("First salt")?,
+            },
+        )?;
+
+        // Can't instantiate with the exact same salt !
+        let response = router
+            .wasm
+            .execute(
+                &api,
+                &mut wasm_storage,
+                &router,
+                &block_info,
+                Addr::unchecked("sender"),
+                WasmMsg::Instantiate2 {
+                    admin: None,
+                    code_id: code_id as u64,
+                    label: "test contract".to_string(),
+                    msg: to_binary(&EmptyMsg {})?,
+                    funds: vec![],
+                    salt: to_binary("First salt")?,
+                },
+            )
+            .unwrap_err();
+
+        // Can instantiate with a different salt
+        let response = router
+            .wasm
+            .execute(
+                &api,
+                &mut wasm_storage,
+                &router,
+                &block_info,
+                Addr::unchecked("sender"),
+                WasmMsg::Instantiate2 {
+                    admin: None,
+                    code_id: code_id as u64,
+                    label: "test contract".to_string(),
+                    msg: to_binary(&EmptyMsg {})?,
+                    funds: vec![],
+                    salt: to_binary("Second salt")?,
+                },
+            )
+            .unwrap();
+
+        Ok(())
     }
 }
