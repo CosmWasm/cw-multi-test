@@ -66,9 +66,12 @@ pub struct ContractData {
     pub created: u64,
 }
 
+/// Contract code base data.
 struct CodeData<ExecC, QueryC> {
+    /// Address of an account that initially created the contract.
     #[allow(dead_code)]
     creator: Addr,
+    /// The contract code base.
     code: Box<dyn Contract<ExecC, QueryC>>,
 }
 
@@ -238,7 +241,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         creator: Addr,
         code: Box<dyn Contract<ExecC, QueryC>>,
     ) -> AnyResult<u64> {
-        let code_id = self.codes.len() as u64 + 1; //FIXME This will fail when len == u64::MAX, unlikely but should be handled.
+        let code_id = self.codes.len() as u64 + 1;
         self.codes
             .insert(code_id, CodeData::<ExecC, QueryC> { creator, code });
         Ok(code_id)
