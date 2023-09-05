@@ -69,7 +69,8 @@ pub struct ContractData {
 /// Contract code base data.
 struct CodeData<ExecC, QueryC> {
     /// Address of an account that initially created the contract.
-    #[allow(dead_code)]
+    //FIXME Remove this feature flag when the default flag is `cosmwasm_1_2` or higher.
+    #[cfg_attr(feature = "cosmwasm_1_1", allow(dead_code))]
     creator: Addr,
     /// The contract code base.
     code: Box<dyn Contract<ExecC, QueryC>>,
