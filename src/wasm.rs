@@ -1146,15 +1146,15 @@ mod test {
             .unwrap();
         assert_eq!(1, code_id);
 
-        let creator_name: String = "foobar".to_string();
-        let admin_name: String = "admin".to_string();
+        let creator = "foobar";
+        let admin = "admin";
 
         let contract_addr = wasm_keeper
             .register_contract(
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked(creator_name.clone()),
-                Addr::unchecked(admin_name.clone()),
+                Addr::unchecked(creator),
+                Addr::unchecked(admin),
                 "label".to_owned(),
                 1000,
             )
@@ -1172,8 +1172,8 @@ mod test {
         let actual: ContractInfoResponse = from_slice(&contract_info).unwrap();
         let mut expected = ContractInfoResponse::default();
         expected.code_id = code_id;
-        expected.creator = creator_name;
-        expected.admin = admin_name.into();
+        expected.creator = creator.into();
+        expected.admin = Some(admin.into());
         assert_eq!(expected, actual);
     }
 
