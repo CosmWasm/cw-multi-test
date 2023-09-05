@@ -181,9 +181,10 @@ where
             }
             #[cfg(feature = "cosmwasm_1_2")]
             WasmQuery::CodeInfo { code_id } => {
-                let Some(code_data) = self.codes.get(&code_id) else {
-                    bail!(Error::UnregisteredCodeId(code_id))
-                };
+                let code_data = self
+                    .codes
+                    .get(&code_id)
+                    .ok_or(Error::UnregisteredCodeId(code_id))?;
                 let mut res = cosmwasm_std::CodeInfoResponse::default();
                 res.code_id = code_id;
                 res.creator = code_data.creator.to_string();
