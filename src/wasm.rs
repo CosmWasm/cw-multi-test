@@ -237,10 +237,15 @@ where
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Stores contract code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
-    pub fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
+    pub fn store_code(&mut self, storer: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
         let code_id = self.codes.len() as u64 + 1;
-        self.codes
-            .insert(code_id, CodeData::<ExecC, QueryC> { creator, code });
+        self.codes.insert(
+            code_id,
+            CodeData::<ExecC, QueryC> {
+                creator: storer,
+                code,
+            },
+        );
         code_id
     }
 

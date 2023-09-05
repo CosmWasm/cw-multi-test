@@ -707,10 +707,10 @@ where
     /// takes the code storer address as an additional argument.
     pub fn store_code_with_storer(
         &mut self,
-        creator: Addr,
+        storer: Addr,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> u64 {
-        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
+        self.init_modules(|router, _, _| router.wasm.store_code(storer, code))
     }
 
     /// This allows to get `ContractData` for specific contract
