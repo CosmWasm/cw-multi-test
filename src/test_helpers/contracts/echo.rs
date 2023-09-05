@@ -3,16 +3,18 @@
 //!
 //! Additionally it bypass all events and attributes send to it
 
-use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply,
-    Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
+    to_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
+    StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
+use schemars::JsonSchema;
+use std::fmt::Debug;
+
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use derivative::Derivative;
-use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::fmt::Debug;
 
 // Choosing a reply id less than ECHO_EXECUTE_BASE_ID indicates an Instantiate message reply by convention.
 // An Execute message reply otherwise.
@@ -135,9 +137,4 @@ where
     let contract =
         ContractWrapper::new(execute::<C>, instantiate::<C>, query).with_reply(reply::<C>);
     Box::new(contract)
-}
-
-/// Returns the address of the creator of this contract.
-pub fn creator() -> Addr {
-    Addr::unchecked("echo_contract_creator")
 }

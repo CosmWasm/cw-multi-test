@@ -1,12 +1,14 @@
-use crate::contracts::{Contract, ContractWrapper};
-use crate::test_helpers::{EmptyMsg, COUNT};
-use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
-};
-use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use cosmwasm_std::{
+    to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+};
+use cw_storage_plus::Item;
+
+use crate::contracts::{Contract, ContractWrapper};
+use crate::test_helpers::{EmptyMsg, COUNT};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct InstantiateMessage {
@@ -85,9 +87,4 @@ where
     let contract =
         ContractWrapper::new_with_empty(execute, instantiate, query).with_sudo_empty(sudo);
     Box::new(contract)
-}
-
-/// Returns the address of the creator of this contract.
-pub fn creator() -> Addr {
-    Addr::unchecked("payout_contract_creator")
 }

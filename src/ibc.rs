@@ -81,7 +81,7 @@ mod test {
     #[test]
     fn default_ibc() {
         let mut app = App::default();
-        let code = app.store_code(stargate::creator(), stargate::contract());
+        let code = app.store_code(stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,
@@ -102,7 +102,7 @@ mod test {
         let mut app = AppBuilder::new()
             .with_ibc(IbcAcceptingModule)
             .build(|_, _, _| ());
-        let code = app.store_code(stargate::creator(), stargate::contract());
+        let code = app.store_code(stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,

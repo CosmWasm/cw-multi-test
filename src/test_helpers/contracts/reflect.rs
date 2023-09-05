@@ -1,12 +1,13 @@
+use serde::{Deserialize, Serialize};
+
+use cosmwasm_std::{
+    to_binary, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError, SubMsg,
+};
+use cw_storage_plus::Map;
+
 use crate::contracts::{Contract, ContractWrapper};
 use crate::test_helpers::contracts::payout;
 use crate::test_helpers::{CustomMsg, EmptyMsg, COUNT};
-use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError,
-    SubMsg,
-};
-use cw_storage_plus::Map;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Message {
@@ -68,9 +69,4 @@ fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<CustomMsg>, St
 pub fn contract() -> Box<dyn Contract<CustomMsg>> {
     let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
     Box::new(contract)
-}
-
-/// Returns the address of the creator of this contract.
-pub fn creator() -> Addr {
-    Addr::unchecked("reflect_contract_creator")
 }

@@ -1043,7 +1043,7 @@ mod test {
         let mut wasm_storage = MockStorage::new();
         let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(error::creator(), error::contract(false));
+        let code_id = wasm_keeper.store_code(Addr::unchecked("storer"), error::contract(false));
 
         transactional(&mut wasm_storage, |cache, _| {
             // cannot register contract with unregistered codeId
@@ -1177,7 +1177,7 @@ mod test {
         let wasm_storage = MockStorage::new();
         let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(payout::creator(), payout::contract());
+        let code_id = wasm_keeper.store_code(Addr::unchecked("storer"), payout::contract());
 
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query = WasmQuery::CodeInfo { code_id };
@@ -1189,9 +1189,9 @@ mod test {
         let actual: cosmwasm_std::CodeInfoResponse = from_slice(&code_info).unwrap();
         let mut expected = cosmwasm_std::CodeInfoResponse::default();
         expected.code_id = code_id;
-        expected.creator = payout::creator().to_string();
+        expected.creator = "storer".to_string();
         expected.checksum = cosmwasm_std::HexBinary::from_hex(
-            "36E021BD4986E9CA83E7F65CFF59CE4DCF2C6D7149C087FD0F5AAD2C1971841E",
+            "F334B071564A550F89534881491D2BF4DBFA15E49EC331FA6A134223744985B5",
         )
         .unwrap();
         assert_eq!(expected, actual);
@@ -1544,7 +1544,7 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(caller::creator(), caller::contract());
+        let code_id = wasm_keeper.store_code(Addr::unchecked("storer"), caller::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1655,7 +1655,7 @@ mod test {
     #[test]
     fn by_default_uses_simple_address_generator() {
         let mut wasm_keeper = mock_wasm_keeper();
-        let code_id = wasm_keeper.store_code(payout::creator(), payout::contract());
+        let code_id = wasm_keeper.store_code(Addr::unchecked("storer"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1692,7 +1692,7 @@ mod test {
             WasmKeeper::new_with_custom_address_generator(TestAddressGenerator {
                 addr_to_return: expected_addr.clone(),
             });
-        let code_id = wasm_keeper.store_code(payout::creator(), payout::contract());
+        let code_id = wasm_keeper.store_code(Addr::unchecked("storer"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
