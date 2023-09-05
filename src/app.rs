@@ -705,7 +705,7 @@ where
 
     /// Registers contract code (like [store_code](Self::store_code)),
     /// takes the code storer address as an additional argument.
-    pub fn store_code_with_creator(
+    pub fn store_code_with_storer(
         &mut self,
         creator: Addr,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
@@ -2637,7 +2637,7 @@ mod test {
         fn query_contract_info() {
             use super::*;
             let mut app = App::default();
-            let code_id = app.store_code_with_creator(Addr::unchecked("storer"), echo::contract());
+            let code_id = app.store_code_with_storer(Addr::unchecked("storer"), echo::contract());
             let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
             assert_eq!(code_id, code_info_response.code_id);
             assert_eq!("storer", code_info_response.creator);
