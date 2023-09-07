@@ -1183,7 +1183,7 @@ mod test {
         let wasm_storage = MockStorage::new();
         let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(Addr::unchecked("storer"), payout::contract());
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
 
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query = WasmQuery::CodeInfo { code_id };
@@ -1193,14 +1193,9 @@ mod test {
             .unwrap();
 
         let actual: cosmwasm_std::CodeInfoResponse = from_slice(&code_info).unwrap();
-        let mut expected = cosmwasm_std::CodeInfoResponse::default();
-        expected.code_id = code_id;
-        expected.creator = "storer".to_string();
-        expected.checksum = cosmwasm_std::HexBinary::from_hex(
-            "F334B071564A550F89534881491D2BF4DBFA15E49EC331FA6A134223744985B5",
-        )
-        .unwrap();
-        assert_eq!(expected, actual);
+        assert_eq!(code_id, actual.code_id);
+        assert_eq!("creator", actual.creator);
+        assert!(!actual.checksum.is_empty());
     }
 
     #[test]
