@@ -17,6 +17,12 @@ backtrace = ["anyhow/backtrace"]
 cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
 cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
 cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
+# This experimental feature enables stable API to be released in version 1.0 of Multi Test.
+# We created this feature to provide as soon as possible a deeper insight into the Multi Test API 1.0.
+# Until version 1.0 of Multi Test is officially released, please consider this feature as experimental
+# and a subject to change at any time.
+# DO NOT enable this feature while testing production ready smart contracts.
+multitest_api_1_0 = []
 
 [dependencies]
 cw-utils = "1.0"

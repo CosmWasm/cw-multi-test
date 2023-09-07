@@ -76,10 +76,10 @@ jobs:
             - cargocache-v2-multi-test:1.65.0-minimal-{{ checksum "Cargo.toml" }}
       - run:
           name: Build library for native target
-          command: cargo build -Zminimal-versions --all-features
+          command: cargo build -Zminimal-versions --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,iterator,staking,stargate
       - run:
           name: Run unit tests
-          command: cargo test --workspace -Zminimal-versions --all-features
+          command: cargo test --workspace -Zminimal-versions --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,iterator,staking,stargate
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -106,7 +106,7 @@ jobs:
           command: cargo build --locked --all-features
       - run:
           name: Run unit tests
-          command: cargo test --workspace --locked --all-features
+          command: cargo test --workspace --locked --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,iterator,staking,stargate
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -159,6 +159,6 @@ jobs:
           command: |
             mkdir -p cov
             docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin \
-              sh -c "cargo tarpaulin --workspace --all-features --skip-clean --frozen --out Xml --output-dir cov"
+              sh -c "cargo tarpaulin --workspace --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,iterator,staking,stargate --skip-clean --frozen --out Xml --output-dir cov"
       - codecov/upload:
           file: cov/cobertura.xml
