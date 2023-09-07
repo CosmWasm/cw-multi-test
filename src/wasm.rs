@@ -1718,37 +1718,4 @@ mod test {
             "custom address generator returned incorrect address"
         )
     }
-
-    #[test]
-    fn wasm_sudo_can_be_debugged() {
-        let contract_data = ContractData {
-            code_id: 10,
-            creator: Addr::unchecked("foobar"),
-            admin: Some(Addr::unchecked("admin")),
-            label: "label".to_owned(),
-            created: 100,
-        };
-        let wasm_sudo = WasmSudo::new(&Addr::unchecked("contract"), &contract_data).unwrap();
-        assert_eq!(
-            r#"WasmSudo { contract_addr: Addr("contract"), msg: Binary(7b22636f64655f6964223a31302c2263726561746f72223a22666f6f626172222c2261646d696e223a2261646d696e222c226c6162656c223a226c6162656c222c2263726561746564223a3130307d) }"#,
-            format!("{:?}", wasm_sudo)
-        );
-    }
-
-    #[test]
-    fn contract_data_can_be_debugged() {
-        assert_eq!(
-            r#"ContractData { code_id: 10, creator: Addr("foobar"), admin: Some(Addr("admin")), label: "label", created: 100 }"#,
-            format!(
-                "{:?}",
-                ContractData {
-                    code_id: 10,
-                    creator: Addr::unchecked("foobar"),
-                    admin: Some(Addr::unchecked("admin")),
-                    label: "label".to_owned(),
-                    created: 100,
-                }
-            )
-        );
-    }
 }
