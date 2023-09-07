@@ -1,11 +1,15 @@
-//! This module is an implemention of a namespacing scheme described
-//! in https://github.com/webmaster128/key-namespacing#length-prefixed-keys
+//! This module is an implementation of a namespacing scheme.
+//!
+//! Namespacing scheme is described in
+//! <https://github.com/webmaster128/key-namespacing#length-prefixed-keys>.
 //!
 //! Everything in this file is only responsible for building such keys
-//! and is in no way specific to any kind of storage.
+//! and is not specific to any kind of storage.
 
-/// Calculates the raw key prefix for a given namespace as documented
-/// in https://github.com/webmaster128/key-namespacing#length-prefixed-keys
+/// Calculates the raw key prefix for a given namespace.
+///
+/// See <https://github.com/webmaster128/key-namespacing#length-prefixed-keys>
+/// for details.
 pub fn to_length_prefixed(namespace: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(namespace.len() + 2);
     out.extend_from_slice(&encode_length(namespace));
@@ -13,8 +17,10 @@ pub fn to_length_prefixed(namespace: &[u8]) -> Vec<u8> {
     out
 }
 
-/// Calculates the raw key prefix for a given nested namespace
-/// as documented in https://github.com/webmaster128/key-namespacing#nesting
+/// Calculates the raw key prefix for a given nested namespace.
+///
+/// See <https://github.com/webmaster128/key-namespacing#nesting>
+/// for details.
 pub fn to_length_prefixed_nested(namespaces: &[&[u8]]) -> Vec<u8> {
     let mut size = 0;
     for &namespace in namespaces {

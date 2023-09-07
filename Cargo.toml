@@ -8,7 +8,6 @@ license = "Apache-2.0"
 repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default = ["iterator", "staking", "cosmwasm_1_1"]
 iterator = ["cosmwasm-std/iterator"]
@@ -16,26 +15,29 @@ stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]
 backtrace = ["anyhow/backtrace"]
 cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
+cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
+cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
+# This experimental feature enables stable API to be released in version 1.0 of Multi Test.
+# We created this feature to provide as soon as possible a deeper insight into the Multi Test API 1.0.
+# Until version 1.0 of Multi Test is officially released, please consider this feature as experimental
+# and a subject to change at any time.
+# DO NOT enable this feature while testing production ready smart contracts.
+multitest_api_1_0 = []
 
 [dependencies]
 cw-utils = "1.0"
-cw-storage-plus = "1.0"
-cosmwasm-std = { version = "1.2", features = ["staking", "stargate"] }
-itertools = "0.10.1"
-schemars = "0.8.1"
+cw-storage-plus = "1.1"
+cosmwasm-std = { version = "1.3", features = ["staking", "stargate"] }
+itertools = "0.11"
+schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
-prost = "0.9"
-anyhow = "1.0.41"
+prost = "0.11"
+anyhow = "1.0"
 thiserror = "1.0"
 derivative = "2"
-
-# We don't use the following dependencies directly. They're dependencies of our dependencies.
-# We specify them to tighten their version requirements so that builds with `-Zminimal-versions` work.
-# Once we bump `cosmwasm-*` deps to a version after `1.1.5`, we can remove these.
-k256 = { version = "0.11.1", features = ["ecdsa"] }
+sha2 = "0.10"
 
 [dev-dependencies]
-# We don't use the following dependencies directly. They're dependencies of our dependencies.
-# We specify them to tighten their version requirements so that builds with `-Zminimal-versions` work.
-# Once we bump `cosmwasm-*` deps to a version after `1.1.5`, we can remove these.
-serde_json = "1.0.40"
+# We don't use the following dependency directly,
+# we tighten the version so that builds with `-Zminimal-versions` work.
+serde_json = "1.0.105"
