@@ -1179,18 +1179,46 @@ mod test {
         let mut wasm_keeper = mock_wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
-
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query = WasmQuery::CodeInfo { code_id };
-
         let code_info = wasm_keeper
             .query(&api, &wasm_storage, &querier, &block, query)
             .unwrap();
-
         let actual: cosmwasm_std::CodeInfoResponse = from_slice(&code_info).unwrap();
         assert_eq!(code_id, actual.code_id);
         assert_eq!("creator", actual.creator);
         assert!(!actual.checksum.is_empty());
+    }
+
+    #[test]
+    #[cfg(feature = "cosmwasm_1_2")]
+    fn different_contracts_must_have_different_checksum() {
+        let api = MockApi::default();
+        let wasm_storage = MockStorage::new();
+        let mut wasm_keeper = mock_wasm_keeper();
+        let block = mock_env().block;
+        let code_id_payout = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        let code_id_caller = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
+        let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
+        let query_payout = WasmQuery::CodeInfo {
+            code_id: code_id_payout,
+        };
+        let query_caller = WasmQuery::CodeInfo {
+            code_id: code_id_caller,
+        };
+        let code_info_payout = wasm_keeper
+            .query(&api, &wasm_storage, &querier, &block, query_payout)
+            .unwrap();
+        let code_info_caller = wasm_keeper
+            .query(&api, &wasm_storage, &querier, &block, query_caller)
+            .unwrap();
+        let info_payout: cosmwasm_std::CodeInfoResponse = from_slice(&code_info_payout).unwrap();
+        let info_caller: cosmwasm_std::CodeInfoResponse = from_slice(&code_info_caller).unwrap();
+        assert_eq!(code_id_payout, info_payout.code_id);
+        assert_eq!(code_id_caller, info_caller.code_id);
+        assert_ne!(info_caller.code_id, info_payout.code_id);
+        assert_eq!(info_caller.creator, info_payout.creator);
+        assert_ne!(info_caller.checksum, info_payout.checksum);
     }
 
     #[test]
