@@ -1,4 +1,4 @@
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
 use anyhow::bail;
@@ -121,7 +121,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Querier
     for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -143,7 +143,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Executor<CustomT::ExecT>
     for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -155,11 +155,7 @@ where
     IbcT: Ibc,
     GovT: Gov,
 {
-    fn execute(
-        &mut self,
-        sender: Addr,
-        msg: cosmwasm_std::CosmosMsg<CustomT::ExecT>,
-    ) -> AnyResult<AppResponse> {
+    fn execute(&mut self, sender: Addr, msg: CosmosMsg<CustomT::ExecT>) -> AnyResult<AppResponse> {
         let mut all = self.execute_multi(sender, vec![msg])?;
         let res = all.pop().unwrap();
         Ok(res)
@@ -696,13 +692,40 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
-    /// This registers contract code (like uploading wasm bytecode on a chain),
+    /// Registers contract code (like uploading wasm bytecode on a chain),
     /// so it can later be used to instantiate a contract.
+    #[cfg(feature = "multitest_api_1_0")]
+    pub fn store_code(
+        &mut self,
+        creator: Addr,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> u64 {
+        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
+    }
+
+    /// Registers contract code (like uploading wasm bytecode on a chain),
+    /// so it can later be used to instantiate a contract.
+    #[cfg(not(feature = "multitest_api_1_0"))]
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
-        self.init_modules(|router, _, _| router.wasm.store_code(code) as u64)
+        self.init_modules(|router, _, _| {
+            router
+                .wasm
+                .store_code(Addr::unchecked("code-creator"), code)
+        })
+    }
+
+    /// Registers contract code (like [store_code](Self::store_code)),
+    /// takes the code creator address as an additional argument.
+    #[cfg(not(feature = "multitest_api_1_0"))]
+    pub fn store_code_with_creator(
+        &mut self,
+        creator: Addr,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> u64 {
+        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
     }
 
     /// This allows to get `ContractData` for specific contract
@@ -719,7 +742,7 @@ where
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: std::fmt::Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -757,7 +780,7 @@ where
     pub fn execute_multi(
         &mut self,
         sender: Addr,
-        msgs: Vec<cosmwasm_std::CosmosMsg<CustomT::ExecT>>,
+        msgs: Vec<CosmosMsg<CustomT::ExecT>>,
     ) -> AnyResult<Vec<AppResponse>> {
         // we need to do some caching of storage here, once in the entry point:
         // meaning, wrap current state, all writes go to a cache, only when execute
@@ -837,7 +860,7 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
 impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
@@ -922,7 +945,7 @@ pub trait CosmosRouter {
 impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> CosmosRouter
     for Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
-    CustomT::ExecT: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
@@ -1078,7 +1101,7 @@ impl<'a, ExecC, QueryC> RouterQuerier<'a, ExecC, QueryC> {
 
 impl<'a, ExecC, QueryC> Querier for RouterQuerier<'a, ExecC, QueryC>
 where
-    ExecC: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
@@ -1118,7 +1141,7 @@ mod test {
         addr: &Addr,
     ) -> Vec<Coin>
     where
-        CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
         CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
         BankT: Bank,
@@ -1161,7 +1184,7 @@ mod test {
 
         // send both tokens
         let to_send = vec![coin(30, "eth"), coin(5, "btc")];
-        let msg: cosmwasm_std::CosmosMsg = BankMsg::Send {
+        let msg: CosmosMsg = BankMsg::Send {
             to_address: rcpt.clone().into(),
             amount: to_send,
         }
@@ -1201,7 +1224,11 @@ mod test {
         });
 
         // set up contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let code_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1220,7 +1247,7 @@ mod test {
         assert_eq!(
             contract_data,
             ContractData {
-                code_id: code_id as usize,
+                code_id,
                 creator: owner.clone(),
                 admin: None,
                 label: "Payout".to_owned(),
@@ -1249,7 +1276,10 @@ mod test {
         // the call to payout does emit this as well as custom attributes
         let payout_exec = &res.events[0];
         assert_eq!(payout_exec.ty.as_str(), "execute");
-        assert_eq!(payout_exec.attributes, [("_contract_addr", &contract_addr)]);
+        assert_eq!(
+            payout_exec.attributes,
+            [("_contract_address", &contract_addr)]
+        );
 
         // next is a custom wasm event
         let custom_attrs = res.custom_attrs(1);
@@ -1284,7 +1314,11 @@ mod test {
         });
 
         // set up payout contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let payout_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let payout_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1300,7 +1334,11 @@ mod test {
             .unwrap();
 
         // set up reflect contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let reflect_id = app.store_code(reflect::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
         let reflect_addr = app
             .instantiate_contract(reflect_id, owner, &EmptyMsg {}, &[], "Reflect", None)
             .unwrap();
@@ -1309,11 +1347,11 @@ mod test {
         let funds = get_balance(&app, &reflect_addr);
         assert_eq!(funds, vec![]);
         // reflect count is 1
-        let qres: payout::CountResponse = app
+        let query_res: payout::CountResponse = app
             .wrap()
             .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
             .unwrap();
-        assert_eq!(0, qres.count);
+        assert_eq!(0, query_res.count);
 
         // reflecting payout message pays reflect contract
         let msg = SubMsg::new(WasmMsg::Execute {
@@ -1334,19 +1372,22 @@ mod test {
         // reflect only returns standard wasm-execute event
         let ref_exec = &res.events[0];
         assert_eq!(ref_exec.ty.as_str(), "execute");
-        assert_eq!(ref_exec.attributes, [("_contract_addr", &reflect_addr)]);
+        assert_eq!(ref_exec.attributes, [("_contract_address", &reflect_addr)]);
 
         // the call to payout does emit this as well as custom attributes
         let payout_exec = &res.events[1];
         assert_eq!(payout_exec.ty.as_str(), "execute");
-        assert_eq!(payout_exec.attributes, [("_contract_addr", &payout_addr)]);
+        assert_eq!(
+            payout_exec.attributes,
+            [("_contract_address", &payout_addr)]
+        );
 
         let payout = &res.events[2];
         assert_eq!(payout.ty.as_str(), "wasm");
         assert_eq!(
             payout.attributes,
             [
-                ("_contract_addr", payout_addr.as_str()),
+                ("_contract_address", payout_addr.as_str()),
                 ("action", "payout")
             ]
         );
@@ -1364,11 +1405,11 @@ mod test {
         assert_eq!(funds, coins(5, "eth"));
 
         // reflect count updated
-        let qres: payout::CountResponse = app
+        let query_res: payout::CountResponse = app
             .wrap()
             .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
             .unwrap();
-        assert_eq!(1, qres.count);
+        assert_eq!(1, query_res.count);
     }
 
     #[test]
@@ -1385,7 +1426,11 @@ mod test {
         });
 
         // set up reflect contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let reflect_id = app.store_code(reflect::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
         let reflect_addr = app
             .instantiate_contract(
                 reflect_id,
@@ -1418,7 +1463,7 @@ mod test {
         // standard wasm-execute event
         let exec = &res.events[0];
         assert_eq!(exec.ty.as_str(), "execute");
-        assert_eq!(exec.attributes, [("_contract_addr", &reflect_addr)]);
+        assert_eq!(exec.attributes, [("_contract_address", &reflect_addr)]);
         // only transfer event from bank
         let transfer = &res.events[1];
         assert_eq!(transfer.ty.as_str(), "transfer");
@@ -1428,11 +1473,11 @@ mod test {
         assert_eq!(funds, coins(7, "eth"));
 
         // reflect count should be updated to 1
-        let qres: payout::CountResponse = app
+        let query_res: payout::CountResponse = app
             .wrap()
             .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
             .unwrap();
-        assert_eq!(1, qres.count);
+        assert_eq!(1, query_res.count);
 
         // sending 8 eth, then 3 btc should fail both
         let msg = SubMsg::new(BankMsg::Send {
@@ -1459,11 +1504,11 @@ mod test {
         assert_eq!(funds, coins(7, "eth"));
 
         // failure should not update reflect count
-        let qres: payout::CountResponse = app
+        let query_res: payout::CountResponse = app
             .wrap()
             .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
             .unwrap();
-        assert_eq!(1, qres.count);
+        assert_eq!(1, query_res.count);
     }
 
     #[test]
@@ -1478,7 +1523,11 @@ mod test {
                 .unwrap();
         });
 
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let payout_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let payout_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1533,7 +1582,7 @@ mod test {
         const LOTTERY: Item<Coin> = Item::new("lottery");
         const PITY: Item<Coin> = Item::new("pity");
 
-        #[derive(Clone, std::fmt::Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
+        #[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
         struct CustomMsg {
             // we mint LOTTERY tokens to this one
             lucky_winner: String,
@@ -1558,8 +1607,7 @@ mod test {
                 msg: Self::ExecT,
             ) -> AnyResult<AppResponse>
             where
-                ExecC:
-                    std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+                ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
                 QueryC: CustomQuery + DeserializeOwned + 'static,
             {
                 let lottery = LOTTERY.load(storage)?;
@@ -1592,8 +1640,7 @@ mod test {
                 _msg: Self::SudoT,
             ) -> AnyResult<AppResponse>
             where
-                ExecC:
-                    std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+                ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
                 QueryC: CustomQuery + DeserializeOwned + 'static,
             {
                 bail!("sudo not implemented for CustomHandler")
@@ -1665,7 +1712,7 @@ mod test {
     }
 
     #[test]
-    fn reflect_submessage_reply_works() {
+    fn reflect_sub_message_reply_works() {
         // set personal balance
         let owner = Addr::unchecked("owner");
         let random = Addr::unchecked("random");
@@ -1679,7 +1726,11 @@ mod test {
         });
 
         // set up reflect contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let reflect_id = app.store_code(reflect::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
         let reflect_addr = app
             .instantiate_contract(
                 reflect_id,
@@ -1713,11 +1764,11 @@ mod test {
 
         // expected events: execute, transfer, reply, custom wasm (set in reply)
         assert_eq!(4, res.events.len(), "{:?}", res.events);
-        res.assert_event(&Event::new("execute").add_attribute("_contract_addr", &reflect_addr));
+        res.assert_event(&Event::new("execute").add_attribute("_contract_address", &reflect_addr));
         res.assert_event(&Event::new("transfer").add_attribute("amount", "7eth"));
         res.assert_event(
             &Event::new("reply")
-                .add_attribute("_contract_addr", reflect_addr.as_str())
+                .add_attribute("_contract_address", reflect_addr.as_str())
                 .add_attribute("mode", "handle_success"),
         );
         res.assert_event(&Event::new("wasm-custom").add_attribute("from", "reply"));
@@ -1731,7 +1782,7 @@ mod test {
         AppResponse::from(reply)
             .assert_event(&Event::new("transfer").add_attribute("amount", "7eth"));
 
-        // reflect sends 300 btc, failure, but error caught by submessage (so shows success)
+        // reflect sends 300 btc, failure, but error caught by sub-message (so shows success)
         let msg = SubMsg::reply_always(
             BankMsg::Send {
                 to_address: random.clone().into(),
@@ -1761,7 +1812,7 @@ mod test {
         rcpt: &Addr,
     ) -> Vec<Coin>
     where
-        CustomT::ExecT: Clone + fmt::Debug + PartialEq + JsonSchema,
+        CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema,
         CustomT::QueryT: CustomQuery + DeserializeOwned,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
         BankT: Bank,
@@ -1787,8 +1838,7 @@ mod test {
         rcpt: &Addr,
     ) -> Vec<Coin>
     where
-        CustomT::ExecT:
-            std::fmt::Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
+        CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
         CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
         BankT: Bank,
@@ -1866,7 +1916,7 @@ mod test {
     fn sent_funds_properly_visible_on_execution() {
         // Testing if funds on contract are properly visible on contract.
         // Hackatom contract is initialized with 10btc. Then, the contract is executed, with
-        // additional 20btc. Then beneficiary balance is checked - expeced value is 30btc. 10btc
+        // additional 20btc. Then beneficiary balance is checked - expected value is 30btc. 10btc
         // would mean that sending tokens with message is not visible for this very message, and
         // 20btc means, that only such just send funds are visible.
         let owner = Addr::unchecked("owner");
@@ -1880,10 +1930,14 @@ mod test {
                 .unwrap();
         });
 
-        let contract_id = app.store_code(hackatom::contract());
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let code_id = app.store_code(hackatom::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), hackatom::contract());
+
         let contract = app
             .instantiate_contract(
-                contract_id,
+                code_id,
                 owner.clone(),
                 &hackatom::InstantiateMsg {
                     beneficiary: beneficiary.as_str().to_owned(),
@@ -1930,10 +1984,14 @@ mod test {
         });
 
         // create a hackatom contract with some funds
-        let contract_id = app.store_code(hackatom::contract());
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let code_id = app.store_code(hackatom::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), hackatom::contract());
+
         let contract = app
             .instantiate_contract(
-                contract_id,
+                code_id,
                 owner.clone(),
                 &hackatom::InstantiateMsg {
                     beneficiary: beneficiary.as_str().to_owned(),
@@ -1959,20 +2017,15 @@ mod test {
         let migrate_msg = hackatom::MigrateMsg {
             new_guy: random.to_string(),
         };
-        app.migrate_contract(beneficiary, contract.clone(), &migrate_msg, contract_id)
+        app.migrate_contract(beneficiary, contract.clone(), &migrate_msg, code_id)
             .unwrap_err();
 
-        // migrate fails if unregistred code id
-        app.migrate_contract(
-            owner.clone(),
-            contract.clone(),
-            &migrate_msg,
-            contract_id + 7,
-        )
-        .unwrap_err();
+        // migrate fails if unregistered code id
+        app.migrate_contract(owner.clone(), contract.clone(), &migrate_msg, code_id + 7)
+            .unwrap_err();
 
         // migrate succeeds when the stars align
-        app.migrate_contract(owner, contract.clone(), &migrate_msg, contract_id)
+        app.migrate_contract(owner, contract.clone(), &migrate_msg, code_id)
             .unwrap();
 
         // check beneficiary updated
@@ -1998,10 +2051,14 @@ mod test {
         let mut app = App::default();
 
         // create a hackatom contract with some funds
-        let contract_id = app.store_code(hackatom::contract());
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let code_id = app.store_code(hackatom::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), hackatom::contract());
+
         let contract = app
             .instantiate_contract(
-                contract_id,
+                code_id,
                 owner.clone(),
                 &hackatom::InstantiateMsg {
                     beneficiary: beneficiary.as_str().to_owned(),
@@ -2016,7 +2073,7 @@ mod test {
         let info = app.contract_data(&contract).unwrap();
         assert_eq!(info.admin, Some(owner.clone()));
 
-        // transfer adminship to owner2
+        // transfer admin permissions to owner2
         app.execute(
             owner.clone(),
             CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
@@ -2096,9 +2153,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2122,9 +2183,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2154,9 +2219,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2181,9 +2250,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2208,9 +2281,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2247,7 +2324,11 @@ mod test {
             });
 
             // set up reflect contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let reflect_id = app.store_code(reflect::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
             let reflect_addr = app
                 .instantiate_contract(
                     reflect_id,
@@ -2260,7 +2341,11 @@ mod test {
                 .unwrap();
 
             // set up echo contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let echo_id = app.store_code(echo::custom_contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let echo_id = app.store_code(Addr::unchecked("creator"), echo::custom_contract());
+
             let echo_addr = app
                 .instantiate_contract(echo_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2289,8 +2374,10 @@ mod test {
             assert_eq!(res.data, None);
             // ensure expected events
             assert_eq!(res.events.len(), 3, "{:?}", res.events);
-            res.assert_event(&Event::new("execute").add_attribute("_contract_addr", &reflect_addr));
-            res.assert_event(&Event::new("execute").add_attribute("_contract_addr", &echo_addr));
+            res.assert_event(
+                &Event::new("execute").add_attribute("_contract_address", &reflect_addr),
+            );
+            res.assert_event(&Event::new("execute").add_attribute("_contract_address", &echo_addr));
             res.assert_event(&Event::new("wasm-echo"));
         }
 
@@ -2300,9 +2387,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2347,9 +2438,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2379,9 +2474,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2426,9 +2525,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2477,9 +2580,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2507,9 +2614,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2537,9 +2648,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2566,9 +2681,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2595,9 +2714,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2614,6 +2737,24 @@ mod test {
                 .unwrap_err();
 
             assert_eq!(Error::event_type_too_short("e"), err.downcast().unwrap());
+        }
+    }
+
+    mod wasm_queries {
+
+        #[test]
+        #[cfg(feature = "cosmwasm_1_2")]
+        fn query_contract_info() {
+            use super::*;
+            let mut app = App::default();
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+            let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
+            assert_eq!(code_id, code_info_response.code_id);
+            assert_eq!("creator", code_info_response.creator);
+            assert!(!code_info_response.checksum.is_empty());
         }
     }
 
@@ -2635,7 +2776,11 @@ mod test {
                 .with_custom(custom_handler)
                 .build(no_init);
 
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let contract_id = app.store_code(echo::custom_contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let contract_id = app.store_code(Addr::unchecked("creator"), echo::custom_contract());
+
             let contract = app
                 .instantiate_contract(contract_id, owner, &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2681,7 +2826,11 @@ mod test {
             });
 
             // set up reflect contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(reflect::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
             let init_msg = to_binary(&EmptyMsg {}).unwrap();
             let msg = WasmMsg::Instantiate {
                 admin: None,
@@ -2710,7 +2859,11 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up echo contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let msg = echo::InitMessage::<Empty> {
                 data: Some("food".into()),
                 sub_msg: None,
@@ -2738,7 +2891,11 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up echo contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let msg = echo::InitMessage::<Empty> {
                 data: Some("food".into()),
                 ..Default::default()
@@ -2789,7 +2946,11 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up reflect contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let echo_addr = app
                 .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "label", None)
                 .unwrap();
@@ -2814,7 +2975,11 @@ mod test {
             let mut app = App::default();
 
             // set up contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(error::contract(false));
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), error::contract(false));
+
             let msg = EmptyMsg {};
             let err = app
                 .instantiate_contract(code_id, owner, &msg, &[], "error", None)
@@ -2839,7 +3004,11 @@ mod test {
             let mut app = App::default();
 
             // set up contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(error::contract(true));
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), error::contract(true));
+
             let msg = EmptyMsg {};
             let contract_addr = app
                 .instantiate_contract(code_id, owner, &msg, &[], "error", None)
@@ -2868,8 +3037,14 @@ mod test {
             let owner = Addr::unchecked("owner");
             let mut app = App::default();
 
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let error_code_id = app.store_code(error::contract(true));
+            #[cfg(feature = "multitest_api_1_0")]
+            let error_code_id = app.store_code(Addr::unchecked("creator"), error::contract(true));
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let caller_code_id = app.store_code(caller::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let caller_code_id = app.store_code(Addr::unchecked("creator"), caller::contract());
 
             // set up contracts
             let msg = EmptyMsg {};
@@ -2908,8 +3083,14 @@ mod test {
             let owner = Addr::unchecked("owner");
             let mut app = App::default();
 
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let error_code_id = app.store_code(error::contract(true));
+            #[cfg(feature = "multitest_api_1_0")]
+            let error_code_id = app.store_code(Addr::unchecked("creator"), error::contract(true));
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let caller_code_id = app.store_code(caller::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let caller_code_id = app.store_code(Addr::unchecked("creator"), caller::contract());
 
             // set up contracts
             let msg = EmptyMsg {};

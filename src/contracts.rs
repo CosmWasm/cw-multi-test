@@ -11,7 +11,7 @@ use cosmwasm_std::{
 
 use anyhow::{anyhow, bail, Result as AnyResult};
 
-/// Interface to call into a Contract
+/// Interface to call into a [Contract].
 pub trait Contract<T, Q = Empty>
 where
     T: Clone + fmt::Debug + PartialEq + JsonSchema,
@@ -119,8 +119,8 @@ where
         }
     }
 
-    /// this will take a contract that returns Response<Empty> and will "upgrade" it
-    /// to Response<C> if needed to be compatible with a chain-specific extension
+    /// This will take a contract that returns `Response<Empty>` and will "upgrade" it
+    /// to `Response<C>` if needed to be compatible with a chain-specific extension.
     pub fn new_with_empty(
         execute_fn: ContractFn<T1, Empty, E1, Empty>,
         instantiate_fn: ContractFn<T2, Empty, E2, Empty>,

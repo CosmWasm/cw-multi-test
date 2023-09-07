@@ -9,7 +9,7 @@ pub enum Error {
     #[error("Empty attribute value. Key: {key}")]
     EmptyAttributeValue { key: String },
 
-    #[error("Attribute key strats with reserved prefix _: {0}")]
+    #[error("Attribute key starts with reserved prefix _: {0}")]
     ReservedAttributeKey(String),
 
     #[error("Event type too short: {0}")]
@@ -22,7 +22,7 @@ pub enum Error {
     UnsupportedWasmMsg(WasmMsg),
 
     #[error("Unregistered code id")]
-    UnregisteredCodeId(usize),
+    UnregisteredCodeId(u64),
 }
 
 impl Error {
