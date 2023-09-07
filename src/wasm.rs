@@ -1016,7 +1016,7 @@ mod test {
         FailingModule<GovMsg, Empty, Empty>,
     >;
 
-    fn mock_wasm_keeper() -> WasmKeeper<Empty, Empty> {
+    fn wasm_keeper() -> WasmKeeper<Empty, Empty> {
         WasmKeeper::new()
     }
 
@@ -1036,7 +1036,7 @@ mod test {
     fn register_contract() {
         let api = MockApi::default();
         let mut wasm_storage = MockStorage::new();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), error::contract(false));
 
@@ -1129,7 +1129,7 @@ mod test {
     fn query_contract_info() {
         let api = MockApi::default();
         let mut wasm_storage = MockStorage::new();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
         assert_eq!(1, code_id);
@@ -1170,7 +1170,7 @@ mod test {
     fn query_code_info() {
         let api = MockApi::default();
         let wasm_storage = MockStorage::new();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
@@ -1189,7 +1189,7 @@ mod test {
     fn different_contracts_must_have_different_checksum() {
         let api = MockApi::default();
         let wasm_storage = MockStorage::new();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id_payout = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
         let code_id_caller = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
@@ -1220,7 +1220,7 @@ mod test {
     fn querying_invalid_code_info_must_fail() {
         let api = MockApi::default();
         let wasm_storage = MockStorage::new();
-        let wasm_keeper = mock_wasm_keeper();
+        let wasm_keeper = wasm_keeper();
         let block = mock_env().block;
 
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
@@ -1234,7 +1234,7 @@ mod test {
     #[test]
     fn can_dump_raw_wasm_state() {
         let api = MockApi::default();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
 
@@ -1285,7 +1285,7 @@ mod test {
     #[test]
     fn contract_send_coins() {
         let api = MockApi::default();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
 
@@ -1396,7 +1396,7 @@ mod test {
     #[test]
     fn multi_level_wasm_cache() {
         let api = MockApi::default();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
 
@@ -1560,7 +1560,7 @@ mod test {
     #[test]
     fn update_clear_admin_works() {
         let api = MockApi::default();
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
 
@@ -1672,7 +1672,7 @@ mod test {
 
     #[test]
     fn by_default_uses_simple_address_generator() {
-        let mut wasm_keeper = mock_wasm_keeper();
+        let mut wasm_keeper = wasm_keeper();
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
