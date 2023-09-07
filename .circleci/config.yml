@@ -158,6 +158,7 @@ jobs:
           name: Run tests with coverage
           command: |
             mkdir -p cov
-            docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin sh -c "cargo tarpaulin --workspace --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,iterator,staking,stargate --force-clean --out Xml --output-dir cov"
+            docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin \
+              sh -c "cargo tarpaulin --workspace --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,iterator,staking,stargate --force-clean --engine llvm --out Xml --output-dir cov"
       - codecov/upload:
           file: cov/cobertura.xml
