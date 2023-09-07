@@ -697,6 +697,18 @@ where
 {
     /// Registers contract code (like uploading wasm bytecode on a chain),
     /// so it can later be used to instantiate a contract.
+    #[cfg(feature = "multitest_api_1_0")]
+    pub fn store_code(
+        &mut self,
+        creator: Addr,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> u64 {
+        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
+    }
+
+    /// Registers contract code (like uploading wasm bytecode on a chain),
+    /// so it can later be used to instantiate a contract.
+    #[cfg(not(feature = "multitest_api_1_0"))]
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
         self.init_modules(|router, _, _| {
             router
@@ -707,6 +719,7 @@ where
 
     /// Registers contract code (like [store_code](Self::store_code)),
     /// takes the code creator address as an additional argument.
+    #[cfg(not(feature = "multitest_api_1_0"))]
     pub fn store_code_with_creator(
         &mut self,
         creator: Addr,
@@ -1211,7 +1224,11 @@ mod test {
         });
 
         // set up contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let code_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1297,7 +1314,11 @@ mod test {
         });
 
         // set up payout contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let payout_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let payout_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1313,7 +1334,11 @@ mod test {
             .unwrap();
 
         // set up reflect contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let reflect_id = app.store_code(reflect::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
         let reflect_addr = app
             .instantiate_contract(reflect_id, owner, &EmptyMsg {}, &[], "Reflect", None)
             .unwrap();
@@ -1401,7 +1426,11 @@ mod test {
         });
 
         // set up reflect contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let reflect_id = app.store_code(reflect::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
         let reflect_addr = app
             .instantiate_contract(
                 reflect_id,
@@ -1494,7 +1523,11 @@ mod test {
                 .unwrap();
         });
 
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let payout_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let payout_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
         let msg = payout::InstantiateMessage {
             payout: coin(5, "eth"),
         };
@@ -1693,7 +1726,11 @@ mod test {
         });
 
         // set up reflect contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
         let reflect_id = app.store_code(reflect::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
         let reflect_addr = app
             .instantiate_contract(
                 reflect_id,
@@ -1893,10 +1930,14 @@ mod test {
                 .unwrap();
         });
 
-        let contract_id = app.store_code(hackatom::contract());
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let code_id = app.store_code(hackatom::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), hackatom::contract());
+
         let contract = app
             .instantiate_contract(
-                contract_id,
+                code_id,
                 owner.clone(),
                 &hackatom::InstantiateMsg {
                     beneficiary: beneficiary.as_str().to_owned(),
@@ -1943,10 +1984,14 @@ mod test {
         });
 
         // create a hackatom contract with some funds
-        let contract_id = app.store_code(hackatom::contract());
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let code_id = app.store_code(hackatom::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), hackatom::contract());
+
         let contract = app
             .instantiate_contract(
-                contract_id,
+                code_id,
                 owner.clone(),
                 &hackatom::InstantiateMsg {
                     beneficiary: beneficiary.as_str().to_owned(),
@@ -1972,20 +2017,15 @@ mod test {
         let migrate_msg = hackatom::MigrateMsg {
             new_guy: random.to_string(),
         };
-        app.migrate_contract(beneficiary, contract.clone(), &migrate_msg, contract_id)
+        app.migrate_contract(beneficiary, contract.clone(), &migrate_msg, code_id)
             .unwrap_err();
 
         // migrate fails if unregistered code id
-        app.migrate_contract(
-            owner.clone(),
-            contract.clone(),
-            &migrate_msg,
-            contract_id + 7,
-        )
-        .unwrap_err();
+        app.migrate_contract(owner.clone(), contract.clone(), &migrate_msg, code_id + 7)
+            .unwrap_err();
 
         // migrate succeeds when the stars align
-        app.migrate_contract(owner, contract.clone(), &migrate_msg, contract_id)
+        app.migrate_contract(owner, contract.clone(), &migrate_msg, code_id)
             .unwrap();
 
         // check beneficiary updated
@@ -2011,10 +2051,14 @@ mod test {
         let mut app = App::default();
 
         // create a hackatom contract with some funds
-        let contract_id = app.store_code(hackatom::contract());
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let code_id = app.store_code(hackatom::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let code_id = app.store_code(Addr::unchecked("creator"), hackatom::contract());
+
         let contract = app
             .instantiate_contract(
-                contract_id,
+                code_id,
                 owner.clone(),
                 &hackatom::InstantiateMsg {
                     beneficiary: beneficiary.as_str().to_owned(),
@@ -2109,9 +2153,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2135,9 +2183,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2167,9 +2219,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2194,9 +2250,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2221,9 +2281,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2260,7 +2324,11 @@ mod test {
             });
 
             // set up reflect contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let reflect_id = app.store_code(reflect::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let reflect_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
             let reflect_addr = app
                 .instantiate_contract(
                     reflect_id,
@@ -2273,7 +2341,11 @@ mod test {
                 .unwrap();
 
             // set up echo contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let echo_id = app.store_code(echo::custom_contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let echo_id = app.store_code(Addr::unchecked("creator"), echo::custom_contract());
+
             let echo_addr = app
                 .instantiate_contract(echo_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2315,9 +2387,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2362,9 +2438,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2394,9 +2474,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2441,9 +2525,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let response = app
@@ -2492,9 +2580,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2522,9 +2614,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2552,9 +2648,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2581,9 +2681,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2610,9 +2714,13 @@ mod test {
 
             let owner = Addr::unchecked("owner");
 
-            let contract_id = app.store_code(echo::contract());
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let contract = app
-                .instantiate_contract(contract_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
+                .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
 
             let err = app
@@ -2639,7 +2747,10 @@ mod test {
         fn query_contract_info() {
             use super::*;
             let mut app = App::default();
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
             let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
             assert_eq!(code_id, code_info_response.code_id);
             assert_eq!("creator", code_info_response.creator);
@@ -2665,7 +2776,11 @@ mod test {
                 .with_custom(custom_handler)
                 .build(no_init);
 
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let contract_id = app.store_code(echo::custom_contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let contract_id = app.store_code(Addr::unchecked("creator"), echo::custom_contract());
+
             let contract = app
                 .instantiate_contract(contract_id, owner, &EmptyMsg {}, &[], "Echo", None)
                 .unwrap();
@@ -2711,7 +2826,11 @@ mod test {
             });
 
             // set up reflect contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(reflect::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), reflect::contract());
+
             let init_msg = to_binary(&EmptyMsg {}).unwrap();
             let msg = WasmMsg::Instantiate {
                 admin: None,
@@ -2740,7 +2859,11 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up echo contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let msg = echo::InitMessage::<Empty> {
                 data: Some("food".into()),
                 sub_msg: None,
@@ -2768,7 +2891,11 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up echo contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let msg = echo::InitMessage::<Empty> {
                 data: Some("food".into()),
                 ..Default::default()
@@ -2819,7 +2946,11 @@ mod test {
             let mut app = BasicApp::new(|_, _, _| {});
 
             // set up reflect contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
             let echo_addr = app
                 .instantiate_contract(code_id, owner.clone(), &EmptyMsg {}, &[], "label", None)
                 .unwrap();
@@ -2844,7 +2975,11 @@ mod test {
             let mut app = App::default();
 
             // set up contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(error::contract(false));
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), error::contract(false));
+
             let msg = EmptyMsg {};
             let err = app
                 .instantiate_contract(code_id, owner, &msg, &[], "error", None)
@@ -2869,7 +3004,11 @@ mod test {
             let mut app = App::default();
 
             // set up contract
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let code_id = app.store_code(error::contract(true));
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), error::contract(true));
+
             let msg = EmptyMsg {};
             let contract_addr = app
                 .instantiate_contract(code_id, owner, &msg, &[], "error", None)
@@ -2898,8 +3037,14 @@ mod test {
             let owner = Addr::unchecked("owner");
             let mut app = App::default();
 
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let error_code_id = app.store_code(error::contract(true));
+            #[cfg(feature = "multitest_api_1_0")]
+            let error_code_id = app.store_code(Addr::unchecked("creator"), error::contract(true));
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let caller_code_id = app.store_code(caller::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let caller_code_id = app.store_code(Addr::unchecked("creator"), caller::contract());
 
             // set up contracts
             let msg = EmptyMsg {};
@@ -2938,8 +3083,14 @@ mod test {
             let owner = Addr::unchecked("owner");
             let mut app = App::default();
 
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let error_code_id = app.store_code(error::contract(true));
+            #[cfg(feature = "multitest_api_1_0")]
+            let error_code_id = app.store_code(Addr::unchecked("creator"), error::contract(true));
+            #[cfg(not(feature = "multitest_api_1_0"))]
             let caller_code_id = app.store_code(caller::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let caller_code_id = app.store_code(Addr::unchecked("creator"), caller::contract());
 
             // set up contracts
             let msg = EmptyMsg {};

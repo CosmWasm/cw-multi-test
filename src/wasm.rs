@@ -1,5 +1,4 @@
 use std::borrow::Borrow;
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use cosmwasm_std::{
@@ -111,9 +110,9 @@ pub trait Wasm<ExecC, QueryC> {
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
-    /// code is in-memory lookup that stands in for wasm code
-    /// this can only be edited on the WasmRouter, and just read in caches
-    codes: HashMap<u64, CodeData<ExecC, QueryC>>,
+    /// `codes` is in-memory lookup that stands in for wasm code,
+    /// this can only be edited on the WasmRouter, and just read in caches.
+    codes: Vec<CodeData<ExecC, QueryC>>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
     generator: Box<dyn AddressGenerator>,
@@ -142,7 +141,7 @@ impl AddressGenerator for SimpleAddressGenerator {
 impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
     fn default() -> Self {
         Self {
-            codes: HashMap::default(),
+            codes: Vec::default(),
             _p: std::marker::PhantomData,
             generator: Box::new(SimpleAddressGenerator()),
         }
@@ -184,17 +183,13 @@ where
             WasmQuery::CodeInfo { code_id } => {
                 let code_data = self
                     .codes
-                    .get(&code_id)
+                    .get((code_id - 1) as usize)
                     .ok_or(Error::UnregisteredCodeId(code_id))?;
                 let mut res = cosmwasm_std::CodeInfoResponse::default();
                 res.code_id = code_id;
                 res.creator = code_data.creator.to_string();
                 res.checksum = cosmwasm_std::HexBinary::from(
-                    Sha256::digest(format!(
-                        "contract code {} stored by {}",
-                        res.code_id, res.creator
-                    ))
-                    .to_vec(),
+                    Sha256::digest(format!("contract code {}", res.code_id)).to_vec(),
                 );
                 to_binary(&res).map_err(Into::into)
             }
@@ -239,10 +234,9 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Stores contract code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
     pub fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
-        let code_id = self.codes.len() as u64 + 1;
-        self.codes
-            .insert(code_id, CodeData::<ExecC, QueryC> { creator, code });
-        code_id
+        let code_id = self.codes.len() + 1;
+        self.codes.push(CodeData::<ExecC, QueryC> { creator, code });
+        code_id as u64
     }
 
     pub fn load_contract(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
@@ -540,7 +534,7 @@ where
                 let contract_addr = api.addr_validate(&contract_addr)?;
 
                 // check admin status and update the stored code_id
-                if !self.codes.contains_key(&new_code_id) {
+                if new_code_id as usize > self.codes.len() {
                     bail!("Cannot migrate contract to unregistered code id");
                 }
                 let mut data = self.load_contract(storage, &contract_addr)?;
@@ -748,7 +742,7 @@ where
         label: String,
         created: u64,
     ) -> AnyResult<Addr> {
-        if !self.codes.contains_key(&code_id) {
+        if code_id as usize > self.codes.len() {
             bail!("Cannot init contract with unregistered code id");
         }
 
@@ -887,7 +881,7 @@ where
         let contract = self.load_contract(storage, &address)?;
         let handler = self
             .codes
-            .get(&contract.code_id)
+            .get((contract.code_id - 1) as usize)
             .ok_or(Error::UnregisteredCodeId(contract.code_id))?
             .code
             .borrow();
@@ -918,7 +912,7 @@ where
         let contract = self.load_contract(storage, &address)?;
         let handler = self
             .codes
-            .get(&contract.code_id)
+            .get((contract.code_id - 1) as usize)
             .ok_or(Error::UnregisteredCodeId(contract.code_id))?
             .code
             .borrow();
