@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::fmt::Debug;
 
 use cosmwasm_std::{
@@ -66,13 +65,17 @@ pub struct ContractData {
 }
 
 /// Contract code base data.
-struct CodeData<ExecC, QueryC> {
-    /// Address of an account that initially created the contract.
+struct CodeData {
+    /// Address of an account that initially stored the contract code.
     //FIXME Remove this feature flag when the default flag is `cosmwasm_1_2` or higher.
     #[cfg_attr(feature = "cosmwasm_1_1", allow(dead_code))]
     creator: Addr,
-    /// The contract code base.
-    code: Box<dyn Contract<ExecC, QueryC>>,
+    /// Seed used to generate a checksum for underlying code base.
+    //FIXME Remove this feature flag when the default flag is `cosmwasm_1_2` or higher.
+    #[cfg_attr(feature = "cosmwasm_1_1", allow(dead_code))]
+    seed: usize,
+    /// Identifier of the code base where the contract code is stored in memory.
+    code_base_id: usize,
 }
 
 pub trait Wasm<ExecC, QueryC> {
@@ -110,9 +113,10 @@ pub trait Wasm<ExecC, QueryC> {
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
-    /// `codes` is in-memory lookup that stands in for wasm code,
-    /// this can only be edited on the WasmRouter, and just read in caches.
-    codes: Vec<CodeData<ExecC, QueryC>>,
+    /// Contract codes that stand for wasm code in real-life blockchain.
+    code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
+    /// Code data with code base identifier and additional attributes.  
+    code_data: Vec<CodeData>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
     generator: Box<dyn AddressGenerator>,
@@ -139,9 +143,11 @@ impl AddressGenerator for SimpleAddressGenerator {
 }
 
 impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
+    /// Returns the default value for [WasmKeeper].
     fn default() -> Self {
         Self {
-            codes: Vec::default(),
+            code_base: Vec::default(),
+            code_data: Vec::default(),
             _p: std::marker::PhantomData,
             generator: Box::new(SimpleAddressGenerator()),
         }
@@ -182,14 +188,14 @@ where
             #[cfg(feature = "cosmwasm_1_2")]
             WasmQuery::CodeInfo { code_id } => {
                 let code_data = self
-                    .codes
+                    .code_data
                     .get((code_id - 1) as usize)
                     .ok_or(Error::UnregisteredCodeId(code_id))?;
                 let mut res = cosmwasm_std::CodeInfoResponse::default();
                 res.code_id = code_id;
                 res.creator = code_data.creator.to_string();
                 res.checksum = cosmwasm_std::HexBinary::from(
-                    Sha256::digest(format!("contract code {}", res.code_id)).to_vec(),
+                    Sha256::digest(format!("contract code {}", code_data.seed)).to_vec(),
                 );
                 to_binary(&res).map_err(Into::into)
             }
@@ -234,9 +240,45 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Stores contract code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
     pub fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
-        let code_id = self.codes.len() + 1;
-        self.codes.push(CodeData::<ExecC, QueryC> { creator, code });
+        let code_base_id = self.code_base.len();
+        self.code_base.push(code);
+        let code_id = self.code_data.len() + 1;
+        self.code_data.push(CodeData {
+            creator,
+            seed: code_id,
+            code_base_id,
+        });
         code_id as u64
+    }
+
+    /// Duplicates contract code with specified identifier.
+    pub fn duplicate_code(&mut self, creator: Addr, code_id: u64) -> AnyResult<u64> {
+        if code_id < 1 {
+            bail!(Error::UnregisteredCodeId(code_id));
+        }
+        let code_data = self
+            .code_data
+            .get((code_id - 1) as usize)
+            .ok_or(Error::UnregisteredCodeId(code_id))?;
+        self.code_data.push(CodeData {
+            creator,
+            seed: code_data.seed,
+            code_base_id: code_data.code_base_id,
+        });
+        Ok(code_id + 1)
+    }
+
+    /// Returns a handler to code of contract having specified code id.
+    #[allow(clippy::borrowed_box)]
+    pub fn get_code(&self, code_id: u64) -> AnyResult<&Box<dyn Contract<ExecC, QueryC>>> {
+        if code_id < 1 {
+            bail!(Error::UnregisteredCodeId(code_id));
+        }
+        let code_data = self
+            .code_data
+            .get((code_id - 1) as usize)
+            .ok_or(Error::UnregisteredCodeId(code_id))?;
+        Ok(&self.code_base[code_data.code_base_id])
     }
 
     pub fn load_contract(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
@@ -330,11 +372,9 @@ where
     }
 
     pub fn new_with_custom_address_generator(generator: impl AddressGenerator + 'static) -> Self {
-        let default = Self::default();
         Self {
-            codes: default.codes,
-            _p: default._p,
             generator: Box::new(generator),
+            ..Default::default()
         }
     }
 
@@ -534,7 +574,7 @@ where
                 let contract_addr = api.addr_validate(&contract_addr)?;
 
                 // check admin status and update the stored code_id
-                if new_code_id as usize > self.codes.len() {
+                if new_code_id as usize > self.code_data.len() {
                     bail!("Cannot migrate contract to unregistered code id");
                 }
                 let mut data = self.load_contract(storage, &contract_addr)?;
@@ -742,7 +782,7 @@ where
         label: String,
         created: u64,
     ) -> AnyResult<Addr> {
-        if code_id as usize > self.codes.len() {
+        if code_id as usize > self.code_data.len() {
             bail!("Cannot init contract with unregistered code id");
         }
 
@@ -879,12 +919,7 @@ where
         F: FnOnce(&Box<dyn Contract<ExecC, QueryC>>, Deps<QueryC>, Env) -> AnyResult<T>,
     {
         let contract = self.load_contract(storage, &address)?;
-        let handler = self
-            .codes
-            .get((contract.code_id - 1) as usize)
-            .ok_or(Error::UnregisteredCodeId(contract.code_id))?
-            .code
-            .borrow();
+        let handler = self.get_code(contract.code_id)?;
         let storage = self.contract_storage_readonly(storage, &address);
         let env = self.get_env(address, block);
 
@@ -910,12 +945,7 @@ where
         ExecC: DeserializeOwned,
     {
         let contract = self.load_contract(storage, &address)?;
-        let handler = self
-            .codes
-            .get((contract.code_id - 1) as usize)
-            .ok_or(Error::UnregisteredCodeId(contract.code_id))?
-            .code
-            .borrow();
+        let handler = self.get_code(contract.code_id)?;
 
         // We don't actually need a transaction here, as it is already embedded in a transactional.
         // execute_submsg or App.execute_multi.

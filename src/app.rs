@@ -728,6 +728,28 @@ where
         self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
     }
 
+    /// Duplicates the contract code identified by `code_id` and returns
+    /// the identifier of newly created copy of the contract code.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cosmwasm_std::Addr;
+    /// use cw_multi_test::App;
+    ///
+    /// let mut app = App::default();
+    ///
+    /// // there is no contract code with identifier 100 stored yet, returns an error
+    /// assert_eq!("Unregistered code id: 100", app.duplicate_code(Addr::unchecked("creator"), 100).unwrap_err().to_string());
+    ///
+    /// // zero is an invalid identifier for contract code, returns an error
+    /// assert_eq!("Unregistered code id: 0", app.duplicate_code(Addr::unchecked("creator"), 0).unwrap_err().to_string());
+    ///
+    /// ```
+    pub fn duplicate_code(&mut self, creator: Addr, code_id: u64) -> AnyResult<u64> {
+        self.init_modules(|router, _, _| router.wasm.duplicate_code(creator, code_id))
+    }
+
     /// This allows to get `ContractData` for specific contract
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
         self.read_module(|router, _, storage| router.wasm.load_contract(storage, address))
@@ -1135,6 +1157,24 @@ mod test {
     use crate::test_helpers::contracts::{caller, echo, error, hackatom, payout, reflect};
     use crate::test_helpers::{CustomMsg, EmptyMsg};
     use crate::transactions::StorageTransaction;
+
+    #[test]
+    fn duplicate_contract_code() {
+        // set up application
+        let mut app = App::default();
+
+        // set up original contract
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let original_code_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let original_code_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
+        // duplicate contract code
+        let duplicate_code_id = app
+            .duplicate_code(Addr::unchecked("creator"), original_code_id)
+            .unwrap();
+        assert_ne!(original_code_id, duplicate_code_id);
+    }
 
     fn get_balance<BankT, ApiT, StorageT, CustomT, WasmT>(
         app: &App<BankT, ApiT, StorageT, CustomT, WasmT>,

@@ -21,7 +21,7 @@ pub enum Error {
     #[error("Unsupported wasm message: {0:?}")]
     UnsupportedWasmMsg(WasmMsg),
 
-    #[error("Unregistered code id")]
+    #[error("Unregistered code id: {0}")]
     UnregisteredCodeId(u64),
 }
 
