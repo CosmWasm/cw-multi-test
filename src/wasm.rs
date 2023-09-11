@@ -252,7 +252,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     }
 
     /// Duplicates contract code with specified identifier.
-    pub fn duplicate_code(&mut self, creator: Addr, code_id: u64) -> AnyResult<u64> {
+    pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         if code_id < 1 {
             bail!(Error::UnregisteredCodeId(code_id));
         }
@@ -261,16 +261,16 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
             .get((code_id - 1) as usize)
             .ok_or(Error::UnregisteredCodeId(code_id))?;
         self.code_data.push(CodeData {
-            creator,
+            creator: code_data.creator.clone(),
             seed: code_data.seed,
             code_base_id: code_data.code_base_id,
         });
         Ok(code_id + 1)
     }
 
-    /// Returns a handler to code of contract having specified code id.
+    /// Returns a handler to code of the contract with specified code id.
     #[allow(clippy::borrowed_box)]
-    pub fn get_code(&self, code_id: u64) -> AnyResult<&Box<dyn Contract<ExecC, QueryC>>> {
+    pub fn get_contract_code(&self, code_id: u64) -> AnyResult<&Box<dyn Contract<ExecC, QueryC>>> {
         if code_id < 1 {
             bail!(Error::UnregisteredCodeId(code_id));
         }
@@ -919,7 +919,7 @@ where
         F: FnOnce(&Box<dyn Contract<ExecC, QueryC>>, Deps<QueryC>, Env) -> AnyResult<T>,
     {
         let contract = self.load_contract(storage, &address)?;
-        let handler = self.get_code(contract.code_id)?;
+        let handler = self.get_contract_code(contract.code_id)?;
         let storage = self.contract_storage_readonly(storage, &address);
         let env = self.get_env(address, block);
 
@@ -945,7 +945,7 @@ where
         ExecC: DeserializeOwned,
     {
         let contract = self.load_contract(storage, &address)?;
-        let handler = self.get_code(contract.code_id)?;
+        let handler = self.get_contract_code(contract.code_id)?;
 
         // We don't actually need a transaction here, as it is already embedded in a transactional.
         // execute_submsg or App.execute_multi.
