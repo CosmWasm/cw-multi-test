@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::fmt::Debug;
 
 use cosmwasm_std::{
@@ -269,8 +270,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     }
 
     /// Returns a handler to code of the contract with specified code id.
-    #[allow(clippy::borrowed_box)]
-    pub fn get_contract_code(&self, code_id: u64) -> AnyResult<&Box<dyn Contract<ExecC, QueryC>>> {
+    pub fn get_contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
         if code_id < 1 {
             bail!(Error::UnregisteredCodeId(code_id));
         }
@@ -278,7 +278,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
             .code_data
             .get((code_id - 1) as usize)
             .ok_or(Error::UnregisteredCodeId(code_id))?;
-        Ok(&self.code_base[code_data.code_base_id])
+        Ok(self.code_base[code_data.code_base_id].borrow())
     }
 
     pub fn load_contract(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
@@ -916,7 +916,7 @@ where
         action: F,
     ) -> AnyResult<T>
     where
-        F: FnOnce(&Box<dyn Contract<ExecC, QueryC>>, Deps<QueryC>, Env) -> AnyResult<T>,
+        F: FnOnce(&dyn Contract<ExecC, QueryC>, Deps<QueryC>, Env) -> AnyResult<T>,
     {
         let contract = self.load_contract(storage, &address)?;
         let handler = self.get_contract_code(contract.code_id)?;
@@ -941,7 +941,7 @@ where
         action: F,
     ) -> AnyResult<T>
     where
-        F: FnOnce(&Box<dyn Contract<ExecC, QueryC>>, DepsMut<QueryC>, Env) -> AnyResult<T>,
+        F: FnOnce(&dyn Contract<ExecC, QueryC>, DepsMut<QueryC>, Env) -> AnyResult<T>,
         ExecC: DeserializeOwned,
     {
         let contract = self.load_contract(storage, &address)?;
