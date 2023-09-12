@@ -740,10 +740,10 @@ where
     /// let mut app = App::default();
     ///
     /// // there is no contract code with identifier 100 stored yet, returns an error
-    /// assert_eq!("Unregistered code id: 100", app.duplicate_code(100).unwrap_err().to_string());
+    /// assert_eq!("code id 100: no such code", app.duplicate_code(100).unwrap_err().to_string());
     ///
     /// // zero is an invalid identifier for contract code, returns an error
-    /// assert_eq!("Unregistered code id: 0", app.duplicate_code(0).unwrap_err().to_string());
+    /// assert_eq!("code id: invalid", app.duplicate_code(0).unwrap_err().to_string());
     ///
     /// ```
     pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
@@ -2790,7 +2790,7 @@ mod test {
 
         #[test]
         #[cfg(feature = "cosmwasm_1_2")]
-        fn query_contract_info() {
+        fn query_existing_code_info() {
             use super::*;
             let mut app = App::default();
             #[cfg(not(feature = "multitest_api_1_0"))]
@@ -2801,6 +2801,21 @@ mod test {
             assert_eq!(code_id, code_info_response.code_id);
             assert_eq!("creator", code_info_response.creator);
             assert!(!code_info_response.checksum.is_empty());
+        }
+
+        #[test]
+        #[cfg(feature = "cosmwasm_1_2")]
+        fn query_non_existing_code_info() {
+            use super::*;
+            let app = App::default();
+            assert_eq!(
+                "Generic error: Querier contract error: code id: invalid",
+                app.wrap().query_wasm_code_info(0).unwrap_err().to_string()
+            );
+            assert_eq!(
+                "Generic error: Querier contract error: code id 1: no such code",
+                app.wrap().query_wasm_code_info(1).unwrap_err().to_string()
+            );
         }
     }
 

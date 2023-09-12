@@ -188,10 +188,7 @@ where
             }
             #[cfg(feature = "cosmwasm_1_2")]
             WasmQuery::CodeInfo { code_id } => {
-                let code_data = self
-                    .code_data
-                    .get((code_id - 1) as usize)
-                    .ok_or(Error::UnregisteredCodeId(code_id))?;
+                let code_data = self.code_data(code_id)?;
                 let mut res = cosmwasm_std::CodeInfoResponse::default();
                 res.code_id = code_id;
                 res.creator = code_data.creator.to_string();
@@ -254,13 +251,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
     /// Duplicates contract code with specified identifier.
     pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
-        if code_id < 1 {
-            bail!(Error::UnregisteredCodeId(code_id));
-        }
-        let code_data = self
-            .code_data
-            .get((code_id - 1) as usize)
-            .ok_or(Error::UnregisteredCodeId(code_id))?;
+        let code_data = self.code_data(code_id)?;
         self.code_data.push(CodeData {
             creator: code_data.creator.clone(),
             seed: code_data.seed,
@@ -270,15 +261,20 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     }
 
     /// Returns a handler to code of the contract with specified code id.
-    pub fn get_contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
+    pub fn contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
+        let code_data = self.code_data(code_id)?;
+        Ok(self.code_base[code_data.code_base_id].borrow())
+    }
+
+    /// Returns code data of the contract with specified code id.
+    fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
         if code_id < 1 {
-            bail!(Error::UnregisteredCodeId(code_id));
+            bail!(Error::InvalidCodeId);
         }
-        let code_data = self
+        Ok(self
             .code_data
             .get((code_id - 1) as usize)
-            .ok_or(Error::UnregisteredCodeId(code_id))?;
-        Ok(self.code_base[code_data.code_base_id].borrow())
+            .ok_or(Error::UnregisteredCodeId(code_id))?)
     }
 
     pub fn load_contract(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
@@ -919,7 +915,7 @@ where
         F: FnOnce(&dyn Contract<ExecC, QueryC>, Deps<QueryC>, Env) -> AnyResult<T>,
     {
         let contract = self.load_contract(storage, &address)?;
-        let handler = self.get_contract_code(contract.code_id)?;
+        let handler = self.contract_code(contract.code_id)?;
         let storage = self.contract_storage_readonly(storage, &address);
         let env = self.get_env(address, block);
 
@@ -945,7 +941,7 @@ where
         ExecC: DeserializeOwned,
     {
         let contract = self.load_contract(storage, &address)?;
-        let handler = self.get_contract_code(contract.code_id)?;
+        let handler = self.contract_code(contract.code_id)?;
 
         // We don't actually need a transaction here, as it is already embedded in a transactional.
         // execute_submsg or App.execute_multi.
