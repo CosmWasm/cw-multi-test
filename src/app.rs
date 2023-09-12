@@ -737,6 +737,10 @@ where
     /// use cosmwasm_std::Addr;
     /// use cw_multi_test::App;
     ///
+    /// //TODO:
+    /// //   Provide a happy path example when testing contracts are public,
+    /// //   otherwise the example code would be unreadable.
+    ///
     /// let mut app = App::default();
     ///
     /// // there is no contract code with identifier 100 stored yet, returns an error
