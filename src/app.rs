@@ -728,6 +728,62 @@ where
         self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
     }
 
+    /// Duplicates the contract code identified by `code_id` and returns
+    /// the identifier of the newly created copy of the contract code.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cosmwasm_std::Addr;
+    /// use cw_multi_test::App;
+    ///
+    /// // contract implementation
+    /// mod echo {
+    ///   // contract entry points not shown here
+    /// #  use std::todo;
+    /// #  use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg};
+    /// #  use serde::{Deserialize, Serialize};
+    /// #  use cw_multi_test::{Contract, ContractWrapper};
+    /// #
+    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {  
+    /// #    todo!()
+    /// #  }
+    /// #
+    /// #  fn execute(_: DepsMut, _: Env, _info: MessageInfo, msg: WasmMsg) -> Result<Response, StdError> {
+    /// #    todo!()
+    /// #  }
+    /// #
+    /// #  fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
+    /// #    todo!()
+    /// #  }
+    /// #  
+    ///   pub fn contract() -> Box<dyn Contract<Empty>> {
+    ///     // should return the contract
+    /// #   Box::new(ContractWrapper::new(execute, instantiate, query))
+    ///   }
+    /// }
+    ///
+    /// let mut app = App::default();
+    ///
+    /// // store a new contract, save the code id
+    /// # #[cfg(not(feature = "multitest_api_1_0"))]
+    /// let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+    /// # #[cfg(feature = "multitest_api_1_0")]
+    /// # let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+    ///
+    /// // duplicate the existing contract, duplicated contract has different code id
+    /// assert_ne!(code_id, app.duplicate_code(code_id).unwrap());
+    ///
+    /// // zero is an invalid identifier for contract code, returns an error
+    /// assert_eq!("code id: invalid", app.duplicate_code(0).unwrap_err().to_string());
+    ///
+    /// // there is no contract code with identifier 100 stored yet, returns an error
+    /// assert_eq!("code id 100: no such code", app.duplicate_code(100).unwrap_err().to_string());
+    /// ```
+    pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
+        self.init_modules(|router, _, _| router.wasm.duplicate_code(code_id))
+    }
+
     /// This allows to get `ContractData` for specific contract
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
         self.read_module(|router, _, storage| router.wasm.load_contract(storage, address))
@@ -1135,6 +1191,30 @@ mod test {
     use crate::test_helpers::contracts::{caller, echo, error, hackatom, payout, reflect};
     use crate::test_helpers::{CustomMsg, EmptyMsg};
     use crate::transactions::StorageTransaction;
+
+    #[test]
+    #[cfg(feature = "cosmwasm_1_2")]
+    fn duplicate_contract_code() {
+        // set up application
+        let mut app = App::default();
+
+        // store original contract code
+        #[cfg(not(feature = "multitest_api_1_0"))]
+        let original_code_id = app.store_code(payout::contract());
+        #[cfg(feature = "multitest_api_1_0")]
+        let original_code_id = app.store_code(Addr::unchecked("creator"), payout::contract());
+
+        // duplicate contract code
+        let duplicate_code_id = app.duplicate_code(original_code_id).unwrap();
+        assert_ne!(original_code_id, duplicate_code_id);
+
+        // query and compare code info of both contracts
+        let original_response = app.wrap().query_wasm_code_info(original_code_id).unwrap();
+        let duplicate_response = app.wrap().query_wasm_code_info(duplicate_code_id).unwrap();
+        assert_ne!(original_response.code_id, duplicate_response.code_id);
+        assert_eq!(original_response.creator, duplicate_response.creator);
+        assert_eq!(original_response.checksum, duplicate_response.checksum);
+    }
 
     fn get_balance<BankT, ApiT, StorageT, CustomT, WasmT>(
         app: &App<BankT, ApiT, StorageT, CustomT, WasmT>,
@@ -2744,7 +2824,7 @@ mod test {
 
         #[test]
         #[cfg(feature = "cosmwasm_1_2")]
-        fn query_contract_info() {
+        fn query_existing_code_info() {
             use super::*;
             let mut app = App::default();
             #[cfg(not(feature = "multitest_api_1_0"))]
@@ -2755,6 +2835,21 @@ mod test {
             assert_eq!(code_id, code_info_response.code_id);
             assert_eq!("creator", code_info_response.creator);
             assert!(!code_info_response.checksum.is_empty());
+        }
+
+        #[test]
+        #[cfg(feature = "cosmwasm_1_2")]
+        fn query_non_existing_code_info() {
+            use super::*;
+            let app = App::default();
+            assert_eq!(
+                "Generic error: Querier contract error: code id: invalid",
+                app.wrap().query_wasm_code_info(0).unwrap_err().to_string()
+            );
+            assert_eq!(
+                "Generic error: Querier contract error: code id 1: no such code",
+                app.wrap().query_wasm_code_info(1).unwrap_err().to_string()
+            );
         }
     }
 
