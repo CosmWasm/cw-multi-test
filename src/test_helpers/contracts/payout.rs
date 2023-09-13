@@ -3,12 +3,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use cosmwasm_std::{
-    to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
 
 use crate::contracts::{Contract, ContractWrapper};
-use crate::test_helpers::{EmptyMsg, COUNT};
+use crate::test_helpers::COUNT;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct InstantiateMessage {
@@ -44,12 +44,7 @@ fn instantiate(
     Ok(Response::default())
 }
 
-fn execute(
-    deps: DepsMut,
-    _env: Env,
-    info: MessageInfo,
-    _msg: EmptyMsg,
-) -> Result<Response, StdError> {
+fn execute(deps: DepsMut, _env: Env, info: MessageInfo, _msg: Empty) -> Result<Response, StdError> {
     // always try to payout what was set originally
     let payout = PAYOUT.load(deps.storage)?;
     let msg = BankMsg::Send {

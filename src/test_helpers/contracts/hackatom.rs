@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
-use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
+use crate::{Contract, ContractWrapper};
 use schemars::JsonSchema;
 use std::fmt;
 
@@ -40,12 +40,7 @@ fn instantiate(
     Ok(Response::default())
 }
 
-fn execute(
-    deps: DepsMut,
-    env: Env,
-    _info: MessageInfo,
-    _msg: EmptyMsg,
-) -> Result<Response, StdError> {
+fn execute(deps: DepsMut, env: Env, _info: MessageInfo, _msg: Empty) -> Result<Response, StdError> {
     let init = HACKATOM.load(deps.storage)?;
     let balance = deps.querier.query_all_balances(env.contract.address)?;
 

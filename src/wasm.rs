@@ -1026,7 +1026,6 @@ mod test {
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
     use crate::test_helpers::contracts::{caller, error, payout};
-    use crate::test_helpers::EmptyMsg;
     use crate::transactions::StorageTransaction;
 
     use super::*;
@@ -1609,7 +1608,7 @@ mod test {
 
         // init the contract
         let info = mock_info("admin", &[]);
-        let init_msg = to_vec(&EmptyMsg {}).unwrap();
+        let init_msg = to_vec(&Empty {}).unwrap();
         let res = wasm_keeper
             .call_instantiate(
                 contract_addr.clone(),

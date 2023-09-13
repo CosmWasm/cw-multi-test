@@ -6,9 +6,6 @@ use cw_storage_plus::Item;
 
 pub mod contracts;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct EmptyMsg {}
-
 /// This is just a demo place so we can test custom message handling
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename = "snake_case")]
