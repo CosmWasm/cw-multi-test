@@ -729,7 +729,7 @@ where
     }
 
     /// Duplicates the contract code identified by `code_id` and returns
-    /// the identifier of newly created copy of the contract.
+    /// the identifier of the newly created copy of the contract code.
     ///
     /// # Examples
     ///
@@ -737,18 +737,49 @@ where
     /// use cosmwasm_std::Addr;
     /// use cw_multi_test::App;
     ///
-    /// //TODO:
-    /// //   Provide a happy path example when testing contracts are public,
-    /// //   otherwise the example code would be unreadable.
+    /// // contract implementation
+    /// mod echo {
+    /// #  use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg};
+    /// #  use serde::{Deserialize, Serialize};
+    /// #  use cw_multi_test::{Contract, ContractWrapper};
+    /// #
+    /// #  #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+    /// #  pub struct EmptyMsg {}
+    /// #
+    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: EmptyMsg) -> Result<Response, StdError> {
+    /// #     Ok(Response::default())
+    /// #  }
+    /// #
+    /// #  fn execute(_: DepsMut, _: Env, _info: MessageInfo, msg: WasmMsg) -> Result<Response, StdError> {
+    /// #    let message = SubMsg::new(msg);
+    /// #    Ok(Response::new().add_submessage(message))
+    /// #  }
+    /// #
+    /// #  fn query(_deps: Deps, _env: Env, _msg: EmptyMsg) -> Result<Binary, StdError> {
+    /// #    Err(StdError::generic_err("not implemented yet"))
+    /// #  }
+    ///   // returns the contract
+    ///   pub fn contract() -> Box<dyn Contract<Empty>> {
+    /// #   Box::new(ContractWrapper::new(execute, instantiate, query))
+    ///   }
+    /// }
     ///
     /// let mut app = App::default();
     ///
-    /// // there is no contract code with identifier 100 stored yet, returns an error
-    /// assert_eq!("code id 100: no such code", app.duplicate_code(100).unwrap_err().to_string());
+    /// // store a new contract, save the code id
+    /// # #[cfg(not(feature = "multitest_api_1_0"))]
+    /// let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+    /// # #[cfg(feature = "multitest_api_1_0")]
+    /// # let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+    ///
+    /// // duplicate the existing contract, duplicated contract has different code id
+    /// assert_ne!(code_id, app.duplicate_code(code_id).unwrap());
     ///
     /// // zero is an invalid identifier for contract code, returns an error
     /// assert_eq!("code id: invalid", app.duplicate_code(0).unwrap_err().to_string());
     ///
+    /// // there is no contract code with identifier 100 stored yet, returns an error
+    /// assert_eq!("code id 100: no such code", app.duplicate_code(100).unwrap_err().to_string());
     /// ```
     pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         self.init_modules(|router, _, _| router.wasm.duplicate_code(code_id))
