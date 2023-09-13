@@ -739,27 +739,26 @@ where
     ///
     /// // contract implementation
     /// mod echo {
+    ///   // contract entry points not shown here
+    /// #  use std::todo;
     /// #  use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg};
     /// #  use serde::{Deserialize, Serialize};
     /// #  use cw_multi_test::{Contract, ContractWrapper};
     /// #
-    /// #  #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-    /// #  pub struct EmptyMsg {}
-    /// #
-    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: EmptyMsg) -> Result<Response, StdError> {
-    /// #     Ok(Response::default())
+    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {  
+    /// #    todo!()
     /// #  }
     /// #
     /// #  fn execute(_: DepsMut, _: Env, _info: MessageInfo, msg: WasmMsg) -> Result<Response, StdError> {
-    /// #    let message = SubMsg::new(msg);
-    /// #    Ok(Response::new().add_submessage(message))
+    /// #    todo!()
     /// #  }
     /// #
-    /// #  fn query(_deps: Deps, _env: Env, _msg: EmptyMsg) -> Result<Binary, StdError> {
-    /// #    Err(StdError::generic_err("not implemented yet"))
+    /// #  fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
+    /// #    todo!()
     /// #  }
-    ///   // returns the contract
+    /// #  
     ///   pub fn contract() -> Box<dyn Contract<Empty>> {
+    ///     // should return the contract
     /// #   Box::new(ContractWrapper::new(execute, instantiate, query))
     ///   }
     /// }
