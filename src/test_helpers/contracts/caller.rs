@@ -1,15 +1,17 @@
 use std::fmt;
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg};
+use cosmwasm_std::{
+    Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg,
+};
 use schemars::JsonSchema;
 
-use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
+use crate::{Contract, ContractWrapper};
 
 fn instantiate(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: EmptyMsg,
+    _msg: Empty,
 ) -> Result<Response, StdError> {
     Ok(Response::default())
 }
@@ -25,7 +27,7 @@ fn execute(
     Ok(Response::new().add_submessage(message))
 }
 
-fn query(_deps: Deps, _env: Env, _msg: EmptyMsg) -> Result<Binary, StdError> {
+fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
     Err(StdError::generic_err(
         "query not implemented for the `caller` contract",
     ))

@@ -1,7 +1,7 @@
-//! Very simple echoing contract which just returns incomming string if any, but performming subcall of
-//! given message to test response.
+//! Very simple echoing contract which just returns incoming string if any,
+//! but performing sub call of given message to test response.
 //!
-//! Additionally it bypass all events and attributes send to it
+//! Additionally it bypasses all events and attributes send to it.
 
 use cosmwasm_std::{
     to_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
@@ -9,7 +9,7 @@ use cosmwasm_std::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
+use crate::{Contract, ContractWrapper};
 use schemars::JsonSchema;
 use std::fmt::Debug;
 
@@ -85,7 +85,7 @@ where
         .add_events(msg.events))
 }
 
-fn query(_deps: Deps, _env: Env, msg: EmptyMsg) -> Result<Binary, StdError> {
+fn query(_deps: Deps, _env: Env, msg: Empty) -> Result<Binary, StdError> {
     to_binary(&msg)
 }
 

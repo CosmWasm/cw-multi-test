@@ -1,15 +1,15 @@
 use std::fmt;
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError};
+use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError};
 use schemars::JsonSchema;
 
-use crate::{test_helpers::EmptyMsg, Contract, ContractWrapper};
+use crate::{Contract, ContractWrapper};
 
 fn instantiate_err(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: EmptyMsg,
+    _msg: Empty,
 ) -> Result<Response, StdError> {
     Err(StdError::generic_err("Init failed"))
 }
@@ -18,7 +18,7 @@ fn instantiate_ok(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: EmptyMsg,
+    _msg: Empty,
 ) -> Result<Response, StdError> {
     Ok(Response::default())
 }
@@ -27,12 +27,12 @@ fn execute(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: EmptyMsg,
+    _msg: Empty,
 ) -> Result<Response, StdError> {
     Err(StdError::generic_err("Handle failed"))
 }
 
-fn query(_deps: Deps, _env: Env, _msg: EmptyMsg) -> Result<Binary, StdError> {
+fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
     Err(StdError::generic_err("Query failed"))
 }
 

@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, Event, MessageInfo, Reply, Response, StdError, SubMsg,
+    to_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response, StdError,
+    SubMsg,
 };
 use cw_storage_plus::Map;
 
 use crate::contracts::{Contract, ContractWrapper};
 use crate::test_helpers::contracts::payout;
-use crate::test_helpers::{CustomMsg, EmptyMsg, COUNT};
+use crate::test_helpers::{CustomMsg, COUNT};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Message {
@@ -26,7 +27,7 @@ fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    _msg: EmptyMsg,
+    _msg: Empty,
 ) -> Result<Response<CustomMsg>, StdError> {
     COUNT.save(deps.storage, &0)?;
     Ok(Response::default())
