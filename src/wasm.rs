@@ -212,7 +212,7 @@ where
     ) -> AnyResult<AppResponse> {
         self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
             .context(format!(
-                "error executing WasmMsg:\nsender: {}\n{:?}",
+                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
                 sender, msg
             ))
     }
@@ -663,7 +663,7 @@ where
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Error) {
                 let reply = Reply {
                     id,
-                    result: SubMsgResult::Err(e.to_string()),
+                    result: SubMsgResult::Err(format!("{:?}", e)),
                 };
                 self._reply(api, router, storage, block, contract, reply)
             } else {
