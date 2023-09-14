@@ -994,6 +994,7 @@ mod test {
 
     use super::*;
 
+    use crate::stargate::{StargateMsg, StargateQuery};
     use cosmwasm_std::{
         from_slice,
         testing::{mock_env, MockApi, MockStorage},
@@ -1009,6 +1010,7 @@ mod test {
         DistributionKeeper,
         FailingModule<IbcMsg, IbcQuery, Empty>,
         FailingModule<GovMsg, Empty, Empty>,
+        FailingModule<StargateMsg, StargateQuery, Empty>,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -1020,6 +1022,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: FailingModule::new(),
             gov: FailingModule::new(),
+            stargate: FailingModule::new(),
         }
     }
 

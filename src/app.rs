@@ -20,6 +20,7 @@ use crate::gov::Gov;
 use crate::ibc::Ibc;
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
+use crate::stargate::{Stargate, StargateMsg, StargateQuery};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 
@@ -53,15 +54,16 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = FailingModule<IbcMsg, IbcQuery, Empty>,
     Gov = FailingModule<GovMsg, Empty, Empty>,
+    Sgate = FailingModule<StargateMsg, StargateQuery, Empty>,
 > {
-    router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov>,
+    router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Sgate>,
     api: Api,
     storage: Storage,
     block: BlockInfo,
 }
 
-fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>(
-    _: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+pub(crate) fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>(
+    _: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>,
     _: &dyn Api,
     _: &mut dyn Storage,
 ) {
@@ -86,6 +88,7 @@ impl BasicApp {
                 DistributionKeeper,
                 FailingModule<IbcMsg, IbcQuery, Empty>,
                 FailingModule<GovMsg, Empty, Empty>,
+                FailingModule<StargateMsg, StargateQuery, Empty>,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -110,6 +113,7 @@ where
             DistributionKeeper,
             FailingModule<IbcMsg, IbcQuery, Empty>,
             FailingModule<GovMsg, Empty, Empty>,
+            FailingModule<StargateMsg, StargateQuery, Empty>,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -118,8 +122,8 @@ where
     AppBuilder::new_custom().build(init_fn)
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Querier
-    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT> Querier
+    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 where
     CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -132,6 +136,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
         self.router
@@ -140,8 +145,9 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> Executor<CustomT::ExecT>
-    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    Executor<CustomT::ExecT>
+    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 where
     CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -154,6 +160,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
 {
     fn execute(&mut self, sender: Addr, msg: CosmosMsg<CustomT::ExecT>) -> AnyResult<AppResponse> {
         let mut all = self.execute_multi(sender, vec![msg])?;
@@ -174,10 +181,11 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     DistributionKeeper,
     FailingModule<IbcMsg, IbcQuery, Empty>,
     FailingModule<GovMsg, Empty, Empty>,
+    FailingModule<StargateMsg, StargateQuery, Empty>,
 >;
 
 /// Utility to build App in stages. If particular items wont be set, defaults would be used
-pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov> {
+pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov, Sgate> {
     api: Api,
     block: BlockInfo,
     storage: Storage,
@@ -188,6 +196,7 @@ pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov
     distribution: Distr,
     ibc: Ibc,
     gov: Gov,
+    stargate: Sgate,
 }
 
 impl Default
@@ -201,6 +210,7 @@ impl Default
         DistributionKeeper,
         FailingModule<IbcMsg, IbcQuery, Empty>,
         FailingModule<GovMsg, Empty, Empty>,
+        FailingModule<StargateMsg, StargateQuery, Empty>,
     >
 {
     fn default() -> Self {
@@ -219,6 +229,7 @@ impl
         DistributionKeeper,
         FailingModule<IbcMsg, IbcQuery, Empty>,
         FailingModule<GovMsg, Empty, Empty>,
+        FailingModule<StargateMsg, StargateQuery, Empty>,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -234,6 +245,7 @@ impl
             distribution: DistributionKeeper::new(),
             ibc: FailingModule::new(),
             gov: FailingModule::new(),
+            stargate: FailingModule::new(),
         }
     }
 }
@@ -249,6 +261,7 @@ impl<ExecC, QueryC>
         DistributionKeeper,
         FailingModule<IbcMsg, IbcQuery, Empty>,
         FailingModule<GovMsg, Empty, Empty>,
+        FailingModule<StargateMsg, StargateQuery, Empty>,
     >
 where
     ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
@@ -268,12 +281,13 @@ where
             distribution: DistributionKeeper::new(),
             ibc: FailingModule::new(),
             gov: FailingModule::new(),
+            stargate: FailingModule::new(),
         }
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
-    AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 {
     /// Overwrites default wasm executor.
     ///
@@ -287,7 +301,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_wasm<C: Module, NewWasm: Wasm<C::ExecT, C::QueryT>>(
         self,
         wasm: NewWasm,
-    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, NewWasm, StakingT, DistrT, IbcT, GovT> {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, NewWasm, StakingT, DistrT, IbcT, GovT, SgateT>
+    {
         let AppBuilder {
             bank,
             api,
@@ -298,6 +313,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -312,6 +328,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
         }
     }
 
@@ -319,7 +336,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_bank<NewBank: Bank>(
         self,
         bank: NewBank,
-    ) -> AppBuilder<NewBank, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> {
+    ) -> AppBuilder<NewBank, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -330,6 +348,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -344,6 +363,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
         }
     }
 
@@ -351,7 +371,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_api<NewApi: Api>(
         self,
         api: NewApi,
-    ) -> AppBuilder<BankT, NewApi, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> {
+    ) -> AppBuilder<BankT, NewApi, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    {
         let AppBuilder {
             wasm,
             bank,
@@ -362,6 +383,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -376,6 +398,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
         }
     }
 
@@ -383,7 +406,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_storage<NewStorage: Storage>(
         self,
         storage: NewStorage,
-    ) -> AppBuilder<BankT, ApiT, NewStorage, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> {
+    ) -> AppBuilder<BankT, ApiT, NewStorage, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -394,6 +418,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -408,6 +433,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
         }
     }
 
@@ -423,7 +449,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_custom<NewCustom: Module>(
         self,
         custom: NewCustom,
-    ) -> AppBuilder<BankT, ApiT, StorageT, NewCustom, WasmT, StakingT, DistrT, IbcT, GovT> {
+    ) -> AppBuilder<BankT, ApiT, StorageT, NewCustom, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    {
         let AppBuilder {
             wasm,
             bank,
@@ -434,6 +461,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -448,6 +476,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
         }
     }
 
@@ -455,39 +484,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_staking<NewStaking: Staking>(
         self,
         staking: NewStaking,
-    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, NewStaking, DistrT, IbcT, GovT> {
-        let AppBuilder {
-            wasm,
-            api,
-            storage,
-            custom,
-            block,
-            bank,
-            distribution,
-            ibc,
-            gov,
-            ..
-        } = self;
-
-        AppBuilder {
-            api,
-            block,
-            storage,
-            bank,
-            wasm,
-            custom,
-            staking,
-            distribution,
-            ibc,
-            gov,
-        }
-    }
-
-    /// Overwrites default distribution interface
-    pub fn with_distribution<NewDistribution: Distribution>(
-        self,
-        distribution: NewDistribution,
-    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, NewDistribution, IbcT, GovT>
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, NewStaking, DistrT, IbcT, GovT, SgateT>
     {
         let AppBuilder {
             wasm,
@@ -495,10 +492,11 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             storage,
             custom,
             block,
-            staking,
             bank,
+            distribution,
             ibc,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -513,6 +511,52 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
+        }
+    }
+
+    /// Overwrites default distribution interface
+    pub fn with_distribution<NewDistribution: Distribution>(
+        self,
+        distribution: NewDistribution,
+    ) -> AppBuilder<
+        BankT,
+        ApiT,
+        StorageT,
+        CustomT,
+        WasmT,
+        StakingT,
+        NewDistribution,
+        IbcT,
+        GovT,
+        SgateT,
+    > {
+        let AppBuilder {
+            wasm,
+            api,
+            storage,
+            custom,
+            block,
+            staking,
+            bank,
+            ibc,
+            gov,
+            stargate,
+            ..
+        } = self;
+
+        AppBuilder {
+            api,
+            block,
+            storage,
+            bank,
+            wasm,
+            custom,
+            staking,
+            distribution,
+            ibc,
+            gov,
+            stargate,
         }
     }
 
@@ -523,7 +567,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_ibc<NewIbc: Ibc>(
         self,
         ibc: NewIbc,
-    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, NewIbc, GovT> {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, NewIbc, GovT, SgateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -534,6 +579,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             bank,
             distribution,
             gov,
+            stargate,
             ..
         } = self;
 
@@ -548,6 +594,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
         }
     }
 
@@ -555,7 +602,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn with_gov<NewGov: Gov>(
         self,
         gov: NewGov,
-    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, NewGov> {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, NewGov, SgateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -566,6 +614,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             bank,
             distribution,
             ibc,
+            stargate,
             ..
         } = self;
 
@@ -580,6 +629,43 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution,
             ibc,
             gov,
+            stargate,
+        }
+    }
+
+    /// Overwrites default stargate interface
+    #[cfg(feature = "stargate")]
+    pub fn with_stargate<NewSgate: Stargate>(
+        self,
+        stargate: NewSgate,
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, NewSgate>
+    {
+        let AppBuilder {
+            wasm,
+            api,
+            storage,
+            custom,
+            block,
+            staking,
+            bank,
+            distribution,
+            ibc,
+            gov,
+            ..
+        } = self;
+
+        AppBuilder {
+            api,
+            block,
+            storage,
+            bank,
+            wasm,
+            custom,
+            staking,
+            distribution,
+            ibc,
+            gov,
+            stargate,
         }
     }
 
@@ -595,7 +681,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     pub fn build<F>(
         self,
         init_fn: F,
-    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
     where
         BankT: Bank,
         ApiT: Api,
@@ -606,8 +692,9 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
         DistrT: Distribution,
         IbcT: Ibc,
         GovT: Gov,
+        SgateT: Stargate,
         F: FnOnce(
-            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>,
             &dyn Api,
             &mut dyn Storage,
         ),
@@ -620,6 +707,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
             distribution: self.distribution,
             ibc: self.ibc,
             gov: self.gov,
+            stargate: self.stargate,
         };
 
         let mut app = App {
@@ -633,8 +721,8 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
-    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 where
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -645,11 +733,12 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
 {
     pub fn init_modules<F, T>(&mut self, init_fn: F) -> T
     where
         F: FnOnce(
-            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>,
             &dyn Api,
             &mut dyn Storage,
         ) -> T,
@@ -660,7 +749,7 @@ where
     pub fn read_module<F, T>(&self, query_fn: F) -> T
     where
         F: FnOnce(
-            &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+            &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>,
             &dyn Api,
             &dyn Storage,
         ) -> T,
@@ -671,7 +760,7 @@ where
 
 // Helper functions to call some custom WasmKeeper logic.
 // They show how we can easily add such calls to other custom keepers (CustomT, StakingT, etc)
-impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT, SgateT>
     App<
         BankT,
         ApiT,
@@ -682,6 +771,7 @@ impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT>
         DistrT,
         IbcT,
         GovT,
+        SgateT,
     >
 where
     BankT: Bank,
@@ -692,6 +782,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
     CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
@@ -795,8 +886,8 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
-    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 where
     CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -809,6 +900,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
 {
     pub fn set_block(&mut self, block: BlockInfo) {
         self.block = block;
@@ -900,7 +992,7 @@ where
     }
 }
 
-pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
+pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Sgate> {
     // this can remain crate-only as all special functions are wired up to app currently
     // we need to figure out another format for wasm, as some like sudo need to be called after init
     pub(crate) wasm: Wasm,
@@ -911,10 +1003,11 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
     pub distribution: Distr,
     pub ibc: Ibc,
     pub gov: Gov,
+    pub stargate: Sgate,
 }
 
-impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
-    Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
+    Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 where
     CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -925,6 +1018,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
 {
     pub fn querier<'a>(
         &'a self,
@@ -998,8 +1092,8 @@ pub trait CosmosRouter {
     ) -> AnyResult<AppResponse>;
 }
 
-impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> CosmosRouter
-    for Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT> CosmosRouter
+    for Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>
 where
     CustomT::ExecT: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -1010,6 +1104,7 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
+    SgateT: Stargate,
 {
     type ExecC = CustomT::ExecT;
     type QueryC = CustomT::QueryT;
@@ -1032,6 +1127,14 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
+            CosmosMsg::Stargate { type_url, value } => self.stargate.execute(
+                api,
+                storage,
+                self,
+                block,
+                sender,
+                StargateMsg { type_url, value },
+            ),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
@@ -1053,6 +1156,10 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
+            QueryRequest::Stargate { path, data } => {
+                self.stargate
+                    .query(api, storage, &querier, block, StargateQuery { path, data })
+            }
             _ => unimplemented!(),
         }
     }
@@ -1180,7 +1287,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use cosmwasm_std::testing::MockQuerier;
     use cosmwasm_std::{
         coin, coins, to_binary, AllBalanceResponse, Attribute, BankMsg, BankQuery, Coin, Event,
@@ -1191,6 +1297,8 @@ mod test {
     use crate::test_helpers::contracts::{caller, echo, error, hackatom, payout, reflect};
     use crate::test_helpers::CustomMsg;
     use crate::transactions::StorageTransaction;
+
+    use super::*;
 
     #[test]
     #[cfg(feature = "cosmwasm_1_2")]
@@ -1651,13 +1759,13 @@ mod test {
     // this demonstrates that we can mint tokens and send from other accounts via a custom module,
     // as an example of ability to do privileged actions
     mod custom_handler {
-        use super::*;
-
         use anyhow::{bail, Result as AnyResult};
         use cw_storage_plus::Item;
         use serde::{Deserialize, Serialize};
 
         use crate::Executor;
+
+        use super::*;
 
         const LOTTERY: Item<Coin> = Item::new("lottery");
         const PITY: Item<Coin> = Item::new("pity");
@@ -1885,8 +1993,8 @@ mod test {
         // TODO: check error?
     }
 
-    fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>(
-        router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+    fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>(
+        router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, SgateT>,
         api: &dyn Api,
         storage: &dyn Storage,
         rcpt: &Addr,
@@ -2183,9 +2291,9 @@ mod test {
     }
 
     mod reply_data_overwrite {
-        use super::*;
-
         use echo::EXECUTE_REPLY_BASE_ID;
+
+        use super::*;
 
         fn make_echo_submsg(
             contract: Addr,
@@ -2847,8 +2955,9 @@ mod test {
     }
 
     mod custom_messages {
-        use super::*;
         use crate::custom_handler::CachingCustomHandler;
+
+        use super::*;
 
         #[test]
         fn triggering_custom_msg() {
@@ -2896,9 +3005,11 @@ mod test {
     }
 
     mod protobuf_wrapped_data {
-        use super::*;
-        use crate::test_helpers::contracts::echo::EXECUTE_REPLY_BASE_ID;
         use cw_utils::parse_instantiate_response_data;
+
+        use crate::test_helpers::contracts::echo::EXECUTE_REPLY_BASE_ID;
+
+        use super::*;
 
         #[test]
         fn instantiate_wrapped_properly() {
