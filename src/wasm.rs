@@ -111,6 +111,8 @@ pub trait Wasm<ExecC, QueryC> {
         block: &BlockInfo,
         msg: Binary,
     ) -> AnyResult<AppResponse>;
+
+    fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64;
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
@@ -232,23 +234,27 @@ where
         let (res, msgs) = self.build_app_response(&contract, custom_event, res);
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
-}
 
-impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Stores contract code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
-    pub fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
+    fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
         let code_base_id = self.code_base.len();
+
         self.code_base.push(code);
+
         let code_id = self.code_data.len() + 1;
+
         self.code_data.push(CodeData {
             creator,
             seed: code_id,
             code_base_id,
         });
+
         code_id as u64
     }
+}
 
+impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Duplicates contract code with specified identifier.
     pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         let code_data = self.code_data(code_id)?;

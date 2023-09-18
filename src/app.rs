@@ -671,23 +671,14 @@ where
 
 // Helper functions to call some custom WasmKeeper logic.
 // They show how we can easily add such calls to other custom keepers (CustomT, StakingT, etc)
-impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT>
-    App<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmKeeper<CustomT::ExecT, CustomT::QueryT>,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-    >
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     BankT: Bank,
     ApiT: Api,
     StorageT: Storage,
     CustomT: Module,
+    WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     StakingT: Staking,
     DistrT: Distribution,
     IbcT: Ibc,
@@ -727,7 +718,34 @@ where
     ) -> u64 {
         self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
     }
+}
 
+// Helper functions to call some custom WasmKeeper logic.
+// They show how we can easily add such calls to other custom keepers (CustomT, StakingT, etc)
+impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT>
+    App<
+        BankT,
+        ApiT,
+        StorageT,
+        CustomT,
+        WasmKeeper<CustomT::ExecT, CustomT::QueryT>,
+        StakingT,
+        DistrT,
+        IbcT,
+        GovT,
+    >
+where
+    BankT: Bank,
+    ApiT: Api,
+    StorageT: Storage,
+    CustomT: Module,
+    StakingT: Staking,
+    DistrT: Distribution,
+    IbcT: Ibc,
+    GovT: Gov,
+    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
+{
     /// Duplicates the contract code identified by `code_id` and returns
     /// the identifier of the newly created copy of the contract code.
     ///
