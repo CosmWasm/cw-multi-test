@@ -508,60 +508,30 @@ where
                 msg,
                 funds,
                 label,
-            } => {
-                if label.is_empty() {
-                    bail!("Label is required on all contracts");
-                }
-
-                let contract_addr = self.register_contract(
-                    storage,
-                    code_id,
-                    sender.clone(),
-                    admin.map(Addr::unchecked),
-                    label,
-                    block.height,
-                )?;
-
-                // move the cash
-                self.send(
-                    api,
-                    storage,
-                    router,
-                    block,
-                    sender.clone(),
-                    contract_addr.clone().into(),
-                    &funds,
-                )?;
-
-                // then call the contract
-                let info = MessageInfo { sender, funds };
-                let res = self.call_instantiate(
-                    contract_addr.clone(),
-                    api,
-                    storage,
-                    router,
-                    block,
-                    info,
-                    msg.to_vec(),
-                )?;
-
-                let custom_event = Event::new("instantiate")
-                    .add_attribute(CONTRACT_ATTR, &contract_addr)
-                    .add_attribute("code_id", code_id.to_string());
-
-                let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
-                let mut res = self.process_response(
-                    api,
-                    router,
-                    storage,
-                    block,
-                    contract_addr.clone(),
-                    res,
-                    msgs,
-                )?;
-                res.data = Some(instantiate_response(res.data, &contract_addr));
-                Ok(res)
-            }
+            } => self.process_wasm_msg_instantiate(
+                api, storage, router, block, sender, admin, code_id, msg, funds, label, None,
+            ),
+            #[cfg(feature = "cosmwasm_1_2")]
+            WasmMsg::Instantiate2 {
+                admin,
+                code_id,
+                msg,
+                funds,
+                label,
+                salt,
+            } => self.process_wasm_msg_instantiate(
+                api,
+                storage,
+                router,
+                block,
+                sender,
+                admin,
+                code_id,
+                msg,
+                funds,
+                label,
+                Some(salt),
+            ),
             WasmMsg::Migrate {
                 contract_addr,
                 new_code_id,
@@ -608,6 +578,75 @@ where
             }
             msg => bail!(Error::UnsupportedWasmMsg(msg)),
         }
+    }
+
+    /// Processes WasmMsg::Instantiate and WasmMsg::Instantiate2 messages.
+    fn process_wasm_msg_instantiate(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        sender: Addr,
+        admin: Option<String>,
+        code_id: u64,
+        msg: Binary,
+        funds: Vec<Coin>,
+        label: String,
+        _salt: Option<Binary>,
+    ) -> AnyResult<AppResponse> {
+        if label.is_empty() {
+            bail!("Label is required on all contracts");
+        }
+
+        let contract_addr = self.register_contract(
+            storage,
+            code_id,
+            sender.clone(),
+            admin.map(Addr::unchecked),
+            label,
+            block.height,
+        )?;
+
+        // move the cash
+        self.send(
+            api,
+            storage,
+            router,
+            block,
+            sender.clone(),
+            contract_addr.clone().into(),
+            &funds,
+        )?;
+
+        // then call the contract
+        let info = MessageInfo { sender, funds };
+        let res = self.call_instantiate(
+            contract_addr.clone(),
+            api,
+            storage,
+            router,
+            block,
+            info,
+            msg.to_vec(),
+        )?;
+
+        let custom_event = Event::new("instantiate")
+            .add_attribute(CONTRACT_ATTR, &contract_addr)
+            .add_attribute("code_id", code_id.to_string());
+
+        let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
+        let mut res = self.process_response(
+            api,
+            router,
+            storage,
+            block,
+            contract_addr.clone(),
+            res,
+            msgs,
+        )?;
+        res.data = Some(instantiate_response(res.data, &contract_addr));
+        Ok(res)
     }
 
     /// This will execute the given messages, making all changes to the local cache.
