@@ -42,3 +42,4 @@ sha2 = "0.10"
 # We don't use the following dependency directly,
 # we tighten the version so that builds with `-Zminimal-versions` work.
 serde_json = "1.0.105"
+ecdsa = "=0.16.7"
