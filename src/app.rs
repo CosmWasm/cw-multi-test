@@ -2813,6 +2813,58 @@ mod test {
         }
     }
 
+    mod contract_instantiation {
+        #[test]
+        #[cfg(feature = "cosmwasm_1_2")]
+        fn instantiate2_works() {
+            use super::*;
+            use cw_utils::*;
+
+            // prepare application and actors
+            let mut app = App::default();
+            let sender = Addr::unchecked("sender");
+
+            // store contract's code
+            #[cfg(not(feature = "multitest_api_1_0"))]
+            let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+            #[cfg(feature = "multitest_api_1_0")]
+            let code_id = app.store_code(Addr::unchecked("creator"), echo::contract());
+
+            // initialize the contract
+            let init_msg = to_binary(&Empty {}).unwrap();
+            let msg = WasmMsg::Instantiate2 {
+                admin: None,
+                code_id,
+                msg: init_msg,
+                funds: vec![],
+                label: "label".into(),
+                salt: [0, 1, 2, 3, 4, 5].as_slice().into(),
+            };
+            let res = app.execute(sender, msg.into()).unwrap();
+
+            // assert a proper instantiate result
+            let parsed = parse_instantiate_response_data(res.data.unwrap().as_slice()).unwrap();
+            assert!(parsed.data.is_none());
+
+            // assert contract's address is exactly the predicted one
+            //
+            // REMARK:
+            //   Currently implemented address generator is used to generate
+            //   the predictable address of newly instantiated contract.
+            //
+            //   Conceptually, the address of the contract is fully predictable,
+            //   because it is just the contract0 for the first instance,
+            //   contract1 for the second and so forth.
+            //
+            //   Comparing this address to real-life blockchain and the implementation
+            //   of cosmwasm_std::instantiate2_address, this approach is totally incompatible.
+            //   This problem will be handled in the next step, please see:
+            //   https://github.com/CosmWasm/cosmwasm/issues/1873
+            //   for details.
+            assert_eq!("contract0", parsed.contract_address);
+        }
+    }
+
     mod wasm_queries {
 
         #[test]
