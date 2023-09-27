@@ -1,31 +1,26 @@
-use std::borrow::Borrow;
-use std::fmt::Debug;
-
-use cosmwasm_std::{
-    to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
-    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
-    QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
-    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
-};
-
-use prost::Message;
-use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-
-use cw_storage_plus::Map;
-
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::contracts::Contract;
 use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use cosmwasm_std::testing::mock_wasmd_attr;
-
 use anyhow::{bail, Context, Result as AnyResult};
+use cosmwasm_std::testing::mock_wasmd_attr;
+use cosmwasm_std::{
+    to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
+    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
+    QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
+    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+};
+use cw_storage_plus::Map;
+use prost::Message;
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "cosmwasm_1_2")]
 use sha2::{Digest, Sha256};
+use std::borrow::Borrow;
+use std::fmt::Debug;
 
 // Contract state is kept in Storage, separate from the contracts themselves
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
@@ -1054,20 +1049,18 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::app::Router;
+    use crate::bank::BankKeeper;
+    use crate::module::FailingModule;
+    use crate::staking::{DistributionKeeper, StakeKeeper};
+    use crate::testing_helpers::{caller, error, payout};
+    use crate::transactions::StorageTransaction;
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
         coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery,
         StdError,
     };
-
-    use crate::app::Router;
-    use crate::bank::BankKeeper;
-    use crate::module::FailingModule;
-    use crate::staking::{DistributionKeeper, StakeKeeper};
-    use crate::test_helpers::contracts::{caller, error, payout};
-    use crate::transactions::StorageTransaction;
-
-    use super::*;
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<

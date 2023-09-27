@@ -18,13 +18,13 @@ mod ibc;
 mod module;
 mod prefixed_storage;
 mod staking;
-mod test_helpers;
+pub mod testing_helpers;
 mod transactions;
 mod wasm;
 
 pub use crate::app::{
-    custom_app, next_block, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter, Router,
-    SudoMsg,
+    custom_app, next_block, no_init, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter,
+    Router, SudoMsg,
 };
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
 pub use crate::contracts::{Contract, ContractWrapper};
@@ -35,4 +35,4 @@ pub use crate::module::{FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
-pub use crate::wasm::{AddressGenerator, Wasm, WasmKeeper, WasmSudo};
+pub use crate::wasm::{AddressGenerator, ContractData, Wasm, WasmKeeper, WasmSudo};

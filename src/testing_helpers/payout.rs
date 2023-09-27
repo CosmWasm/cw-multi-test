@@ -1,14 +1,12 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use std::fmt;
-
+use crate::testing_helpers::COUNT;
+use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
-
-use crate::contracts::{Contract, ContractWrapper};
-use crate::test_helpers::COUNT;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct InstantiateMessage {
@@ -77,7 +75,7 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
 
 pub fn contract<C>() -> Box<dyn Contract<C>>
 where
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
 {
     let contract =
         ContractWrapper::new_with_empty(execute, instantiate, query).with_sudo_empty(sudo);
