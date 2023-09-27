@@ -1,5 +1,30 @@
 # Changelog
 
+## [v0.17.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.17.0) (2023-09-27)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.5...v0.17.0)
+
+**Closed issues:**
+
+- Refactoring: replace EmptyMsg with cosmwasm_std::Empty [\#61](https://github.com/CosmWasm/cw-multi-test/issues/61)
+- Better error loggin when a message execution fails [\#60](https://github.com/CosmWasm/cw-multi-test/issues/60)
+- Add function App::duplicate_code [\#58](https://github.com/CosmWasm/cw-multi-test/issues/58)
+- Include CodeData support [\#49](https://github.com/CosmWasm/cw-multi-test/issues/49)
+
+**Merged pull requests:**
+
+- Removed multitest_api_1_0 feature [\#71](https://github.com/CosmWasm/cw-multi-test/pull/71) ([DariuszDepta](https://github.com/DariuszDepta))
+- Final line-break in Cargo.toml [\#68](https://github.com/CosmWasm/cw-multi-test/pull/68) ([DariuszDepta](https://github.com/DariuszDepta))
+- Updated dependencies [\#67](https://github.com/CosmWasm/cw-multi-test/pull/67) ([DariuszDepta](https://github.com/DariuszDepta))
+- Handling WasmMsg::instantiate2 message [\#65](https://github.com/CosmWasm/cw-multi-test/pull/65) ([DariuszDepta](https://github.com/DariuszDepta))
+- Improved error logging when the message execution fails [\#63](https://github.com/CosmWasm/cw-multi-test/pull/63) ([DariuszDepta](https://github.com/DariuszDepta))
+- Replaced test_helpers::EmptyMsg with cosmwasm_std::Empty [\#62](https://github.com/CosmWasm/cw-multi-test/pull/62) ([DariuszDepta](https://github.com/DariuszDepta))
+- Duplicate contract code [\#59](https://github.com/CosmWasm/cw-multi-test/pull/59) ([DariuszDepta](https://github.com/DariuszDepta))
+- CodeInfo support [\#57](https://github.com/CosmWasm/cw-multi-test/pull/57) ([DariuszDepta](https://github.com/DariuszDepta))
+- Change contract address attribute [\#52](https://github.com/CosmWasm/cw-multi-test/pull/52) ([chipshort](https://github.com/chipshort))
+- Adds BankQuery::Supply support [\#51](https://github.com/CosmWasm/cw-multi-test/pull/51) ([JakeHartnell](https://github.com/JakeHartnell))
+- Remove direct k256 dependencies [\#47](https://github.com/CosmWasm/cw-multi-test/pull/47) ([webmaster128](https://github.com/webmaster128))
+
 ## [v0.16.5](https://github.com/CosmWasm/cw-multi-test/tree/v0.16.5) (2023-06-07)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.4...v0.16.5)
