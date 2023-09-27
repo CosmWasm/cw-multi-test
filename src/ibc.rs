@@ -81,10 +81,7 @@ mod test {
     #[test]
     fn default_ibc() {
         let mut app = App::default();
-        #[cfg(not(feature = "multitest_api_1_0"))]
         let code = app.store_code(stargate::contract());
-        #[cfg(feature = "multitest_api_1_0")]
-        let code = app.store_code(Addr::unchecked("creator"), stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,
@@ -105,10 +102,7 @@ mod test {
         let mut app = AppBuilder::new()
             .with_ibc(IbcAcceptingModule)
             .build(|_, _, _| ());
-        #[cfg(not(feature = "multitest_api_1_0"))]
         let code = app.store_code(stargate::contract());
-        #[cfg(feature = "multitest_api_1_0")]
-        let code = app.store_code(Addr::unchecked("creator"), stargate::contract());
         let contract = app
             .instantiate_contract(
                 code,
