@@ -668,23 +668,14 @@ where
 
 // Helper functions to call some custom WasmKeeper logic.
 // They show how we can easily add such calls to other custom keepers (CustomT, StakingT, etc)
-impl<BankT, ApiT, StorageT, CustomT, StakingT, DistrT, IbcT, GovT>
-    App<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmKeeper<CustomT::ExecT, CustomT::QueryT>,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-    >
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     BankT: Bank,
     ApiT: Api,
     StorageT: Storage,
     CustomT: Module,
+    WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     StakingT: Staking,
     DistrT: Distribution,
     IbcT: Ibc,
@@ -767,7 +758,7 @@ where
 
     /// This allows to get `ContractData` for specific contract
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
-        self.read_module(|router, _, storage| router.wasm.load_contract(storage, address))
+        self.read_module(|router, _, storage| router.wasm.contract_data(storage, address))
     }
 
     /// This gets a raw state dump of all key-values held by a given contract

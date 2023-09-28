@@ -106,6 +106,18 @@ pub trait Wasm<ExecC, QueryC> {
         block: &BlockInfo,
         msg: Binary,
     ) -> AnyResult<AppResponse>;
+
+    ///
+    fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64;
+
+    ///
+    fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64>;
+
+    ///
+    fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData>;
+
+    ///
+    fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record>;
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
@@ -174,7 +186,7 @@ where
             }
             WasmQuery::ContractInfo { contract_addr } => {
                 let addr = api.addr_validate(&contract_addr)?;
-                let contract = self.load_contract(storage, &addr)?;
+                let contract = self.contract_data(storage, &addr)?;
                 let mut res = ContractInfoResponse::default();
                 res.code_id = contract.code_id;
                 res.creator = contract.creator.to_string();
@@ -227,12 +239,9 @@ where
         let (res, msgs) = self.build_app_response(&contract, custom_event, res);
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
-}
 
-impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
-    /// Stores contract code in the in-memory lookup table.
-    /// Returns an identifier of the stored contract code.
-    pub fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
+    /// Stores the contract's code
+    fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
         let code_id = self.code_data.len() + 1;
@@ -244,8 +253,8 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         code_id as u64
     }
 
-    /// Duplicates contract code with specified identifier.
-    pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
+    /// Duplicates the contract's code with specified identifier.
+    fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         let code_data = self.code_data(code_id)?;
         self.code_data.push(CodeData {
             creator: code_data.creator.clone(),
@@ -255,6 +264,19 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         Ok(code_id + 1)
     }
 
+    fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
+        CONTRACTS
+            .load(&prefixed_read(storage, NAMESPACE_WASM), address)
+            .map_err(Into::into)
+    }
+
+    fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
+        let storage = self.contract_storage_readonly(storage, address);
+        storage.range(None, None, Order::Ascending).collect()
+    }
+}
+
+impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Returns a handler to code of the contract with specified code id.
     pub fn contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
         let code_data = self.code_data(code_id)?;
@@ -270,17 +292,6 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
             .code_data
             .get((code_id - 1) as usize)
             .ok_or(Error::UnregisteredCodeId(code_id))?)
-    }
-
-    pub fn load_contract(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
-        CONTRACTS
-            .load(&prefixed_read(storage, NAMESPACE_WASM), address)
-            .map_err(Into::into)
-    }
-
-    pub fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
-        let storage = self.contract_storage_readonly(storage, address);
-        storage.range(None, None, Order::Ascending).collect()
     }
 
     fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
@@ -433,7 +444,7 @@ where
         let admin = new_admin.map(|a| api.addr_validate(&a)).transpose()?;
 
         // check admin status
-        let mut data = self.load_contract(storage, &contract_addr)?;
+        let mut data = self.contract_data(storage, &contract_addr)?;
         if data.admin != Some(sender) {
             bail!("Only admin can update the contract admin: {:?}", data.admin);
         }
@@ -538,7 +549,7 @@ where
                 if new_code_id as usize > self.code_data.len() {
                     bail!("Cannot migrate contract to unregistered code id");
                 }
-                let mut data = self.load_contract(storage, &contract_addr)?;
+                let mut data = self.contract_data(storage, &contract_addr)?;
                 if data.admin != Some(sender) {
                     bail!("Only admin can migrate contract: {:?}", data.admin);
                 }
@@ -948,7 +959,7 @@ where
     where
         F: FnOnce(&dyn Contract<ExecC, QueryC>, Deps<QueryC>, Env) -> AnyResult<T>,
     {
-        let contract = self.load_contract(storage, &address)?;
+        let contract = self.contract_data(storage, &address)?;
         let handler = self.contract_code(contract.code_id)?;
         let storage = self.contract_storage_readonly(storage, &address);
         let env = self.get_env(address, block);
@@ -974,7 +985,7 @@ where
         F: FnOnce(&dyn Contract<ExecC, QueryC>, DepsMut<QueryC>, Env) -> AnyResult<T>,
         ExecC: DeserializeOwned,
     {
-        let contract = self.load_contract(storage, &address)?;
+        let contract = self.contract_data(storage, &address)?;
         let handler = self.contract_code(contract.code_id)?;
 
         // We don't actually need a transaction here, as it is already embedded in a transactional.
@@ -1125,7 +1136,7 @@ mod test {
 
         // verify contract data are as expected
         let contract_data = wasm_keeper
-            .load_contract(&wasm_storage, &contract_addr)
+            .contract_data(&wasm_storage, &contract_addr)
             .unwrap();
 
         assert_eq!(
