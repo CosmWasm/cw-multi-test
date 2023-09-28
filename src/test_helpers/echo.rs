@@ -3,22 +3,20 @@
 //!
 //! Additionally it bypasses all events and attributes send to it.
 
+use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
     StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-
-use crate::{Contract, ContractWrapper};
-use schemars::JsonSchema;
-use std::fmt::Debug;
-
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use derivative::Derivative;
+use schemars::JsonSchema;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::fmt::Debug;
 
 // Choosing a reply id less than ECHO_EXECUTE_BASE_ID indicates an Instantiate message reply by convention.
 // An Execute message reply otherwise.
-pub(crate) const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
+pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
 #[derivative(Default(bound = "", new = "true"))]

@@ -1,14 +1,13 @@
 //! Simplified contract which when executed releases the funds to beneficiary
 
+use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
-use serde::{Deserialize, Serialize};
-
-use crate::{Contract, ContractWrapper};
 use schemars::JsonSchema;
-use std::fmt;
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstantiateMsg {
@@ -78,7 +77,7 @@ pub fn contract() -> Box<dyn Contract<Empty>> {
 #[allow(dead_code)]
 pub fn custom_contract<C>() -> Box<dyn Contract<C>>
 where
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
 {
     let contract =
         ContractWrapper::new_with_empty(execute, instantiate, query).with_migrate_empty(migrate);

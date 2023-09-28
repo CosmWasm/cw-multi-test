@@ -1,14 +1,11 @@
-use serde::{Deserialize, Serialize};
-
+use crate::test_helpers::{payout, CustomMsg, COUNT};
+use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response, StdError,
     SubMsg,
 };
 use cw_storage_plus::Map;
-
-use crate::contracts::{Contract, ContractWrapper};
-use crate::test_helpers::contracts::payout;
-use crate::test_helpers::{CustomMsg, COUNT};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Message {

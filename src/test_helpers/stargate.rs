@@ -1,9 +1,8 @@
+use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     Binary, CosmosMsg, Deps, DepsMut, Empty, Env, GovMsg, IbcMsg, MessageInfo, Response, StdResult,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::{Contract, ContractWrapper};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecMsg {

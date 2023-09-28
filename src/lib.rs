@@ -19,6 +19,7 @@ mod module;
 mod prefixed_storage;
 mod staking;
 mod test_helpers;
+mod tests;
 mod transactions;
 mod wasm;
 
