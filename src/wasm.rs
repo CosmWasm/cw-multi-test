@@ -1054,7 +1054,7 @@ mod test {
     use crate::bank::BankKeeper;
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
-    use crate::testing_helpers::{caller, error, payout};
+    use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{

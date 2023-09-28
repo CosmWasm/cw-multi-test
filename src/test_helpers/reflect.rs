@@ -1,4 +1,4 @@
-use crate::testing_helpers::{payout, CustomMsg, COUNT};
+use crate::test_helpers::{payout, CustomMsg, COUNT};
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response, StdError,

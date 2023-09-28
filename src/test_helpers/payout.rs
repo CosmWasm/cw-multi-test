@@ -1,4 +1,4 @@
-use crate::testing_helpers::COUNT;
+use crate::test_helpers::COUNT;
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,

@@ -1,14 +1,14 @@
+use crate::app::no_init;
+use crate::custom_handler::CachingCustomHandler;
+use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
+use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
+use crate::wasm::ContractData;
+use crate::{custom_app, App, AppResponse, Bank, Executor, Module, Wasm, WasmSudo};
 use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{
     coin, coins, testing::MockApi, to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo,
     Coin, CosmosMsg, CustomQuery, Empty, Event, OverflowError, OverflowOperation, Querier, Reply,
     StdError, StdResult, Storage, SubMsg, WasmMsg,
-};
-use cw_multi_test::custom_handler::CachingCustomHandler;
-use cw_multi_test::testing_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
-use cw_multi_test::{
-    custom_app, error::Error, no_init, App, AppBuilder, AppResponse, Bank, BankSudo, BasicApp,
-    BasicAppBuilder, ContractData, CosmosRouter, Executor, Module, Wasm, WasmSudo,
 };
 use cw_storage_plus::Item;
 use cw_utils::parse_instantiate_response_data;
@@ -720,6 +720,7 @@ fn sent_funds_properly_visible_on_execution() {
 /// via a custom module, as an example of ability to do privileged actions.
 mod custom_handler {
     use super::*;
+    use crate::{BankSudo, BasicAppBuilder, CosmosRouter};
 
     const LOTTERY: Item<Coin> = Item::new("lottery");
     const PITY: Item<Coin> = Item::new("pity");
@@ -1267,6 +1268,7 @@ mod reply_data_overwrite {
 
 mod response_validation {
     use super::*;
+    use crate::error::Error;
 
     #[test]
     fn empty_attribute_key() {
@@ -1500,6 +1502,7 @@ mod wasm_queries {
 
 mod custom_messages {
     use super::*;
+    use crate::AppBuilder;
 
     #[test]
     fn triggering_custom_msg() {
@@ -1545,7 +1548,7 @@ mod custom_messages {
 
 mod protobuf_wrapped_data {
     use super::*;
-    use cw_multi_test::testing_helpers::echo::EXECUTE_REPLY_BASE_ID;
+    use crate::BasicApp;
 
     #[test]
     fn instantiate_wrapped_properly() {

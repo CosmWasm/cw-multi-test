@@ -1,4 +1,4 @@
-#![cfg(debug_assertions)]
+#![cfg(test)]
 
 use cw_storage_plus::Item;
 use schemars::JsonSchema;

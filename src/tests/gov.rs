@@ -1,6 +1,6 @@
+use crate::test_helpers::{stargate, stargate::ExecMsg};
+use crate::{App, AppBuilder, AppResponse, CosmosRouter, Executor, Gov, Module};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, GovMsg, Querier, Storage};
-use cw_multi_test::testing_helpers::{stargate, stargate::ExecMsg};
-use cw_multi_test::{App, AppBuilder, AppResponse, CosmosRouter, Executor, Gov, Module};
 
 struct AcceptingModule;
 

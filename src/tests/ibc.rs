@@ -1,6 +1,6 @@
+use crate::test_helpers::{stargate, stargate::ExecMsg};
+use crate::{App, AppBuilder, Executor, IbcAcceptingModule};
 use cosmwasm_std::{Addr, Empty};
-use cw_multi_test::testing_helpers::{stargate, stargate::ExecMsg};
-use cw_multi_test::{App, AppBuilder, Executor, IbcAcceptingModule};
 
 #[test]
 fn default_ibc() {
