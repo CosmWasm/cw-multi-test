@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Response, StdError, Storage, SubMsg, WasmMsg, WasmQuery,
 };
 use cw_multi_test::{
-    AppBuilder, AppResponse, Contract, ContractData, ContractWrapper, CosmosRouter, Module, Wasm,
+    AppBuilder, AppResponse, Contract, ContractData, ContractWrapper, CosmosRouter, Wasm,
 };
 use schemars::JsonSchema;
 use std::fmt::Debug;
@@ -59,50 +59,6 @@ fn building_app_with_custom_wasm_should_work() {
     impl<ExecT, QueryT> Default for MyWasm<ExecT, QueryT> {
         fn default() -> Self {
             Self(PhantomData)
-        }
-    }
-
-    impl<Exec, Query> Module for MyWasm<Exec, Query>
-    where
-        Exec: Debug,
-        Query: Debug,
-    {
-        type ExecT = Exec;
-        type QueryT = Query;
-        type SudoT = Empty;
-
-        fn execute<ExecC, QueryC>(
-            &self,
-            _api: &dyn Api,
-            _storage: &mut dyn Storage,
-            _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-            _block: &BlockInfo,
-            _sender: Addr,
-            _msg: Self::ExecT,
-        ) -> AnyResult<AppResponse> {
-            todo!()
-        }
-
-        fn sudo<ExecC, QueryC>(
-            &self,
-            _api: &dyn Api,
-            _storage: &mut dyn Storage,
-            _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-            _block: &BlockInfo,
-            _msg: Self::SudoT,
-        ) -> AnyResult<AppResponse> {
-            todo!()
-        }
-
-        fn query(
-            &self,
-            _api: &dyn Api,
-            _storage: &dyn Storage,
-            _querier: &dyn Querier,
-            _block: &BlockInfo,
-            _request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            todo!()
         }
     }
 
@@ -164,10 +120,7 @@ fn building_app_with_custom_wasm_should_work() {
     }
 
     let app_builder = AppBuilder::default();
-    let mut app = app_builder
-        .with_wasm::<MyWasm<Empty, Empty>, MyWasm<Empty, Empty>>(MyWasm::default())
-        .build(|_, _, _| {});
-
+    let mut app = app_builder.with_wasm(MyWasm::default()).build(|_, _, _| {});
     let code_id = app.store_code(contracts::caller::contract());
     assert_eq!(154, code_id);
 }

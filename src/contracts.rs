@@ -11,7 +11,7 @@ use cosmwasm_std::{
 
 use anyhow::{anyhow, bail, Result as AnyResult};
 
-/// Interface to call into a [Contract].
+/// Interface to call into a `Contract`.
 pub trait Contract<T, Q = Empty>
 where
     T: Clone + fmt::Debug + PartialEq + JsonSchema,

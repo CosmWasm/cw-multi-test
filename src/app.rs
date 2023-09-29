@@ -271,6 +271,9 @@ where
 
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
+where
+    CustomT: Module,
+    WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
 {
     /// Overwrites default wasm executor.
     ///
@@ -281,7 +284,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     /// Also it is possible to completely abandon trait bounding here which would not be bad idea,
     /// however it might make the message on build creepy in many cases, so as for properly build
     /// `App` we always want `Wasm` to be `Wasm`, some checks are done early.
-    pub fn with_wasm<C: Module, NewWasm: Wasm<C::ExecT, C::QueryT>>(
+    pub fn with_wasm<NewWasm: Wasm<CustomT::ExecT, CustomT::QueryT>>(
         self,
         wasm: NewWasm,
     ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, NewWasm, StakingT, DistrT, IbcT, GovT> {
@@ -756,12 +759,12 @@ where
         self.init_modules(|router, _, _| router.wasm.duplicate_code(code_id))
     }
 
-    /// This allows to get `ContractData` for specific contract
+    /// Returns `ContractData` for the contract with specified address.
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
         self.read_module(|router, _, storage| router.wasm.contract_data(storage, address))
     }
 
-    /// This gets a raw state dump of all key-values held by a given contract
+    /// Returns a raw state dump of all key-values held by a contract with specified address.
     pub fn dump_wasm_raw(&self, address: &Addr) -> Vec<Record> {
         self.read_module(|router, _, storage| router.wasm.dump_wasm_raw(storage, address))
     }

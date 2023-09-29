@@ -74,8 +74,9 @@ struct CodeData {
     code_base_id: usize,
 }
 
+/// Interface to call into a `Wasm` module.
 pub trait Wasm<ExecC, QueryC> {
-    /// Handles all WasmQuery requests
+    /// Handles all `WasmQuery` requests.
     fn query(
         &self,
         api: &dyn Api,
@@ -85,7 +86,7 @@ pub trait Wasm<ExecC, QueryC> {
         request: WasmQuery,
     ) -> AnyResult<Binary>;
 
-    /// Handles all WasmMsg messages
+    /// Handles all `WasmMsg` messages.
     fn execute(
         &self,
         api: &dyn Api,
@@ -96,7 +97,7 @@ pub trait Wasm<ExecC, QueryC> {
         msg: WasmMsg,
     ) -> AnyResult<AppResponse>;
 
-    /// Admin interface, cannot be called via CosmosMsg
+    /// Handles all sudo messages, this is an admin interface and can not be called via `CosmosMsg`.
     fn sudo(
         &self,
         api: &dyn Api,
@@ -107,16 +108,17 @@ pub trait Wasm<ExecC, QueryC> {
         msg: Binary,
     ) -> AnyResult<AppResponse>;
 
-    ///
+    /// Stores the contract's code and returns an identifier of the stored contract's code.
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64;
 
-    ///
+    /// Duplicates the contract's code with specified identifier
+    /// and returns an identifier of the copy of the contract's code.
     fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64>;
 
-    ///
+    /// Returns `ContractData` for the contract with specified address.
     fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData>;
 
-    ///
+    /// Returns a raw state dump of all key-values held by a contract with specified address.
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record>;
 }
 
@@ -240,7 +242,8 @@ where
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
 
-    /// Stores the contract's code
+    /// Stores the contract's code in the in-memory lookup table.
+    /// Returns an identifier of the stored contract code.
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
@@ -254,6 +257,7 @@ where
     }
 
     /// Duplicates the contract's code with specified identifier.
+    /// Returns an identifier of the copy of the contract's code.
     fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         let code_data = self.code_data(code_id)?;
         self.code_data.push(CodeData {
@@ -264,12 +268,14 @@ where
         Ok(code_id + 1)
     }
 
+    /// Returns `ContractData` for the contract with specified address.
     fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
         CONTRACTS
             .load(&prefixed_read(storage, NAMESPACE_WASM), address)
             .map_err(Into::into)
     }
 
+    /// Returns a raw state dump of all key-values held by a contract with specified address.
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
         let storage = self.contract_storage_readonly(storage, address);
         storage.range(None, None, Order::Ascending).collect()
