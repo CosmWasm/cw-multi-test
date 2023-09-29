@@ -21,7 +21,7 @@ impl Module for IbcAcceptingModule {
         _block: &cosmwasm_std::BlockInfo,
         _sender: cosmwasm_std::Addr,
         _msg: Self::ExecT,
-    ) -> anyhow::Result<crate::AppResponse>
+    ) -> anyhow::Result<AppResponse>
     where
         ExecC: std::fmt::Debug
             + Clone
@@ -41,7 +41,7 @@ impl Module for IbcAcceptingModule {
         _router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &cosmwasm_std::BlockInfo,
         _msg: Self::SudoT,
-    ) -> anyhow::Result<crate::AppResponse>
+    ) -> anyhow::Result<AppResponse>
     where
         ExecC: std::fmt::Debug
             + Clone
@@ -61,66 +61,9 @@ impl Module for IbcAcceptingModule {
         _querier: &dyn cosmwasm_std::Querier,
         _block: &cosmwasm_std::BlockInfo,
         _request: Self::QueryT,
-    ) -> anyhow::Result<cosmwasm_std::Binary> {
+    ) -> anyhow::Result<Binary> {
         Ok(Binary::default())
     }
 }
 
 impl Ibc for IbcAcceptingModule {}
-
-#[cfg(test)]
-mod test {
-    use cosmwasm_std::{Addr, Empty};
-
-    use crate::test_helpers::contracts::stargate;
-    use crate::test_helpers::contracts::stargate::ExecMsg;
-    use crate::{App, AppBuilder, Executor};
-
-    use super::*;
-
-    #[test]
-    fn default_ibc() {
-        let mut app = App::default();
-        #[cfg(not(feature = "multitest_api_1_0"))]
-        let code = app.store_code(stargate::contract());
-        #[cfg(feature = "multitest_api_1_0")]
-        let code = app.store_code(Addr::unchecked("creator"), stargate::contract());
-        let contract = app
-            .instantiate_contract(
-                code,
-                Addr::unchecked("owner"),
-                &Empty {},
-                &[],
-                "contract",
-                None,
-            )
-            .unwrap();
-
-        app.execute_contract(Addr::unchecked("owner"), contract, &ExecMsg::Ibc {}, &[])
-            .unwrap_err();
-    }
-
-    #[test]
-    fn substituting_ibc() {
-        let mut app = AppBuilder::new()
-            .with_ibc(IbcAcceptingModule)
-            .build(|_, _, _| ());
-        #[cfg(not(feature = "multitest_api_1_0"))]
-        let code = app.store_code(stargate::contract());
-        #[cfg(feature = "multitest_api_1_0")]
-        let code = app.store_code(Addr::unchecked("creator"), stargate::contract());
-        let contract = app
-            .instantiate_contract(
-                code,
-                Addr::unchecked("owner"),
-                &Empty {},
-                &[],
-                "contract",
-                None,
-            )
-            .unwrap();
-
-        app.execute_contract(Addr::unchecked("owner"), contract, &ExecMsg::Ibc {}, &[])
-            .unwrap();
-    }
-}

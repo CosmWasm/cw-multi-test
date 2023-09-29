@@ -19,6 +19,7 @@ mod module;
 mod prefixed_storage;
 mod staking;
 mod test_helpers;
+mod tests;
 mod transactions;
 mod wasm;
 
@@ -35,4 +36,4 @@ pub use crate::module::{FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
-pub use crate::wasm::{AddressGenerator, Wasm, WasmKeeper, WasmSudo};
+pub use crate::wasm::{AddressGenerator, ContractData, Wasm, WasmKeeper, WasmSudo};

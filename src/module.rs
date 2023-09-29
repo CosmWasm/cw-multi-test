@@ -8,6 +8,7 @@ use crate::AppResponse;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 
+/// Interface of the module.
 pub trait Module {
     type ExecT;
     type QueryT;

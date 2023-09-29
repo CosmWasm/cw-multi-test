@@ -1,31 +1,26 @@
-use std::borrow::Borrow;
-use std::fmt::Debug;
-
-use cosmwasm_std::{
-    to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
-    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
-    QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
-    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
-};
-
-use prost::Message;
-use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
-
-use cw_storage_plus::Map;
-
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::contracts::Contract;
 use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use cosmwasm_std::testing::mock_wasmd_attr;
-
 use anyhow::{bail, Context, Result as AnyResult};
+use cosmwasm_std::testing::mock_wasmd_attr;
+use cosmwasm_std::{
+    to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
+    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
+    QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
+    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+};
+use cw_storage_plus::Map;
+use prost::Message;
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "cosmwasm_1_2")]
 use sha2::{Digest, Sha256};
+use std::borrow::Borrow;
+use std::fmt::Debug;
 
 // Contract state is kept in Storage, separate from the contracts themselves
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
@@ -79,8 +74,9 @@ struct CodeData {
     code_base_id: usize,
 }
 
+/// Interface to call into a `Wasm` module.
 pub trait Wasm<ExecC, QueryC> {
-    /// Handles all WasmQuery requests
+    /// Handles all `WasmQuery` requests.
     fn query(
         &self,
         api: &dyn Api,
@@ -90,7 +86,7 @@ pub trait Wasm<ExecC, QueryC> {
         request: WasmQuery,
     ) -> AnyResult<Binary>;
 
-    /// Handles all WasmMsg messages
+    /// Handles all `WasmMsg` messages.
     fn execute(
         &self,
         api: &dyn Api,
@@ -101,7 +97,7 @@ pub trait Wasm<ExecC, QueryC> {
         msg: WasmMsg,
     ) -> AnyResult<AppResponse>;
 
-    /// Admin interface, cannot be called via CosmosMsg
+    /// Handles all sudo messages, this is an admin interface and can not be called via `CosmosMsg`.
     fn sudo(
         &self,
         api: &dyn Api,
@@ -112,7 +108,18 @@ pub trait Wasm<ExecC, QueryC> {
         msg: Binary,
     ) -> AnyResult<AppResponse>;
 
+    /// Stores the contract's code and returns an identifier of the stored contract's code.
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64;
+
+    /// Duplicates the contract's code with specified identifier
+    /// and returns an identifier of the copy of the contract's code.
+    fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64>;
+
+    /// Returns `ContractData` for the contract with specified address.
+    fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData>;
+
+    /// Returns a raw state dump of all key-values held by a contract with specified address.
+    fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record>;
 }
 
 pub struct WasmKeeper<ExecC, QueryC> {
@@ -181,7 +188,7 @@ where
             }
             WasmQuery::ContractInfo { contract_addr } => {
                 let addr = api.addr_validate(&contract_addr)?;
-                let contract = self.load_contract(storage, &addr)?;
+                let contract = self.contract_data(storage, &addr)?;
                 let mut res = ContractInfoResponse::default();
                 res.code_id = contract.code_id;
                 res.creator = contract.creator.to_string();
@@ -235,7 +242,7 @@ where
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
 
-    /// Stores contract code in the in-memory lookup table.
+    /// Stores the contract's code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
         let code_base_id = self.code_base.len();
@@ -254,9 +261,9 @@ where
     }
 }
 
-impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
-    /// Duplicates contract code with specified identifier.
-    pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
+    /// Duplicates the contract's code with specified identifier.
+    /// Returns an identifier of the copy of the contract's code.
+    fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         let code_data = self.code_data(code_id)?;
         self.code_data.push(CodeData {
             creator: code_data.creator.clone(),
@@ -266,6 +273,21 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         Ok(code_id + 1)
     }
 
+    /// Returns `ContractData` for the contract with specified address.
+    fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
+        CONTRACTS
+            .load(&prefixed_read(storage, NAMESPACE_WASM), address)
+            .map_err(Into::into)
+    }
+
+    /// Returns a raw state dump of all key-values held by a contract with specified address.
+    fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
+        let storage = self.contract_storage_readonly(storage, address);
+        storage.range(None, None, Order::Ascending).collect()
+    }
+}
+
+impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Returns a handler to code of the contract with specified code id.
     pub fn contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
         let code_data = self.code_data(code_id)?;
@@ -281,17 +303,6 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
             .code_data
             .get((code_id - 1) as usize)
             .ok_or(Error::UnregisteredCodeId(code_id))?)
-    }
-
-    pub fn load_contract(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
-        CONTRACTS
-            .load(&prefixed_read(storage, NAMESPACE_WASM), address)
-            .map_err(Into::into)
-    }
-
-    pub fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
-        let storage = self.contract_storage_readonly(storage, address);
-        storage.range(None, None, Order::Ascending).collect()
     }
 
     fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
@@ -444,7 +455,7 @@ where
         let admin = new_admin.map(|a| api.addr_validate(&a)).transpose()?;
 
         // check admin status
-        let mut data = self.load_contract(storage, &contract_addr)?;
+        let mut data = self.contract_data(storage, &contract_addr)?;
         if data.admin != Some(sender) {
             bail!("Only admin can update the contract admin: {:?}", data.admin);
         }
@@ -514,60 +525,30 @@ where
                 msg,
                 funds,
                 label,
-            } => {
-                if label.is_empty() {
-                    bail!("Label is required on all contracts");
-                }
-
-                let contract_addr = self.register_contract(
-                    storage,
-                    code_id,
-                    sender.clone(),
-                    admin.map(Addr::unchecked),
-                    label,
-                    block.height,
-                )?;
-
-                // move the cash
-                self.send(
-                    api,
-                    storage,
-                    router,
-                    block,
-                    sender.clone(),
-                    contract_addr.clone().into(),
-                    &funds,
-                )?;
-
-                // then call the contract
-                let info = MessageInfo { sender, funds };
-                let res = self.call_instantiate(
-                    contract_addr.clone(),
-                    api,
-                    storage,
-                    router,
-                    block,
-                    info,
-                    msg.to_vec(),
-                )?;
-
-                let custom_event = Event::new("instantiate")
-                    .add_attribute(CONTRACT_ATTR, &contract_addr)
-                    .add_attribute("code_id", code_id.to_string());
-
-                let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
-                let mut res = self.process_response(
-                    api,
-                    router,
-                    storage,
-                    block,
-                    contract_addr.clone(),
-                    res,
-                    msgs,
-                )?;
-                res.data = Some(instantiate_response(res.data, &contract_addr));
-                Ok(res)
-            }
+            } => self.process_wasm_msg_instantiate(
+                api, storage, router, block, sender, admin, code_id, msg, funds, label, None,
+            ),
+            #[cfg(feature = "cosmwasm_1_2")]
+            WasmMsg::Instantiate2 {
+                admin,
+                code_id,
+                msg,
+                funds,
+                label,
+                salt,
+            } => self.process_wasm_msg_instantiate(
+                api,
+                storage,
+                router,
+                block,
+                sender,
+                admin,
+                code_id,
+                msg,
+                funds,
+                label,
+                Some(salt),
+            ),
             WasmMsg::Migrate {
                 contract_addr,
                 new_code_id,
@@ -579,7 +560,7 @@ where
                 if new_code_id as usize > self.code_data.len() {
                     bail!("Cannot migrate contract to unregistered code id");
                 }
-                let mut data = self.load_contract(storage, &contract_addr)?;
+                let mut data = self.contract_data(storage, &contract_addr)?;
                 if data.admin != Some(sender) {
                     bail!("Only admin can migrate contract: {:?}", data.admin);
                 }
@@ -614,6 +595,75 @@ where
             }
             msg => bail!(Error::UnsupportedWasmMsg(msg)),
         }
+    }
+
+    /// Processes WasmMsg::Instantiate and WasmMsg::Instantiate2 messages.
+    fn process_wasm_msg_instantiate(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        sender: Addr,
+        admin: Option<String>,
+        code_id: u64,
+        msg: Binary,
+        funds: Vec<Coin>,
+        label: String,
+        _salt: Option<Binary>,
+    ) -> AnyResult<AppResponse> {
+        if label.is_empty() {
+            bail!("Label is required on all contracts");
+        }
+
+        let contract_addr = self.register_contract(
+            storage,
+            code_id,
+            sender.clone(),
+            admin.map(Addr::unchecked),
+            label,
+            block.height,
+        )?;
+
+        // move the cash
+        self.send(
+            api,
+            storage,
+            router,
+            block,
+            sender.clone(),
+            contract_addr.clone().into(),
+            &funds,
+        )?;
+
+        // then call the contract
+        let info = MessageInfo { sender, funds };
+        let res = self.call_instantiate(
+            contract_addr.clone(),
+            api,
+            storage,
+            router,
+            block,
+            info,
+            msg.to_vec(),
+        )?;
+
+        let custom_event = Event::new("instantiate")
+            .add_attribute(CONTRACT_ATTR, &contract_addr)
+            .add_attribute("code_id", code_id.to_string());
+
+        let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
+        let mut res = self.process_response(
+            api,
+            router,
+            storage,
+            block,
+            contract_addr.clone(),
+            res,
+            msgs,
+        )?;
+        res.data = Some(instantiate_response(res.data, &contract_addr));
+        Ok(res)
     }
 
     /// This will execute the given messages, making all changes to the local cache.
@@ -920,7 +970,7 @@ where
     where
         F: FnOnce(&dyn Contract<ExecC, QueryC>, Deps<QueryC>, Env) -> AnyResult<T>,
     {
-        let contract = self.load_contract(storage, &address)?;
+        let contract = self.contract_data(storage, &address)?;
         let handler = self.contract_code(contract.code_id)?;
         let storage = self.contract_storage_readonly(storage, &address);
         let env = self.get_env(address, block);
@@ -946,7 +996,7 @@ where
         F: FnOnce(&dyn Contract<ExecC, QueryC>, DepsMut<QueryC>, Env) -> AnyResult<T>,
         ExecC: DeserializeOwned,
     {
-        let contract = self.load_contract(storage, &address)?;
+        let contract = self.contract_data(storage, &address)?;
         let handler = self.contract_code(contract.code_id)?;
 
         // We don't actually need a transaction here, as it is already embedded in a transactional.
@@ -1021,20 +1071,18 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use crate::app::Router;
+    use crate::bank::BankKeeper;
+    use crate::module::FailingModule;
+    use crate::staking::{DistributionKeeper, StakeKeeper};
+    use crate::test_helpers::{caller, error, payout};
+    use crate::transactions::StorageTransaction;
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
         coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery,
         StdError,
     };
-
-    use crate::app::Router;
-    use crate::bank::BankKeeper;
-    use crate::module::FailingModule;
-    use crate::staking::{DistributionKeeper, StakeKeeper};
-    use crate::test_helpers::contracts::{caller, error, payout};
-    use crate::transactions::StorageTransaction;
-
-    use super::*;
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
@@ -1099,7 +1147,7 @@ mod test {
 
         // verify contract data are as expected
         let contract_data = wasm_keeper
-            .load_contract(&wasm_storage, &contract_addr)
+            .contract_data(&wasm_storage, &contract_addr)
             .unwrap();
 
         assert_eq!(
