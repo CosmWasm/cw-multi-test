@@ -173,7 +173,8 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     FailingModule<GovMsg, Empty, Empty>,
 >;
 
-/// Utility to build App in stages. If particular items wont be set, defaults would be used
+/// Utility to build [App] in stages. If particular items/properties are not explicitly set,
+/// then default values are used.
 pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov> {
     api: Api,
     block: BlockInfo,
@@ -275,15 +276,11 @@ where
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
 {
-    /// Overwrites default wasm executor.
+    /// Overwrites the default wasm executor.
     ///
     /// At this point it is needed that new wasm implements some `Wasm` trait, but it doesn't need
     /// to be bound to Bank or Custom yet - as those may change. The cross-components validation is
     /// done on final building.
-    ///
-    /// Also it is possible to completely abandon trait bounding here which would not be bad idea,
-    /// however it might make the message on build creepy in many cases, so as for properly build
-    /// `App` we always want `Wasm` to be `Wasm`, some checks are done early.
     pub fn with_wasm<NewWasm: Wasm<CustomT::ExecT, CustomT::QueryT>>(
         self,
         wasm: NewWasm,
@@ -315,7 +312,7 @@ where
         }
     }
 
-    /// Overwrites default bank interface
+    /// Overwrites the default bank interface.
     pub fn with_bank<NewBank: Bank>(
         self,
         bank: NewBank,
@@ -347,7 +344,7 @@ where
         }
     }
 
-    /// Overwrites default api interface
+    /// Overwrites the default api interface.
     pub fn with_api<NewApi: Api>(
         self,
         api: NewApi,
@@ -379,7 +376,7 @@ where
         }
     }
 
-    /// Overwrites default storage interface
+    /// Overwrites the default storage interface.
     pub fn with_storage<NewStorage: Storage>(
         self,
         storage: NewStorage,
@@ -411,15 +408,11 @@ where
         }
     }
 
-    /// Overwrites default custom messages handler
+    /// Overwrites the default custom messages handler.
     ///
     /// At this point it is needed that new custom implements some `Module` trait, but it doesn't need
     /// to be bound to ExecC or QueryC yet - as those may change. The cross-components validation is
     /// done on final building.
-    ///
-    /// Also it is possible to completely abandon trait bounding here which would not be bad idea,
-    /// however it might make the message on build creepy in many cases, so as for properly build
-    /// `App` we always want `Wasm` to be `Wasm`, some checks are done early.
     pub fn with_custom<NewCustom: Module>(
         self,
         custom: NewCustom,
@@ -451,7 +444,7 @@ where
         }
     }
 
-    /// Overwrites default bank interface
+    /// Overwrites the default staking interface.
     pub fn with_staking<NewStaking: Staking>(
         self,
         staking: NewStaking,
@@ -483,7 +476,7 @@ where
         }
     }
 
-    /// Overwrites default distribution interface
+    /// Overwrites the default distribution interface.
     pub fn with_distribution<NewDistribution: Distribution>(
         self,
         distribution: NewDistribution,
@@ -516,10 +509,13 @@ where
         }
     }
 
-    /// Overwrites default ibc interface.
+    /// Overwrites the default ibc interface.
     ///
-    /// If you wish to simply ignore/drop all returned IBC Messages, you can use the `IbcAcceptingModule` type.
-    ///     builder.with_ibc(IbcAcceptingModule::new())
+    /// If you wish to simply ignore/drop all returned IBC Messages,
+    /// you can use the `IbcAcceptingModule` type:
+    /// ```text
+    /// builder.with_ibc(IbcAcceptingModule::new())
+    /// ```
     pub fn with_ibc<NewIbc: Ibc>(
         self,
         ibc: NewIbc,
@@ -551,7 +547,7 @@ where
         }
     }
 
-    /// Overwrites default gov interface
+    /// Overwrites the default gov interface.
     pub fn with_gov<NewGov: Gov>(
         self,
         gov: NewGov,
@@ -583,14 +579,14 @@ where
         }
     }
 
-    /// Overwrites default initial block
+    /// Overwrites the initial block.
     pub fn with_block(mut self, block: BlockInfo) -> Self {
         self.block = block;
         self
     }
 
     /// Builds final `App`. At this point all components type have to be properly related to each
-    /// other. If there are some generics related compilation error make sure, that all components
+    /// other. If there are some generics related compilation errors, make sure that all components
     /// are properly relating to each other.
     pub fn build<F>(
         self,
