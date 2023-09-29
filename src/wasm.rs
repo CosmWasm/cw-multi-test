@@ -259,7 +259,6 @@ where
 
         code_id as u64
     }
-}
 
     /// Duplicates the contract's code with specified identifier.
     /// Returns an identifier of the copy of the contract's code.
