@@ -643,6 +643,31 @@ where
     IbcT: Ibc,
     GovT: Gov,
 {
+    /// Returns a shared reference to application's router.
+    pub fn router(&self) -> &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT> {
+        &self.router
+    }
+
+    /// Returns a shared reference to application's api.
+    pub fn api(&self) -> &ApiT {
+        &self.api
+    }
+
+    /// Returns a shared reference to application's storage.
+    pub fn storage(&self) -> &StorageT {
+        &self.storage
+    }
+
+    /// Returns a mutable reference to application's storage.
+    pub fn storage_mut(&mut self) -> &mut StorageT {
+        &mut self.storage
+    }
+
+    /// Returns a shared reference to application's block info.
+    pub fn block(&self) -> &BlockInfo {
+        &self.block
+    }
+
     pub fn init_modules<F, T>(&mut self, init_fn: F) -> T
     where
         F: FnOnce(
@@ -1148,131 +1173,5 @@ where
             .query(self.api, self.storage, self.block_info, request)
             .into();
         SystemResult::Ok(contract_result)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::transactions::StorageTransaction;
-    use cosmwasm_std::testing::MockQuerier;
-    use cosmwasm_std::{coin, coins, AllBalanceResponse, BankMsg, BankQuery, Coin};
-
-    fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>(
-        router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        rcpt: &Addr,
-    ) -> Vec<Coin>
-    where
-        CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema,
-        CustomT::QueryT: CustomQuery + DeserializeOwned,
-        WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
-        BankT: Bank,
-        CustomT: Module,
-        StakingT: Staking,
-        DistrT: Distribution,
-    {
-        let query = BankQuery::AllBalances {
-            address: rcpt.into(),
-        };
-        let block = mock_env().block;
-        let querier: MockQuerier<CustomT::QueryT> = MockQuerier::new(&[]);
-        let res = router
-            .bank
-            .query(api, storage, &querier, &block, query)
-            .unwrap();
-        let val: AllBalanceResponse = from_slice(&res).unwrap();
-        val.amount
-    }
-
-    fn query_app<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>(
-        app: &App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>,
-        rcpt: &Addr,
-    ) -> Vec<Coin>
-    where
-        CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
-        CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
-        WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
-        BankT: Bank,
-        ApiT: Api,
-        StorageT: Storage,
-        CustomT: Module,
-        StakingT: Staking,
-        DistrT: Distribution,
-    {
-        let query = BankQuery::AllBalances {
-            address: rcpt.into(),
-        }
-        .into();
-        let val: AllBalanceResponse = app.wrap().query(&query).unwrap();
-        val.amount
-    }
-
-    #[test]
-    fn update_block() {
-        let mut app = App::default();
-
-        let BlockInfo { time, height, .. } = app.block;
-        app.update_block(next_block);
-
-        assert_eq!(time.plus_seconds(5), app.block.time);
-        assert_eq!(height + 1, app.block.height);
-    }
-
-    #[test]
-    fn multi_level_bank_cache() {
-        // set personal balance
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("recipient");
-        let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
-
-        let mut app = App::new(|router, _, storage| {
-            router
-                .bank
-                .init_balance(storage, &owner, init_funds)
-                .unwrap();
-        });
-
-        // cache 1 - send some tokens
-        let mut cache = StorageTransaction::new(&app.storage);
-        let msg = BankMsg::Send {
-            to_address: rcpt.clone().into(),
-            amount: coins(25, "eth"),
-        };
-        app.router
-            .execute(&app.api, &mut cache, &app.block, owner.clone(), msg.into())
-            .unwrap();
-
-        // shows up in cache
-        let cached_rcpt = query_router(&app.router, &app.api, &cache, &rcpt);
-        assert_eq!(coins(25, "eth"), cached_rcpt);
-        let router_rcpt = query_app(&app, &rcpt);
-        assert_eq!(router_rcpt, vec![]);
-
-        // now, second level cache
-        transactional(&mut cache, |cache2, read| {
-            let msg = BankMsg::Send {
-                to_address: rcpt.clone().into(),
-                amount: coins(12, "eth"),
-            };
-            app.router
-                .execute(&app.api, cache2, &app.block, owner, msg.into())
-                .unwrap();
-
-            // shows up in 2nd cache
-            let cached_rcpt = query_router(&app.router, &app.api, read, &rcpt);
-            assert_eq!(coins(25, "eth"), cached_rcpt);
-            let cached2_rcpt = query_router(&app.router, &app.api, cache2, &rcpt);
-            assert_eq!(coins(37, "eth"), cached2_rcpt);
-            Ok(())
-        })
-        .unwrap();
-
-        // apply first to router
-        cache.prepare().commit(&mut app.storage);
-
-        let committed = query_app(&app, &rcpt);
-        assert_eq!(coins(37, "eth"), committed);
     }
 }
