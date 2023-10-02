@@ -7,6 +7,7 @@
 //! To understand the design of this module, please refer to `../DESIGN.md`
 
 mod app;
+mod app_builder;
 mod bank;
 #[allow(clippy::type_complexity)]
 mod contracts;
@@ -23,10 +24,8 @@ mod tests;
 mod transactions;
 mod wasm;
 
-pub use crate::app::{
-    custom_app, next_block, App, AppBuilder, BasicApp, BasicAppBuilder, CosmosRouter, Router,
-    SudoMsg,
-};
+pub use crate::app::{custom_app, next_block, App, BasicApp, CosmosRouter, Router, SudoMsg};
+pub use crate::app_builder::{AppBuilder, BasicAppBuilder};
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
 pub use crate::contracts::{Contract, ContractWrapper};
 pub use crate::executor::{AppResponse, Executor};
