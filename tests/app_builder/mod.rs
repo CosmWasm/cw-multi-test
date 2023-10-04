@@ -1,8 +1,10 @@
 use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 use cw_multi_test::{AppResponse, CosmosRouter, Module};
+use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -13,34 +15,58 @@ mod with_staking;
 mod with_storage;
 mod with_wasm;
 
+const COUNTER: Item<u64> = Item::new("count");
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum CounterQueryMsg {
+    Counter {},
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CounterResponseMsg {
+    value: u64,
+}
+
 mod contracts {
     use super::*;
 
-    pub mod caller {
+    pub mod counter {
         use super::*;
-        use cosmwasm_std::{Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, WasmMsg};
+        use cosmwasm_std::{
+            to_binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, WasmMsg,
+        };
         use cw_multi_test::{Contract, ContractWrapper};
 
         fn instantiate(
-            _deps: DepsMut,
+            deps: DepsMut,
             _env: Env,
             _info: MessageInfo,
             _msg: Empty,
         ) -> Result<Response, StdError> {
-            unimplemented!()
+            COUNTER.save(deps.storage, &1).unwrap();
+            Ok(Response::default())
         }
 
         fn execute(
-            _deps: DepsMut,
+            deps: DepsMut,
             _env: Env,
             _info: MessageInfo,
             _msg: WasmMsg,
         ) -> Result<Response, StdError> {
-            unimplemented!()
+            if let Some(mut counter) = COUNTER.may_load(deps.storage).unwrap() {
+                counter += 1;
+                COUNTER.save(deps.storage, &counter).unwrap();
+            }
+            Ok(Response::default())
         }
 
-        fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
-            unimplemented!()
+        fn query(deps: Deps, _env: Env, msg: CounterQueryMsg) -> Result<Binary, StdError> {
+            match msg {
+                CounterQueryMsg::Counter { .. } => Ok(to_binary(&CounterResponseMsg {
+                    value: COUNTER.may_load(deps.storage).unwrap().unwrap(),
+                })?),
+            }
         }
 
         pub fn contract() -> Box<dyn Contract<Empty>> {

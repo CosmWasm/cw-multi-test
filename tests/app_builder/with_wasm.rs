@@ -89,7 +89,7 @@ fn building_app_with_custom_wasm_should_work() {
     let contract_addr = Addr::unchecked("contract");
 
     // calling store_code should return value defined in custom keeper
-    assert_eq!(CODE_ID, app.store_code(contracts::caller::contract()));
+    assert_eq!(CODE_ID, app.store_code(contracts::counter::contract()));
 
     // calling duplicate_code should return error defined in custom keeper
     assert_eq!(
