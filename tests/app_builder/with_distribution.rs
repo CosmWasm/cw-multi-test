@@ -29,7 +29,7 @@ fn building_app_with_custom_distribution_should_work() {
         app.execute(
             Addr::unchecked("sender"),
             DistributionMsg::SetWithdrawAddress {
-                address: recipient.clone().into(),
+                address: recipient.into(),
             }
             .into(),
         )
