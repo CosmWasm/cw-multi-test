@@ -95,11 +95,11 @@ where
 fn update_block() {
     let mut app = App::default();
 
-    let BlockInfo { time, height, .. } = app.block().clone();
+    let BlockInfo { time, height, .. } = app.block_info();
     app.update_block(next_block);
 
-    assert_eq!(time.plus_seconds(5), app.block().time);
-    assert_eq!(height + 1, app.block().height);
+    assert_eq!(time.plus_seconds(5), app.block_info().time);
+    assert_eq!(height + 1, app.block_info().height);
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn multi_level_bank_cache() {
         .execute(
             app.api(),
             &mut cache,
-            app.block(),
+            &app.block_info(),
             owner.clone(),
             msg.into(),
         )
@@ -145,7 +145,7 @@ fn multi_level_bank_cache() {
             amount: coins(12, "eth"),
         };
         app.router()
-            .execute(app.api(), cache2, app.block(), owner, msg.into())
+            .execute(app.api(), cache2, &app.block_info(), owner, msg.into())
             .unwrap();
 
         // shows up in 2nd cache

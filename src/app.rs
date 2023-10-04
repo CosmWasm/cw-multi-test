@@ -194,11 +194,6 @@ where
         &mut self.storage
     }
 
-    /// Returns a shared reference to application's block info.
-    pub fn block(&self) -> &BlockInfo {
-        &self.block
-    }
-
     pub fn init_modules<F, T>(&mut self, init_fn: F) -> T
     where
         F: FnOnce(
