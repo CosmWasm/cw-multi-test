@@ -1,116 +1,160 @@
-use anyhow::Result as AnyResult;
+use crate::app_builder::{contracts, MyKeeper};
+use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{
-    Addr, Api, Binary, BlockInfo, Deps, DepsMut, Empty, Env, MessageInfo, Querier, Record,
-    Response, StdError, Storage, WasmMsg, WasmQuery,
+    Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, WasmMsg, WasmQuery,
 };
 use cw_multi_test::{
-    AppBuilder, AppResponse, Contract, ContractData, ContractWrapper, CosmosRouter, Wasm,
+    AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm, WasmKeeper,
+    WasmSudo,
 };
-use std::marker::PhantomData;
+use once_cell::sync::Lazy;
 
-mod contracts {
-    use super::*;
+const EXECUTE_MSG: &str = "wasm execute called";
+const QUERY_MSG: &str = "wasm query called";
+const SUDO_MSG: &str = "wasm sudo called";
+const DUPLICATE_CODE_MSG: &str = "wasm duplicate code called";
+const CONTRACT_DATA_MSG: &str = "wasm contract data called";
 
-    pub mod caller {
-        use super::*;
+const CODE_ID: u64 = 154;
 
-        fn instantiate(
-            _deps: DepsMut,
-            _env: Env,
-            _info: MessageInfo,
-            _msg: Empty,
-        ) -> Result<Response, StdError> {
-            unimplemented!()
-        }
+static WASM_RAW: Lazy<Vec<Record>> = Lazy::new(|| vec![(vec![154u8], vec![155u8])]);
 
-        fn execute(
-            _deps: DepsMut,
-            _env: Env,
-            _info: MessageInfo,
-            _msg: WasmMsg,
-        ) -> Result<Response, StdError> {
-            unimplemented!()
-        }
+// This is on purpose derived from module, to check if there are no compilation errors
+// when custom wasm keeper implements also Module trait (although it is not needed).
+type MyWasmKeeper = MyKeeper<Empty, Empty, Empty>;
 
-        fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
-            unimplemented!()
-        }
+impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: WasmQuery,
+    ) -> AnyResult<Binary> {
+        bail!(self.2);
+    }
 
-        pub fn contract() -> Box<dyn Contract<Empty>> {
-            Box::new(ContractWrapper::new_with_empty(execute, instantiate, query))
-        }
+    fn execute(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _msg: WasmMsg,
+    ) -> AnyResult<AppResponse> {
+        bail!(self.1);
+    }
+
+    fn sudo(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
+        _block: &BlockInfo,
+        _msg: Binary,
+    ) -> AnyResult<AppResponse> {
+        bail!(self.3);
+    }
+
+    fn store_code(&mut self, _creator: Addr, _code: Box<dyn Contract<ExecT, QueryT>>) -> u64 {
+        CODE_ID
+    }
+
+    fn duplicate_code(&mut self, _code_id: u64) -> AnyResult<u64> {
+        bail!(DUPLICATE_CODE_MSG);
+    }
+
+    fn contract_data(&self, _storage: &dyn Storage, _address: &Addr) -> AnyResult<ContractData> {
+        bail!(CONTRACT_DATA_MSG);
+    }
+
+    fn dump_wasm_raw(&self, _storage: &dyn Storage, _address: &Addr) -> Vec<Record> {
+        WASM_RAW.clone()
     }
 }
 
 #[test]
 fn building_app_with_custom_wasm_should_work() {
-    struct MyWasm<ExecT, QueryT>(PhantomData<(ExecT, QueryT)>);
+    // build custom wasm keeper
+    let wasm_keeper = MyWasmKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
-    impl<ExecT, QueryT> Default for MyWasm<ExecT, QueryT> {
-        fn default() -> Self {
-            Self(PhantomData)
-        }
-    }
-
-    impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasm<ExecT, QueryT> {
-        fn query(
-            &self,
-            _api: &dyn Api,
-            _storage: &dyn Storage,
-            _querier: &dyn Querier,
-            _block: &BlockInfo,
-            _request: WasmQuery,
-        ) -> AnyResult<Binary> {
-            unimplemented!()
-        }
-
-        fn execute(
-            &self,
-            _api: &dyn Api,
-            _storage: &mut dyn Storage,
-            _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
-            _block: &BlockInfo,
-            _sender: Addr,
-            _msg: WasmMsg,
-        ) -> AnyResult<AppResponse> {
-            unimplemented!()
-        }
-
-        fn sudo(
-            &self,
-            _api: &dyn Api,
-            _contract_addr: Addr,
-            _storage: &mut dyn Storage,
-            _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
-            _block: &BlockInfo,
-            _msg: Binary,
-        ) -> AnyResult<AppResponse> {
-            unimplemented!()
-        }
-
-        fn store_code(&mut self, _creator: Addr, _code: Box<dyn Contract<ExecT, QueryT>>) -> u64 {
-            154
-        }
-
-        fn duplicate_code(&mut self, _code_id: u64) -> AnyResult<u64> {
-            unimplemented!()
-        }
-
-        fn contract_data(
-            &self,
-            _storage: &dyn Storage,
-            _address: &Addr,
-        ) -> AnyResult<ContractData> {
-            unimplemented!()
-        }
-
-        fn dump_wasm_raw(&self, _storage: &dyn Storage, _address: &Addr) -> Vec<Record> {
-            unimplemented!()
-        }
-    }
-
+    // build the application with custom wasm keeper
     let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_wasm(MyWasm::default()).build(|_, _, _| {});
-    let code_id = app.store_code(contracts::caller::contract());
-    assert_eq!(154, code_id);
+    let mut app = app_builder.with_wasm(wasm_keeper).build(|_, _, _| {});
+
+    // prepare additional input data
+    let contract_addr = Addr::unchecked("contract");
+
+    // calling store_code should return value defined in custom keeper
+    assert_eq!(CODE_ID, app.store_code(contracts::caller::contract()));
+
+    // calling duplicate_code should return error defined in custom keeper
+    assert_eq!(
+        DUPLICATE_CODE_MSG,
+        app.duplicate_code(CODE_ID).unwrap_err().to_string()
+    );
+
+    // calling contract_data should return error defined in custom keeper
+    assert_eq!(
+        CONTRACT_DATA_MSG,
+        app.contract_data(&contract_addr).unwrap_err().to_string()
+    );
+
+    // calling dump_wasm_raw should return value defined in custom keeper
+    assert_eq!(*WASM_RAW, app.dump_wasm_raw(&contract_addr));
+
+    // executing wasm execute should return an error defined in custom keeper
+    assert_eq!(
+        EXECUTE_MSG,
+        app.execute(
+            Addr::unchecked("sender"),
+            WasmMsg::Instantiate {
+                admin: None,
+                code_id: 0,
+                msg: Default::default(),
+                funds: vec![],
+                label: "".to_string(),
+            }
+            .into()
+        )
+        .unwrap_err()
+        .to_string()
+    );
+
+    // executing wasm sudo should return an error defined in custom keeper
+    assert_eq!(
+        SUDO_MSG,
+        app.sudo(
+            WasmSudo {
+                contract_addr,
+                msg: Default::default()
+            }
+            .into()
+        )
+        .unwrap_err()
+        .to_string()
+    );
+
+    // executing wasm query should return an error defined in custom keeper
+    #[cfg(feature = "cosmwasm_1_2")]
+    assert_eq!(
+        format!("Generic error: Querier contract error: {}", QUERY_MSG),
+        app.wrap()
+            .query_wasm_code_info(CODE_ID)
+            .unwrap_err()
+            .to_string()
+    );
+}
+
+#[test]
+fn compiling_with_wasm_keeper_should_work() {
+    // this verifies only compilation errors
+    // while our WasmKeeper does not implement Module
+    let app_builder = AppBuilder::default();
+    let _ = app_builder
+        .with_wasm(WasmKeeper::default())
+        .build(|_, _, _| {});
 }

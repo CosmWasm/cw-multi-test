@@ -248,6 +248,7 @@ dependencies = [
  "derivative",
  "ecdsa",
  "itertools",
+ "once_cell",
  "prost",
  "schemars",
  "serde",

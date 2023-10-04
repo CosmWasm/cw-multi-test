@@ -13,6 +13,42 @@ mod with_staking;
 mod with_storage;
 mod with_wasm;
 
+mod contracts {
+    use super::*;
+
+    pub mod caller {
+        use super::*;
+        use cosmwasm_std::{Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, WasmMsg};
+        use cw_multi_test::{Contract, ContractWrapper};
+
+        fn instantiate(
+            _deps: DepsMut,
+            _env: Env,
+            _info: MessageInfo,
+            _msg: Empty,
+        ) -> Result<Response, StdError> {
+            unimplemented!()
+        }
+
+        fn execute(
+            _deps: DepsMut,
+            _env: Env,
+            _info: MessageInfo,
+            _msg: WasmMsg,
+        ) -> Result<Response, StdError> {
+            unimplemented!()
+        }
+
+        fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
+            unimplemented!()
+        }
+
+        pub fn contract() -> Box<dyn Contract<Empty>> {
+            Box::new(ContractWrapper::new_with_empty(execute, instantiate, query))
+        }
+    }
+}
+
 struct MyKeeper<ExecT, QueryT, SudoT>(
     PhantomData<(ExecT, QueryT, SudoT)>,
     &'static str,
@@ -26,15 +62,15 @@ impl<ExecT, QueryT, SudoT> MyKeeper<ExecT, QueryT, SudoT> {
     }
 }
 
-impl<Exec, Query, Sudo> Module for MyKeeper<Exec, Query, Sudo>
+impl<ExecT, QueryT, SudoT> Module for MyKeeper<ExecT, QueryT, SudoT>
 where
-    Exec: Debug,
-    Query: Debug,
-    Sudo: Debug,
+    ExecT: Debug,
+    QueryT: Debug,
+    SudoT: Debug,
 {
-    type ExecT = Exec;
-    type QueryT = Query;
-    type SudoT = Sudo;
+    type ExecT = ExecT;
+    type QueryT = QueryT;
+    type SudoT = SudoT;
 
     fn execute<ExecC, QueryC>(
         &self,
