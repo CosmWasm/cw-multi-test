@@ -10,9 +10,10 @@ use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
 use crate::app::CosmosRouter;
 use crate::{AppResponse, Module};
 
-/// Internal state of `CachingCustomHandler` wrapping internal mutability so it is not exposed to
-/// user. Those have to be shared internal state, as after mock is passed to app it is not
-/// possible to access mock internals which are not exposed by API.
+/// Internal state of [CachingCustomHandler] wrapping internal mutability
+/// so it is not exposed to user. Those have to be shared internal state,
+/// as after mock is passed to app it is not possible to access mock
+/// internals which are not exposed by API.
 #[derive(Derivative)]
 #[derivative(Default(bound = "", new = "true"), Clone(bound = ""))]
 pub struct CachingCustomHandlerState<ExecC, QueryC> {
