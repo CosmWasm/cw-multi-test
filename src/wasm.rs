@@ -22,9 +22,10 @@ use sha2::{Digest, Sha256};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
-// Contract state is kept in Storage, separate from the contracts themselves
+/// Contract state kept in storage, separate from the contracts themselves (contract code).
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 
+/// `Wasm` namespace.
 pub const NAMESPACE_WASM: &[u8] = b"wasm";
 /// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
 const CONTRACT_ATTR: &str = "_contract_address";
@@ -45,7 +46,7 @@ impl WasmSudo {
 }
 
 /// Contract data includes information about contract,
-/// equivalent of `ContractInfo` in **wasmd** interface.
+/// equivalent of `ContractInfo` in `wasmd` interface.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ContractData {
     /// Identifier of stored contract code
@@ -76,17 +77,7 @@ struct CodeData {
 
 /// Interface to call into a `Wasm` module.
 pub trait Wasm<ExecC, QueryC> {
-    /// Handles all `WasmQuery` requests.
-    fn query(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        request: WasmQuery,
-    ) -> AnyResult<Binary>;
-
-    /// Handles all `WasmMsg` messages.
+    /// Processes `WasmMsg` messages.
     fn execute(
         &self,
         api: &dyn Api,
@@ -97,7 +88,19 @@ pub trait Wasm<ExecC, QueryC> {
         msg: WasmMsg,
     ) -> AnyResult<AppResponse>;
 
-    /// Handles all sudo messages, this is an admin interface and can not be called via `CosmosMsg`.
+    /// Processes `WasmQuery` query requests.
+    fn query(
+        &self,
+        api: &dyn Api,
+        storage: &dyn Storage,
+        querier: &dyn Querier,
+        block: &BlockInfo,
+        request: WasmQuery,
+    ) -> AnyResult<Binary>;
+
+    /// Processes binary sudo messages.
+    ///
+    /// This is admin interface and can not be called via `CosmosMsg`.
     fn sudo(
         &self,
         api: &dyn Api,
@@ -127,9 +130,10 @@ pub struct WasmKeeper<ExecC, QueryC> {
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
     /// Code data with code base identifier and additional attributes.  
     code_data: Vec<CodeData>,
-    /// Just markers to make type elision fork when using it as `Wasm` trait
-    _p: std::marker::PhantomData<QueryC>,
+    /// Address generator.
     generator: Box<dyn AddressGenerator>,
+    /// Just markers to make type elision fork when using it as `Wasm` trait.
+    _p: std::marker::PhantomData<QueryC>,
 }
 
 pub trait AddressGenerator {
@@ -169,6 +173,22 @@ where
     ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
+    fn execute(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        sender: Addr,
+        msg: WasmMsg,
+    ) -> AnyResult<AppResponse> {
+        self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
+            .context(format!(
+                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
+                sender, msg
+            ))
+    }
+
     fn query(
         &self,
         api: &dyn Api,
@@ -210,22 +230,6 @@ where
         }
     }
 
-    fn execute(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        sender: Addr,
-        msg: WasmMsg,
-    ) -> AnyResult<AppResponse> {
-        self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
-            .context(format!(
-                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
-                sender, msg
-            ))
-    }
-
     fn sudo(
         &self,
         api: &dyn Api,
@@ -236,7 +240,6 @@ where
         msg: Binary,
     ) -> AnyResult<AppResponse> {
         let custom_event = Event::new("sudo").add_attribute(CONTRACT_ATTR, &contract);
-
         let res = self.call_sudo(contract.clone(), api, storage, router, block, msg.to_vec())?;
         let (res, msgs) = self.build_app_response(&contract, custom_event, res);
         self.process_response(api, router, storage, block, contract, res, msgs)
@@ -592,7 +595,7 @@ where
         }
     }
 
-    /// Processes WasmMsg::Instantiate and WasmMsg::Instantiate2 messages.
+    /// Processes `WasmMsg::Instantiate` and `WasmMsg::Instantiate2` messages.
     fn process_wasm_msg_instantiate(
         &self,
         api: &dyn Api,
@@ -699,7 +702,7 @@ where
                     }),
                 };
                 // do reply and combine it with the original response
-                let reply_res = self._reply(api, router, storage, block, contract, reply)?;
+                let reply_res = self.reply(api, router, storage, block, contract, reply)?;
                 // override data
                 r.data = reply_res.data;
                 // append the events
@@ -716,7 +719,7 @@ where
                     id,
                     result: SubMsgResult::Err(format!("{:?}", e)),
                 };
-                self._reply(api, router, storage, block, contract, reply)
+                self.reply(api, router, storage, block, contract, reply)
             } else {
                 Err(e)
             }
@@ -725,7 +728,7 @@ where
         }
     }
 
-    fn _reply(
+    fn reply(
         &self,
         api: &dyn Api,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
