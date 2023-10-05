@@ -1,3 +1,7 @@
+use crate::AnyResult;
+use cosmwasm_std::Storage;
+#[cfg(feature = "iterator")]
+use cosmwasm_std::{Order, Record};
 #[cfg(feature = "iterator")]
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -7,12 +11,6 @@ use std::iter;
 use std::iter::Peekable;
 #[cfg(feature = "iterator")]
 use std::ops::{Bound, RangeBounds};
-
-use cosmwasm_std::Storage;
-#[cfg(feature = "iterator")]
-use cosmwasm_std::{Order, Record};
-
-use anyhow::Result as AnyResult;
 
 #[cfg(feature = "iterator")]
 /// The BTreeMap specific key-value pair reference type, as returned by `BTreeMap<Vec<u8>, T>::range`.
@@ -64,21 +62,6 @@ impl<'a> Storage for StorageTransaction<'a> {
         }
     }
 
-    fn set(&mut self, key: &[u8], value: &[u8]) {
-        let op = Op::Set {
-            key: key.to_vec(),
-            value: value.to_vec(),
-        };
-        self.local_state.insert(key.to_vec(), op.to_delta());
-        self.rep_log.append(op);
-    }
-
-    fn remove(&mut self, key: &[u8]) {
-        let op = Op::Delete { key: key.to_vec() };
-        self.local_state.insert(key.to_vec(), op.to_delta());
-        self.rep_log.append(op);
-    }
-
     #[cfg(feature = "iterator")]
     /// range allows iteration over a set of keys, either forwards or backwards
     /// uses standard rust range notation, and eg db.range(b"foo"..b"bar") also works reverse
@@ -109,6 +92,21 @@ impl<'a> Storage for StorageTransaction<'a> {
         let base = self.storage.range(start, end, order);
         let merged = MergeOverlay::new(local, base, order);
         Box::new(merged)
+    }
+
+    fn set(&mut self, key: &[u8], value: &[u8]) {
+        let op = Op::Set {
+            key: key.to_vec(),
+            value: value.to_vec(),
+        };
+        self.local_state.insert(key.to_vec(), op.to_delta());
+        self.rep_log.append(op);
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        let op = Op::Delete { key: key.to_vec() };
+        self.local_state.insert(key.to_vec(), op.to_delta());
+        self.rep_log.append(op);
     }
 }
 
