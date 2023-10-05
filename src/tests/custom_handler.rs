@@ -26,7 +26,7 @@ fn custom_handler_works() {
     // run query function
     let _ = custom_handler.query(
         app.api(),
-        &mut storage,
+        &storage,
         &(*app.wrap()),
         &app.block_info(),
         CustomMsg::SetName {
@@ -34,13 +34,16 @@ fn custom_handler_works() {
         },
     );
 
+    // get the state
     let custom_handler_state = custom_handler.state();
 
+    // there should be one exec message
     assert_eq!(
         custom_handler_state.execs().to_owned(),
         vec![CustomMsg::SetAge { age: 32 }]
     );
 
+    // there should be one query message
     assert_eq!(
         custom_handler_state.queries().to_owned(),
         vec![CustomMsg::SetName {
@@ -48,6 +51,7 @@ fn custom_handler_works() {
         }]
     );
 
+    // clear the state and assert there are no more messages
     custom_handler_state.reset();
     assert!(custom_handler_state.execs().is_empty());
     assert!(custom_handler_state.queries().is_empty());
