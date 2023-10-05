@@ -4,7 +4,8 @@ use crate::error::Error;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use anyhow::{bail, Context, Result as AnyResult};
+use crate::AnyResult;
+use anyhow::{bail, Context};
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,

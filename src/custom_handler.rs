@@ -1,4 +1,5 @@
-use anyhow::{bail, Result as AnyResult};
+use crate::AnyResult;
+use anyhow::bail;
 use derivative::Derivative;
 use std::cell::{Ref, RefCell};
 use std::ops::Deref;

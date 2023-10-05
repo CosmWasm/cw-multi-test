@@ -1,5 +1,6 @@
 use crate::app_builder::{contracts, MyKeeper};
-use anyhow::{bail, Result as AnyResult};
+use crate::AnyResult;
+use anyhow::bail;
 use cosmwasm_std::{
     Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, WasmMsg, WasmQuery,
 };

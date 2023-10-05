@@ -1,8 +1,9 @@
-use std::collections::{BTreeSet, VecDeque};
-
-use anyhow::{anyhow, bail, Result as AnyResult};
-use schemars::JsonSchema;
-
+use crate::app::CosmosRouter;
+use crate::executor::AppResponse;
+use crate::prefixed_storage::{prefixed, prefixed_read};
+use crate::AnyResult;
+use crate::{BankSudo, Module};
+use anyhow::{anyhow, bail};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_binary, Addr, AllDelegationsResponse, AllValidatorsResponse, Api,
     BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
@@ -10,12 +11,9 @@ use cosmwasm_std::{
     StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::app::CosmosRouter;
-use crate::executor::AppResponse;
-use crate::prefixed_storage::{prefixed, prefixed_read};
-use crate::{BankSudo, Module};
+use std::collections::{BTreeSet, VecDeque};
 
 // Contains some general staking parameters
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

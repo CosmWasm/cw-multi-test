@@ -4,11 +4,12 @@ use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
+use crate::AnyResult;
 use crate::{
     custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
     Router, Staking, Wasm, WasmSudo,
 };
-use anyhow::{bail, Result as AnyResult};
+use anyhow::bail;
 use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_slice, testing::MockApi, to_binary, Addr, AllBalanceResponse, Api, Attribute,

@@ -1,4 +1,5 @@
-use anyhow::{bail, Result as AnyResult};
+use crate::AnyResult;
+use anyhow::bail;
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 use cw_multi_test::{AppResponse, CosmosRouter, Module};
 use cw_storage_plus::Item;

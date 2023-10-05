@@ -7,8 +7,9 @@ use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
+use crate::AnyResult;
 use crate::AppBuilder;
-use anyhow::{bail, Result as AnyResult};
+use anyhow::bail;
 use cosmwasm_std::{
     from_slice,
     testing::{MockApi, MockStorage},
