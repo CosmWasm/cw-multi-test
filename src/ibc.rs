@@ -1,5 +1,9 @@
+use crate::AnyResult;
 use crate::{AppResponse, FailingModule, Module};
-use cosmwasm_std::{Binary, Empty, IbcMsg, IbcQuery};
+use cosmwasm_std::{Binary, CustomQuery, Empty, IbcMsg, IbcQuery};
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 
 pub trait Ibc: Module<ExecT = IbcMsg, QueryT = IbcQuery, SudoT = Empty> {}
 
@@ -20,15 +24,10 @@ impl Module for IbcAcceptingModule {
         _block: &cosmwasm_std::BlockInfo,
         _sender: cosmwasm_std::Addr,
         _msg: Self::ExecT,
-    ) -> anyhow::Result<AppResponse>
+    ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }
@@ -40,7 +39,7 @@ impl Module for IbcAcceptingModule {
         _querier: &dyn cosmwasm_std::Querier,
         _block: &cosmwasm_std::BlockInfo,
         _request: Self::QueryT,
-    ) -> anyhow::Result<Binary> {
+    ) -> AnyResult<Binary> {
         Ok(Binary::default())
     }
 
@@ -51,15 +50,10 @@ impl Module for IbcAcceptingModule {
         _router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &cosmwasm_std::BlockInfo,
         _msg: Self::SudoT,
-    ) -> anyhow::Result<AppResponse>
+    ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + schemars::JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }
