@@ -34,8 +34,8 @@ impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC> {
     }
 }
 
-/// Custom handler storing all the messages it received, so they can be later verified. State is
-/// thin shared state, so it can be hold after mock is passed to App to read state.
+/// Custom handler storing all the messages it received, so they can be later verified.
+/// State is thin shared state, so it can be hold after mock is passed to App to read state.
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "", new = "true"))]
 pub struct CachingCustomHandler<ExecC, QueryC> {
@@ -53,8 +53,7 @@ impl<Exec, Query> Module for CachingCustomHandler<Exec, Query> {
     type QueryT = Query;
     type SudoT = Empty;
 
-    // TODO: how to assert
-    // where ExecC: Exec, QueryC: Query
+    // TODO: how to assert like `where ExecC: Exec, QueryC: Query`
     fn execute<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -68,17 +67,6 @@ impl<Exec, Query> Module for CachingCustomHandler<Exec, Query> {
         Ok(AppResponse::default())
     }
 
-    fn sudo<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        msg: Self::SudoT,
-    ) -> AnyResult<AppResponse> {
-        bail!("Unexpected sudo msg {:?}", msg)
-    }
-
     fn query(
         &self,
         _api: &dyn Api,
@@ -89,5 +77,16 @@ impl<Exec, Query> Module for CachingCustomHandler<Exec, Query> {
     ) -> AnyResult<Binary> {
         self.state.queries.borrow_mut().push(request);
         Ok(Binary::default())
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        msg: Self::SudoT,
+    ) -> AnyResult<AppResponse> {
+        bail!("Unexpected sudo msg {:?}", msg)
     }
 }
