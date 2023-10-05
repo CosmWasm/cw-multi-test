@@ -36,3 +36,5 @@ pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
 pub use crate::wasm::{AddressGenerator, ContractData, Wasm, WasmKeeper, WasmSudo};
+
+pub(crate) use anyhow::Result as AnyResult;
