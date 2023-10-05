@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::error::Error;
-use std::fmt::{self, Debug, Display};
+use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
 use cosmwasm_std::{
@@ -14,7 +14,7 @@ use anyhow::{anyhow, bail, Result as AnyResult};
 /// Interface to call into a `Contract`.
 pub trait Contract<T, Q = Empty>
 where
-    T: Clone + fmt::Debug + PartialEq + JsonSchema,
+    T: Clone + Debug + PartialEq + JsonSchema,
     Q: CustomQuery,
 {
     fn execute(
@@ -82,7 +82,7 @@ pub struct ContractWrapper<
     E4: Display + Debug + Send + Sync + 'static,
     E5: Display + Debug + Send + Sync + 'static,
     E6: Display + Debug + Send + Sync + 'static,
-    C: Clone + fmt::Debug + PartialEq + JsonSchema,
+    C: Clone + Debug + PartialEq + JsonSchema,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     execute_fn: ContractClosure<T1, C, E1, Q>,
@@ -101,7 +101,7 @@ where
     E1: Display + Debug + Send + Sync + 'static,
     E2: Display + Debug + Send + Sync + 'static,
     E3: Display + Debug + Send + Sync + 'static,
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     pub fn new(
@@ -151,7 +151,7 @@ where
     E4: Display + Debug + Send + Sync + 'static,
     E5: Display + Debug + Send + Sync + 'static,
     E6: Display + Debug + Send + Sync + 'static,
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     pub fn with_sudo<T4A, E4A>(
@@ -266,7 +266,7 @@ fn customize_fn<T, C, E, Q>(raw_fn: ContractFn<T, Empty, E, Empty>) -> ContractC
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     let customized = move |mut deps: DepsMut<Q>,
@@ -321,7 +321,7 @@ fn customize_permissioned_fn<T, C, E, Q>(
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     let customized = move |deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
@@ -332,7 +332,7 @@ where
 
 fn customize_response<C>(resp: Response<Empty>) -> Response<C>
 where
-    C: Clone + fmt::Debug + PartialEq + JsonSchema,
+    C: Clone + Debug + PartialEq + JsonSchema,
 {
     let mut customized_resp = Response::<C>::new()
         .add_submessages(resp.messages.into_iter().map(customize_msg::<C>))
@@ -344,7 +344,7 @@ where
 
 fn customize_msg<C>(msg: SubMsg<Empty>) -> SubMsg<C>
 where
-    C: Clone + fmt::Debug + PartialEq + JsonSchema,
+    C: Clone + Debug + PartialEq + JsonSchema,
 {
     SubMsg {
         msg: match msg.msg {
@@ -379,7 +379,7 @@ where
     E4: Display + Debug + Send + Sync + 'static,
     E5: Display + Debug + Send + Sync + 'static,
     E6: Display + Debug + Send + Sync + 'static,
-    C: Clone + fmt::Debug + PartialEq + JsonSchema,
+    C: Clone + Debug + PartialEq + JsonSchema,
     Q: CustomQuery + DeserializeOwned,
 {
     fn execute(
