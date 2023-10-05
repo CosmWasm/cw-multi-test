@@ -648,97 +648,6 @@ impl Module for StakeKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC: CustomQuery>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        msg: StakingSudo,
-    ) -> AnyResult<AppResponse> {
-        match msg {
-            StakingSudo::Slash {
-                validator,
-                percentage,
-            } => {
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                let validator = api.addr_validate(&validator)?;
-                self.validate_percentage(percentage)?;
-
-                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
-
-                Ok(AppResponse::default())
-            }
-            StakingSudo::ProcessQueue {} => {
-                let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
-                let mut unbonding_queue = UNBONDING_QUEUE
-                    .may_load(&staking_storage)?
-                    .unwrap_or_default();
-                loop {
-                    let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                    match unbonding_queue.front() {
-                        // assuming the queue is sorted by payout_at
-                        Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
-                            // remove from queue
-                            let Unbonding {
-                                delegator,
-                                validator,
-                                amount,
-                                ..
-                            } = unbonding_queue.pop_front().unwrap();
-
-                            // remove staking entry if it is empty
-                            let delegation = self
-                                .get_stake(&staking_storage, &delegator, &validator)?
-                                .map(|mut stake| {
-                                    // add unbonding amounts
-                                    stake.amount += unbonding_queue
-                                        .iter()
-                                        .filter(|u| {
-                                            u.delegator == delegator && u.validator == validator
-                                        })
-                                        .map(|u| u.amount)
-                                        .sum::<Uint128>();
-                                    stake
-                                });
-                            match delegation {
-                                Some(delegation) if delegation.amount.is_zero() => {
-                                    STAKES.remove(&mut staking_storage, (&delegator, &validator));
-                                }
-                                None => {
-                                    STAKES.remove(&mut staking_storage, (&delegator, &validator))
-                                }
-                                _ => {}
-                            }
-
-                            let staking_info = Self::get_staking_info(&staking_storage)?;
-                            if !amount.is_zero() {
-                                router.execute(
-                                    api,
-                                    storage,
-                                    block,
-                                    self.module_addr.clone(),
-                                    BankMsg::Send {
-                                        to_address: delegator.into_string(),
-                                        amount: vec![coin(
-                                            amount.u128(),
-                                            &staking_info.bonded_denom,
-                                        )],
-                                    }
-                                    .into(),
-                                )?;
-                            }
-                        }
-                        _ => break,
-                    }
-                }
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
-                Ok(AppResponse::default())
-            }
-        }
-    }
-
     fn query(
         &self,
         api: &dyn Api,
@@ -837,6 +746,97 @@ impl Module for StakeKeeper {
                 validator: self.get_validator(&staking_storage, &Addr::unchecked(address))?,
             })?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
+        }
+    }
+
+    fn sudo<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: StakingSudo,
+    ) -> AnyResult<AppResponse> {
+        match msg {
+            StakingSudo::Slash {
+                validator,
+                percentage,
+            } => {
+                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                let validator = api.addr_validate(&validator)?;
+                self.validate_percentage(percentage)?;
+
+                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
+
+                Ok(AppResponse::default())
+            }
+            StakingSudo::ProcessQueue {} => {
+                let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+                let mut unbonding_queue = UNBONDING_QUEUE
+                    .may_load(&staking_storage)?
+                    .unwrap_or_default();
+                loop {
+                    let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                    match unbonding_queue.front() {
+                        // assuming the queue is sorted by payout_at
+                        Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
+                            // remove from queue
+                            let Unbonding {
+                                delegator,
+                                validator,
+                                amount,
+                                ..
+                            } = unbonding_queue.pop_front().unwrap();
+
+                            // remove staking entry if it is empty
+                            let delegation = self
+                                .get_stake(&staking_storage, &delegator, &validator)?
+                                .map(|mut stake| {
+                                    // add unbonding amounts
+                                    stake.amount += unbonding_queue
+                                        .iter()
+                                        .filter(|u| {
+                                            u.delegator == delegator && u.validator == validator
+                                        })
+                                        .map(|u| u.amount)
+                                        .sum::<Uint128>();
+                                    stake
+                                });
+                            match delegation {
+                                Some(delegation) if delegation.amount.is_zero() => {
+                                    STAKES.remove(&mut staking_storage, (&delegator, &validator));
+                                }
+                                None => {
+                                    STAKES.remove(&mut staking_storage, (&delegator, &validator))
+                                }
+                                _ => {}
+                            }
+
+                            let staking_info = Self::get_staking_info(&staking_storage)?;
+                            if !amount.is_zero() {
+                                router.execute(
+                                    api,
+                                    storage,
+                                    block,
+                                    self.module_addr.clone(),
+                                    BankMsg::Send {
+                                        to_address: delegator.into_string(),
+                                        amount: vec![coin(
+                                            amount.u128(),
+                                            &staking_info.bonded_denom,
+                                        )],
+                                    }
+                                    .into(),
+                                )?;
+                            }
+                        }
+                        _ => break,
+                    }
+                }
+                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
+                Ok(AppResponse::default())
+            }
         }
     }
 }
@@ -965,17 +965,6 @@ impl Module for DistributionKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        _msg: Empty,
-    ) -> AnyResult<AppResponse> {
-        bail!("Something went wrong - Distribution doesn't have sudo messages")
-    }
-
     fn query(
         &self,
         _api: &dyn Api,
@@ -985,6 +974,17 @@ impl Module for DistributionKeeper {
         _request: Empty,
     ) -> AnyResult<Binary> {
         bail!("Something went wrong - Distribution doesn't have query messages")
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _msg: Empty,
+    ) -> AnyResult<AppResponse> {
+        bail!("Something went wrong - Distribution doesn't have sudo messages")
     }
 }
 
@@ -1581,7 +1581,7 @@ mod test {
             // withdrawal address received rewards.
             assert_balances(
                 &test_env,
-                // one year, 10%apr, 10%commision, 100 tokens staked
+                // one year, 10%apr, 10% commission, 100 tokens staked
                 vec![(reward_receiver, 100 / 10 * 9 / 10)],
             );
 
@@ -1718,7 +1718,7 @@ mod test {
             )
             .unwrap();
 
-            // one year, 10%apr, 10%commision, 100 tokens staked
+            // one year, 10%apr, 10% commission, 100 tokens staked
             let rewards_yr = 100 / 10 * 9 / 10;
 
             assert_balances(
