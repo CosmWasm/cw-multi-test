@@ -33,6 +33,7 @@ derivative = "2.2.0"
 sha2 = "0.10.7"
 
 [dev-dependencies]
+once_cell = "1.18.0"
 # We don't use these dependencies directly,
 # we tighten versions that builds with `-Zminimal-versions` work.
 ecdsa = "0.16.8"
