@@ -11,7 +11,9 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
 /// This is essential to create a custom app with custom handler.
-///   let mut app = BasicAppBuilder::<E, Q>::new_custom().with_custom(handler).build();
+/// ```text
+/// let mut app = BasicAppBuilder::<E, Q>::new_custom().with_custom(handler).build();
+/// ```
 pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     BankKeeper,
     MockApi,
