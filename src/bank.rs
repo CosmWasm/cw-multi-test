@@ -179,24 +179,6 @@ impl Module for BankKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        msg: BankSudo,
-    ) -> AnyResult<AppResponse> {
-        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
-        match msg {
-            BankSudo::Mint { to_address, amount } => {
-                let to_address = api.addr_validate(&to_address)?;
-                self.mint(&mut bank_storage, to_address, amount)?;
-                Ok(AppResponse::default())
-            }
-        }
-    }
-
     fn query(
         &self,
         api: &dyn Api,
@@ -231,6 +213,24 @@ impl Module for BankKeeper {
                 Ok(to_json_binary(&res)?)
             }
             q => bail!("Unsupported bank query: {:?}", q),
+        }
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        msg: BankSudo,
+    ) -> AnyResult<AppResponse> {
+        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
+        match msg {
+            BankSudo::Mint { to_address, amount } => {
+                let to_address = api.addr_validate(&to_address)?;
+                self.mint(&mut bank_storage, to_address, amount)?;
+                Ok(AppResponse::default())
+            }
         }
     }
 }
