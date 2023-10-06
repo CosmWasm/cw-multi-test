@@ -1,8 +1,8 @@
 use crate::app::CosmosRouter;
+use crate::errors::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};
-use anyhow::{anyhow, bail, Result as AnyResult};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_binary, Addr, AllDelegationsResponse, AllValidatorsResponse, Api,
     BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,

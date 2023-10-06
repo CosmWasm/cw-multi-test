@@ -1,3 +1,4 @@
+use crate::errors::AnyResult;
 use crate::test_helpers::{stargate, stargate::ExecMsg};
 use crate::{App, AppBuilder, AppResponse, CosmosRouter, Executor, Gov, Module};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, GovMsg, Querier, Storage};
@@ -17,7 +18,7 @@ impl Module for AcceptingModule {
         _block: &BlockInfo,
         _sender: Addr,
         _msg: Self::ExecT,
-    ) -> anyhow::Result<AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: std::fmt::Debug
             + Clone
@@ -37,7 +38,7 @@ impl Module for AcceptingModule {
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
         _msg: Self::SudoT,
-    ) -> anyhow::Result<AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: std::fmt::Debug
             + Clone
@@ -57,7 +58,7 @@ impl Module for AcceptingModule {
         _querier: &dyn Querier,
         _block: &BlockInfo,
         _request: Self::QueryT,
-    ) -> anyhow::Result<Binary> {
+    ) -> AnyResult<Binary> {
         Ok(Binary::default())
     }
 }

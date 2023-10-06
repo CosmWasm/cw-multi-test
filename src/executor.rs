@@ -1,4 +1,4 @@
-use anyhow::Result as AnyResult;
+use crate::errors::AnyResult;
 use cosmwasm_std::{
     to_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, Event, SubMsgResponse, WasmMsg,
 };

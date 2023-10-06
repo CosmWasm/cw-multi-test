@@ -1,4 +1,4 @@
-use anyhow::Result as AnyResult;
+use crate::errors::AnyResult;
 use cosmwasm_std::Storage;
 #[cfg(feature = "iterator")]
 use cosmwasm_std::{Order, Record};

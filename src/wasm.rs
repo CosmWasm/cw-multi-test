@@ -1,10 +1,9 @@
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::contracts::Contract;
-use crate::errors::Error;
+use crate::errors::{bail, AnyContext, AnyError, AnyResult, Error};
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
-use anyhow::{bail, Context, Result as AnyResult};
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
@@ -811,7 +810,7 @@ where
             let sub_res =
                 self.execute_submsg(api, router, storage, block, contract.clone(), resend)?;
             events.extend_from_slice(&sub_res.events);
-            Ok::<_, anyhow::Error>(sub_res.data.or(data))
+            Ok::<_, AnyError>(sub_res.data.or(data))
         })?;
 
         Ok(AppResponse { events, data })

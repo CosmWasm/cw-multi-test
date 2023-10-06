@@ -1,6 +1,6 @@
 use crate::app::CosmosRouter;
+use crate::errors::{bail, AnyResult};
 use crate::{AppResponse, Module};
-use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
 use derivative::Derivative;
 use std::cell::{Ref, RefCell};
