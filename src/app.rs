@@ -248,18 +248,23 @@ where
     CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
 {
-    /// Registers contract code (like uploading wasm bytecode on a chain),
-    /// so it can later be used to instantiate a contract.
-    pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
-        self.init_modules(|router, _, _| {
-            router
-                .wasm
-                .store_code(Addr::unchecked("code-creator"), code)
-        })
+    /// Registers contract code, like uploading wasm bytecode on a chain.
+    ///
+    /// Registered contract's code can be used later to instantiate a contract.
+    pub fn store_code(
+        &mut self,
+        creator: Addr,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> u64 {
+        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
     }
 
     /// Registers contract code (like [store_code](Self::store_code)),
     /// but takes the address of the code creator as an additional argument.
+    #[deprecated(
+        since = "1.0.0",
+        note = "use store_code instead, will be removed in version 2.0.0"
+    )]
     pub fn store_code_with_creator(
         &mut self,
         creator: Addr,
@@ -304,9 +309,10 @@ where
     /// }
     ///
     /// let mut app = App::default();
+    /// let creator = Addr::unchecked("creator");
     ///
     /// // store a new contract, save the code id
-    /// let code_id = app.store_code(echo::contract());
+    /// let code_id = app.store_code(creator, echo::contract());
     ///
     /// // duplicate the existing contract, duplicated contract has different code id
     /// assert_ne!(code_id, app.duplicate_code(code_id).unwrap());

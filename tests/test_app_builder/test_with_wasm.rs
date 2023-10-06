@@ -87,10 +87,14 @@ fn building_app_with_custom_wasm_should_work() {
     let mut app = app_builder.with_wasm(wasm_keeper).build(no_init);
 
     // prepare additional input data
+    let creator = Addr::unchecked("creator");
     let contract_addr = Addr::unchecked("contract");
 
     // calling store_code should return value defined in custom keeper
-    assert_eq!(CODE_ID, app.store_code(test_contracts::counter::contract()));
+    assert_eq!(
+        CODE_ID,
+        app.store_code(creator, test_contracts::counter::contract())
+    );
 
     // calling duplicate_code should return error defined in custom keeper
     assert_eq!(

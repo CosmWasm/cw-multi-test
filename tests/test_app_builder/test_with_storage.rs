@@ -34,6 +34,7 @@ impl Storage for MyStorage {
 #[test]
 fn building_app_with_custom_storage_should_work() {
     // prepare additional test input data
+    let creator = Addr::unchecked("creator");
     let owner = Addr::unchecked("owner");
     let msg = to_json_binary(&Empty {}).unwrap();
     let admin = None;
@@ -47,7 +48,7 @@ fn building_app_with_custom_storage_should_work() {
         .build(no_init);
 
     // store a contract code
-    let code_id = app.store_code(test_contracts::counter::contract());
+    let code_id = app.store_code(creator, test_contracts::counter::contract());
 
     // instantiate contract, this initializes a counter with value 1
     let contract_addr = app
