@@ -1397,7 +1397,7 @@ mod reply_data_overwrite {
 
 mod response_validation {
     use super::*;
-    use crate::error::Error;
+    use crate::errors::Error;
 
     #[test]
     fn empty_attribute_key() {
