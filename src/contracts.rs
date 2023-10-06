@@ -1,15 +1,13 @@
+use anyhow::{anyhow, bail, Result as AnyResult};
+use cosmwasm_std::{
+    from_slice, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
+    QuerierWrapper, Reply, Response, SubMsg,
+};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::ops::Deref;
-
-use cosmwasm_std::{
-    from_slice, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
-    QuerierWrapper, Reply, Response, SubMsg,
-};
-
-use anyhow::{anyhow, bail, Result as AnyResult};
 
 /// Interface to call into a `Contract`.
 pub trait Contract<T, Q = Empty>

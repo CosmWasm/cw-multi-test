@@ -1,6 +1,5 @@
-use cosmwasm_std::{Binary, Empty, IbcMsg, IbcQuery};
-
 use crate::{AppResponse, FailingModule, Module};
+use cosmwasm_std::{Binary, Empty, IbcMsg, IbcQuery};
 
 pub trait Ibc: Module<ExecT = IbcMsg, QueryT = IbcQuery, SudoT = Empty> {}
 
