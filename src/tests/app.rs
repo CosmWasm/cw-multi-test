@@ -9,12 +9,11 @@ use crate::{
     Router, Staking, Wasm, WasmSudo,
 };
 use anyhow::{bail, Result as AnyResult};
-use cosmwasm_std::testing::{mock_env, MockQuerier};
+use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier};
 use cosmwasm_std::{
-    coin, coins, from_slice, testing::MockApi, to_binary, Addr, AllBalanceResponse, Api, Attribute,
-    BankMsg, BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomQuery, Empty, Event,
-    OverflowError, OverflowOperation, Querier, Reply, StdError, StdResult, Storage, SubMsg,
-    WasmMsg,
+    coin, coins, from_slice, to_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
+    BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomQuery, Empty, Event, OverflowError,
+    OverflowOperation, Querier, Reply, StdError, StdResult, Storage, SubMsg, WasmMsg,
 };
 use cw_storage_plus::Item;
 use cw_utils::parse_instantiate_response_data;

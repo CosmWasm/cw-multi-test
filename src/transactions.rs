@@ -1,3 +1,7 @@
+use anyhow::Result as AnyResult;
+use cosmwasm_std::Storage;
+#[cfg(feature = "iterator")]
+use cosmwasm_std::{Order, Record};
 #[cfg(feature = "iterator")]
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -7,12 +11,6 @@ use std::iter;
 use std::iter::Peekable;
 #[cfg(feature = "iterator")]
 use std::ops::{Bound, RangeBounds};
-
-use cosmwasm_std::Storage;
-#[cfg(feature = "iterator")]
-use cosmwasm_std::{Order, Record};
-
-use anyhow::Result as AnyResult;
 
 #[cfg(feature = "iterator")]
 /// The BTreeMap specific key-value pair reference type, as returned by `BTreeMap<Vec<u8>, T>::range`.

@@ -1,6 +1,5 @@
-use cosmwasm_std::{Empty, GovMsg};
-
 use crate::{FailingModule, Module};
+use cosmwasm_std::{Empty, GovMsg};
 
 pub trait Gov: Module<ExecT = GovMsg, QueryT = Empty, SudoT = Empty> {}
 

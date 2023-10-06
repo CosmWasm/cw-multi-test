@@ -9,12 +9,11 @@ use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::AppBuilder;
 use anyhow::{bail, Result as AnyResult};
+use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
-    from_slice,
-    testing::{MockApi, MockStorage},
-    to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery, Empty, GovMsg,
-    IbcMsg, IbcQuery, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage,
-    SystemError, SystemResult,
+    from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
+    Empty, GovMsg, IbcMsg, IbcQuery, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record,
+    Storage, SystemError, SystemResult,
 };
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
