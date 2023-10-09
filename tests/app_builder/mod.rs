@@ -1,5 +1,5 @@
-use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
+use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{AppResponse, CosmosRouter, Module};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;

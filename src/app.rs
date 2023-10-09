@@ -1,5 +1,6 @@
 use crate::bank::{Bank, BankKeeper, BankSudo};
 use crate::contracts::Contract;
+use crate::error::{bail, AnyResult};
 use crate::executor::{AppResponse, Executor};
 use crate::gov::Gov;
 use crate::ibc::Ibc;
@@ -8,7 +9,6 @@ use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, Sta
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::AppBuilder;
-use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,

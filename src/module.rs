@@ -1,6 +1,6 @@
 use crate::app::CosmosRouter;
+use crate::error::{bail, AnyResult};
 use crate::AppResponse;
-use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;

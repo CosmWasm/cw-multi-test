@@ -1,5 +1,6 @@
 use crate::app::no_init;
 use crate::custom_handler::CachingCustomHandler;
+use crate::error::{bail, AnyResult};
 use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
 use crate::transactions::{transactional, StorageTransaction};
@@ -8,7 +9,6 @@ use crate::{
     custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
     Router, Staking, Wasm, WasmSudo,
 };
-use anyhow::{bail, Result as AnyResult};
 use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_slice, to_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,

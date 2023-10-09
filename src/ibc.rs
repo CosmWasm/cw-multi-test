@@ -1,3 +1,4 @@
+use crate::error::AnyResult;
 use crate::{AppResponse, FailingModule, Module};
 use cosmwasm_std::{Binary, Empty, IbcMsg, IbcQuery};
 
@@ -20,7 +21,7 @@ impl Module for IbcAcceptingModule {
         _block: &cosmwasm_std::BlockInfo,
         _sender: cosmwasm_std::Addr,
         _msg: Self::ExecT,
-    ) -> anyhow::Result<AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: std::fmt::Debug
             + Clone
@@ -40,7 +41,7 @@ impl Module for IbcAcceptingModule {
         _router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &cosmwasm_std::BlockInfo,
         _msg: Self::SudoT,
-    ) -> anyhow::Result<AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: std::fmt::Debug
             + Clone
@@ -60,7 +61,7 @@ impl Module for IbcAcceptingModule {
         _querier: &dyn cosmwasm_std::Querier,
         _block: &cosmwasm_std::BlockInfo,
         _request: Self::QueryT,
-    ) -> anyhow::Result<Binary> {
+    ) -> AnyResult<Binary> {
         Ok(Binary::default())
     }
 }

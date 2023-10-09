@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result as AnyResult};
+use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
     from_slice, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
     QuerierWrapper, Reply, Response, SubMsg,
@@ -64,10 +64,10 @@ pub struct ContractWrapper<
     C = Empty,
     Q = Empty,
     T4 = Empty,
-    E4 = anyhow::Error,
-    E5 = anyhow::Error,
+    E4 = AnyError,
+    E5 = AnyError,
     T6 = Empty,
-    E6 = anyhow::Error,
+    E6 = AnyError,
 > where
     T1: DeserializeOwned + Debug,
     T2: DeserializeOwned,
