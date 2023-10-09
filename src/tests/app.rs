@@ -1,6 +1,6 @@
 use crate::app::no_init;
 use crate::custom_handler::CachingCustomHandler;
-use crate::errors::{bail, AnyResult};
+use crate::error::{bail, AnyResult};
 use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
 use crate::transactions::{transactional, StorageTransaction};
@@ -1397,7 +1397,7 @@ mod reply_data_overwrite {
 
 mod response_validation {
     use super::*;
-    use crate::errors::Error;
+    use crate::error::Error;
 
     #[test]
     fn empty_attribute_key() {

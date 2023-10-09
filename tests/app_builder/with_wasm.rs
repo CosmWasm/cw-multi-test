@@ -2,7 +2,7 @@ use crate::app_builder::{contracts, MyKeeper};
 use cosmwasm_std::{
     Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, WasmMsg, WasmQuery,
 };
-use cw_multi_test::errors::{bail, AnyResult};
+use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{
     AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm, WasmKeeper,
     WasmSudo,

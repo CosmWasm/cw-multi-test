@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::errors::{bail, AnyResult};
+use crate::error::{bail, AnyResult};
 use crate::{AppResponse, Module};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
 use derivative::Derivative;

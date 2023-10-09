@@ -1,4 +1,4 @@
-use crate::errors::{anyhow, bail, AnyError, AnyResult};
+use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
     from_slice, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
     QuerierWrapper, Reply, Response, SubMsg,

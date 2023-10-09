@@ -1,6 +1,6 @@
 use crate::bank::{Bank, BankKeeper, BankSudo};
 use crate::contracts::Contract;
-use crate::errors::{bail, AnyResult};
+use crate::error::{bail, AnyResult};
 use crate::executor::{AppResponse, Executor};
 use crate::gov::Gov;
 use crate::ibc::Ibc;

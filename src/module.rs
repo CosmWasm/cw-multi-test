@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::errors::{bail, AnyResult};
+use crate::error::{bail, AnyResult};
 use crate::AppResponse;
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 use schemars::JsonSchema;

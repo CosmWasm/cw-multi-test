@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::errors::{bail, AnyResult};
+use crate::error::{bail, AnyResult};
 use crate::executor::AppResponse;
 use crate::module::Module;
 use crate::prefixed_storage::{prefixed, prefixed_read};

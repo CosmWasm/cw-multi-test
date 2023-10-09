@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::errors::{anyhow, bail, AnyResult};
+use crate::error::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};

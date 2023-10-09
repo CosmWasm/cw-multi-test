@@ -1,4 +1,4 @@
-use crate::errors::AnyResult;
+use crate::error::AnyResult;
 use crate::{AppResponse, FailingModule, Module};
 use cosmwasm_std::{Binary, Empty, IbcMsg, IbcQuery};
 

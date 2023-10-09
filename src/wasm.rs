@@ -1,6 +1,6 @@
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::contracts::Contract;
-use crate::errors::{bail, AnyContext, AnyError, AnyResult, Error};
+use crate::error::{bail, AnyContext, AnyError, AnyResult, Error};
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;

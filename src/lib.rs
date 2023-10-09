@@ -12,7 +12,7 @@ mod bank;
 #[allow(clippy::type_complexity)]
 mod contracts;
 pub mod custom_handler;
-pub mod errors;
+pub mod error;
 mod executor;
 mod gov;
 mod ibc;
