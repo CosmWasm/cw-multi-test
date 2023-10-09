@@ -25,17 +25,6 @@ static WASM_RAW: Lazy<Vec<Record>> = Lazy::new(|| vec![(vec![154u8], vec![155u8]
 type MyWasmKeeper = MyKeeper<Empty, Empty, Empty>;
 
 impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
-    fn query(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: WasmQuery,
-    ) -> AnyResult<Binary> {
-        bail!(self.2);
-    }
-
     fn execute(
         &self,
         _api: &dyn Api,
@@ -46,6 +35,17 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         _msg: WasmMsg,
     ) -> AnyResult<AppResponse> {
         bail!(self.1);
+    }
+
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: WasmQuery,
+    ) -> AnyResult<Binary> {
+        bail!(self.2);
     }
 
     fn sudo(

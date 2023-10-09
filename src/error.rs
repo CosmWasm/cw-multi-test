@@ -1,9 +1,4 @@
-<<<<<<< HEAD:src/error.rs
 pub use anyhow::{anyhow, bail, Context as AnyContext, Error as AnyError, Result as AnyResult};
-=======
-pub(crate) use anyhow::bail;
-pub(crate) use anyhow::Result as AnyResult;
->>>>>>> d227c18 (Refactored AnyResult usage.):src/errors.rs
 use cosmwasm_std::{WasmMsg, WasmQuery};
 use thiserror::Error;
 
