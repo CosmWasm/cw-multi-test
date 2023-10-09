@@ -1,3 +1,4 @@
+use crate::api::MockApi;
 use crate::bank::{Bank, BankKeeper, BankSudo};
 use crate::contracts::Contract;
 use crate::error::{bail, AnyResult};
@@ -9,7 +10,7 @@ use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, Sta
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::AppBuilder;
-use cosmwasm_std::testing::{MockApi, MockStorage};
+use cosmwasm_std::testing::MockStorage;
 use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
     Empty, GovMsg, IbcMsg, IbcQuery, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record,

@@ -6,6 +6,7 @@
 //!
 //! To understand the design of this module, please refer to `../DESIGN.md`
 
+mod api;
 mod app;
 mod app_builder;
 mod bank;
