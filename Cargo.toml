@@ -18,6 +18,9 @@ cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
 cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
 cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
 cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
+# enable the below feature when the cosmwams 1.5 is published
+# update also the dependency version to 1.5.0
+#cosmwasm_1_5 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_1_5"]
 
 [dependencies]
 cw-utils = "1.0.2"
