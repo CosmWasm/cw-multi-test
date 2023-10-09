@@ -1,11 +1,10 @@
 //! Implementation of the builder for [App].
 
-use crate::api::MockApi;
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, Ibc, Module,
-    Router, StakeKeeper, Staking, TestApi, Wasm, WasmKeeper,
+    Router, StakeKeeper, Staking, Wasm, WasmKeeper,
 };
-use cosmwasm_std::testing::{mock_env, MockStorage};
+use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, GovMsg, IbcMsg, IbcQuery, Storage};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -446,7 +445,7 @@ where
     ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     where
         BankT: Bank,
-        ApiT: TestApi,
+        ApiT: Api,
         StorageT: Storage,
         CustomT: Module,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,

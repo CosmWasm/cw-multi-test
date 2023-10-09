@@ -6,7 +6,6 @@
 //!
 //! To understand the design of this module, please refer to `../DESIGN.md`
 
-mod api;
 mod app;
 mod app_builder;
 mod bank;
@@ -25,7 +24,6 @@ mod tests;
 mod transactions;
 mod wasm;
 
-pub use crate::api::TestApi;
 pub use crate::app::{custom_app, next_block, App, BasicApp, CosmosRouter, Router, SudoMsg};
 pub use crate::app_builder::{AppBuilder, BasicAppBuilder};
 pub use crate::bank::{Bank, BankKeeper, BankSudo};

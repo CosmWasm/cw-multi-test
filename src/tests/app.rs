@@ -1,4 +1,3 @@
-use crate::api::TestApi;
 use crate::app::no_init;
 use crate::custom_handler::CachingCustomHandler;
 use crate::error::{bail, AnyResult};
@@ -1997,16 +1996,8 @@ mod api {
     }
 
     #[test]
-    #[cfg(not(feature = "cosmwasm_1_5"))]
-    #[should_panic(expected = "not implemented")]
-    fn api_addr_make_should_panic() {
-        let app = App::default();
-        app.api().addr_make("creator");
-    }
-
-    #[test]
     #[cfg(feature = "cosmwasm_1_5")]
-    fn api_addr_make_should_panic() {
+    fn api_addr_make_should_work() {
         let app = App::default();
         assert_eq!(
             app.api().addr_make("creator"),
