@@ -3,7 +3,7 @@
 use crate::api::MockApi;
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, Ibc, Module,
-    Router, StakeKeeper, Staking, Wasm, WasmKeeper,
+    Router, StakeKeeper, Staking, TestApi, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, GovMsg, IbcMsg, IbcQuery, Storage};
@@ -446,7 +446,7 @@ where
     ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     where
         BankT: Bank,
-        ApiT: Api,
+        ApiT: TestApi,
         StorageT: Storage,
         CustomT: Module,
         WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,

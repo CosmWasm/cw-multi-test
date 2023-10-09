@@ -65,8 +65,8 @@ impl Api for MockApi {
 
 impl TestApi for MockApi {
     #[cfg(not(feature = "cosmwasm_1_5"))]
-    fn addr_make(&self, input: &str) -> Addr {
-        Addr::unchecked(input)
+    fn addr_make(&self, _input: &str) -> Addr {
+        unimplemented!()
     }
     #[cfg(feature = "cosmwasm_1_5")]
     fn addr_make(&self, input: &str) -> Addr {

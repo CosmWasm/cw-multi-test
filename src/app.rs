@@ -9,7 +9,7 @@ use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
-use crate::AppBuilder;
+use crate::{AppBuilder, TestApi};
 use cosmwasm_std::testing::MockStorage;
 use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
@@ -166,7 +166,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
-    ApiT: Api,
+    ApiT: TestApi,
     StorageT: Storage,
     CustomT: Module,
     StakingT: Staking,
@@ -223,7 +223,7 @@ impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
     App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>
 where
     BankT: Bank,
-    ApiT: Api,
+    ApiT: TestApi,
     StorageT: Storage,
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
