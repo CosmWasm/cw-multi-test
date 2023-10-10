@@ -1995,14 +1995,4 @@ mod api {
         let canonical = app.api().addr_canonicalize("creator").unwrap();
         assert_eq!(app.api().addr_humanize(&canonical).unwrap(), "creator");
     }
-
-    #[test]
-    #[cfg(feature = "cosmwasm_1_5")]
-    fn api_addr_make_should_work() {
-        let app = App::default();
-        assert_eq!(
-            app.api().addr_make("creator"),
-            "cosmwasm1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqs8s7vcp"
-        );
-    }
 }

@@ -1,19 +1,54 @@
-use cosmwasm_std::{Addr, Api, CanonicalAddr, RecoverPubkeyError, StdResult, VerificationError};
+use bech32::{decode, encode, FromBase32, ToBase32, Variant};
+use cosmwasm_std::{
+    Addr, Api, CanonicalAddr, HexBinary, RecoverPubkeyError, StdError, StdResult, VerificationError,
+};
 use cw_multi_test::AppBuilder;
+use sha2::{Digest, Sha256};
 
-struct MyApi {}
+struct MyApi {
+    prefix: &'static str,
+}
+
+impl MyApi {
+    fn new(prefix: &'static str) -> Self {
+        Self { prefix }
+    }
+}
 
 impl Api for MyApi {
-    fn addr_validate(&self, _human: &str) -> StdResult<Addr> {
-        Ok(Addr::unchecked("custom-validate"))
+    fn addr_validate(&self, input: &str) -> StdResult<Addr> {
+        let canonical = self.addr_canonicalize(input)?;
+        let normalized = self.addr_humanize(&canonical)?;
+        if input != normalized {
+            Err(StdError::generic_err(
+                "Invalid input: address not normalized",
+            ))
+        } else {
+            Ok(Addr::unchecked(input))
+        }
     }
 
-    fn addr_canonicalize(&self, _human: &str) -> StdResult<CanonicalAddr> {
-        Ok(CanonicalAddr::from(b"custom-canonicalize"))
+    fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
+        if let Ok((prefix, decoded, Variant::Bech32)) = decode(input) {
+            if prefix == self.prefix {
+                if let Ok(bytes) = Vec::<u8>::from_base32(&decoded) {
+                    return Ok(bytes.into());
+                }
+            }
+        }
+        Err(StdError::generic_err("Invalid input"))
     }
 
-    fn addr_humanize(&self, _canonical: &CanonicalAddr) -> StdResult<Addr> {
-        Ok(Addr::unchecked("custom-humanize"))
+    fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
+        if let Ok(encoded) = encode(
+            self.prefix,
+            canonical.as_slice().to_base32(),
+            Variant::Bech32,
+        ) {
+            Ok(Addr::unchecked(encoded))
+        } else {
+            Err(StdError::generic_err("Invalid canonical address"))
+        }
     }
 
     fn secp256k1_verify(
@@ -52,31 +87,53 @@ impl Api for MyApi {
         unimplemented!()
     }
 
-    fn debug(&self, message: &str) {
-        println!("{}", message)
+    fn debug(&self, _message: &str) {
+        unimplemented!()
     }
 }
 
 impl MyApi {
-    fn my_api_extension(&self) -> &'static str {
-        "my-api-extension"
+    fn addr_make(&self, input: &str) -> Addr {
+        let digest = Sha256::digest(input).to_vec();
+        match encode(self.prefix, digest.to_base32(), Variant::Bech32) {
+            Ok(address) => Addr::unchecked(address),
+            Err(reason) => panic!("Generating address failed with reason: {reason}"),
+        }
     }
 }
 
 #[test]
 fn building_app_with_custom_api_should_work() {
-    let app = AppBuilder::default().with_api(MyApi {}).build(|_, _, _| {});
+    // prepare test data
+    let human = "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp";
+    let hex = "bc6bfd848ebd7819c9a82bf124d65e7f739d08e002601e23bb906aacd40a3d81";
+
+    // create application with custom api that implements
+    // Bech32 address encoding with 'juno' prefix
+    let app = AppBuilder::default()
+        .with_api(MyApi::new("juno"))
+        .build(|_, _, _| {});
+
+    // check address validation function
     assert_eq!(
-        app.api().addr_validate("creator").unwrap(),
-        Addr::unchecked("custom-validate")
+        app.api().addr_validate(human).unwrap(),
+        Addr::unchecked(human)
     );
+
+    // check if address can be canonicalized
     assert_eq!(
-        app.api().addr_canonicalize("creator").unwrap(),
-        CanonicalAddr::from(b"custom-canonicalize")
+        app.api().addr_canonicalize(human).unwrap(),
+        CanonicalAddr::from(HexBinary::from_hex(hex).unwrap())
     );
+
+    // check if address can be humanized
     assert_eq!(
-        app.api().addr_humanize(&CanonicalAddr::from(&[1])).unwrap(),
-        Addr::unchecked("custom-humanize")
+        app.api()
+            .addr_humanize(&app.api().addr_canonicalize(human).unwrap())
+            .unwrap(),
+        Addr::unchecked(human)
     );
-    assert_eq!(app.api().my_api_extension(), "my-api-extension");
+
+    // check extension function for creating Bech32 encoded addresses
+    assert_eq!(app.api().addr_make("creator"), Addr::unchecked(human));
 }
