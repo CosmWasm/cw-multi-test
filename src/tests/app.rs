@@ -5,11 +5,12 @@ use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
+use crate::AppBuilder;
 use crate::{
     custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
     Router, Staking, Wasm, WasmSudo,
 };
-use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier};
+use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_slice, to_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
     BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomQuery, Empty, Event, OverflowError,
@@ -1631,21 +1632,18 @@ mod wasm_queries {
 
 mod custom_messages {
     use super::*;
-    use crate::AppBuilder;
 
     #[test]
     fn triggering_custom_msg() {
-        let api = MockApi::default();
-        let sender = api.addr_validate("sender").unwrap();
-        let owner = api.addr_validate("owner").unwrap();
-
         let custom_handler = CachingCustomHandler::<CustomMsg, Empty>::new();
         let custom_handler_state = custom_handler.state();
 
         let mut app = AppBuilder::new_custom()
-            .with_api(api)
             .with_custom(custom_handler)
             .build(no_init);
+
+        let sender = app.api().addr_validate("sender").unwrap();
+        let owner = app.api().addr_validate("owner").unwrap();
 
         let contract_id = app.store_code(echo::custom_contract());
 
@@ -1970,5 +1968,31 @@ mod errors {
         // We're expecting exactly 4 nested error types
         // (the original error, 3 WasmMsg contexts)
         assert_eq!(err.chain().count(), 4);
+    }
+}
+
+mod api {
+    use super::*;
+
+    #[test]
+    fn api_addr_validate_should_work() {
+        let app = App::default();
+        let addr = app.api().addr_validate("creator").unwrap();
+        assert_eq!(addr.to_string(), "creator");
+    }
+
+    #[test]
+    #[cfg(not(feature = "cosmwasm_1_5"))]
+    fn api_addr_canonicalize_should_work() {
+        let app = App::default();
+        let canonical = app.api().addr_canonicalize("creator").unwrap();
+        assert_eq!(canonical.to_string(), "0000000000000000000000000000726F0000000000000000000000000000000000000000006572000000000000000000000000000000000000000000610000000000000000000000000000000000000000006374000000000000");
+    }
+
+    #[test]
+    fn api_addr_humanize_should_work() {
+        let app = App::default();
+        let canonical = app.api().addr_canonicalize("creator").unwrap();
+        assert_eq!(app.api().addr_humanize(&canonical).unwrap(), "creator");
     }
 }

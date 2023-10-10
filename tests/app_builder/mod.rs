@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+mod with_api;
 mod with_bank;
 mod with_block;
 mod with_distribution;
