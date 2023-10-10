@@ -18,12 +18,12 @@ cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
 cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
 cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
 cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
-# enable the below feature when the cosmwams 1.5 is published
+# enable the feature below when the cosmwams 1.5 is published
 #cosmwasm_1_5 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_1_5"]
 
 [dependencies]
 anyhow = "1.0.75"
-# update also the dependency version to 1.5.0
+# update also the dependency version to 1.5.0 when published
 cosmwasm-std = { version = "1.4.1", features = ["staking", "stargate"] }
 cw-storage-plus = "1.1.0"
 cw-utils = "1.0.2"

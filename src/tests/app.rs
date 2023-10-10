@@ -1982,10 +1982,11 @@ mod api {
     }
 
     #[test]
+    #[cfg(not(feature = "cosmwasm_1_5"))]
     fn api_addr_canonicalize_should_work() {
         let app = App::default();
         let canonical = app.api().addr_canonicalize("creator").unwrap();
-        assert!(!canonical.to_string().is_empty());
+        assert_eq!(canonical.to_string(), "0000000000000000000000000000726F0000000000000000000000000000000000000000006572000000000000000000000000000000000000000000610000000000000000000000000000000000000000006374000000000000");
     }
 
     #[test]
