@@ -18,12 +18,11 @@ use std::fmt::Debug;
 /// # use cosmwasm_std::Empty;
 /// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module};
 /// # type MyHandler = FailingModule<Empty, Empty, Empty>;
-/// # type MyExecT = Empty;
-/// # type MyQueryT = Empty;
-/// # let my_module = MyHandler::default();
-/// #  
-/// let mut app = BasicAppBuilder::<MyExecT, MyQueryT>::new_custom()
-///                   .with_custom(my_module)
+/// # type MyExecC = Empty;
+/// # type MyQueryC = Empty;
+///
+/// let mut app = BasicAppBuilder::<MyExecC, MyQueryC>::new_custom()
+///                   .with_custom(MyHandler::default())
 ///                   .build(|_, _, _| {});
 /// ```
 pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
