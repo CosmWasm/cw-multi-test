@@ -10,9 +10,21 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-/// This is essential to create a custom app with custom handler, like this:
-/// ```text
-/// let mut app = BasicAppBuilder::<E, Q>::new_custom().with_custom(handler).build();
+/// This is essential to create a custom app with custom module.
+///
+/// # Example
+///
+/// ```
+/// # use cosmwasm_std::Empty;
+/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module};
+/// # type MyHandler = FailingModule<Empty, Empty, Empty>;
+/// # type MyExecT = Empty;
+/// # type MyQueryT = Empty;
+/// # let my_module = MyHandler::default();
+/// #  
+/// let mut app = BasicAppBuilder::<MyExecT, MyQueryT>::new_custom()
+///                   .with_custom(my_module)
+///                   .build(|_, _, _| {});
 /// ```
 pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     BankKeeper,
