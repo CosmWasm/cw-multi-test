@@ -1578,7 +1578,7 @@ mod test {
             // withdrawal address received rewards.
             assert_balances(
                 &test_env,
-                // one year, 10%apr, 10%commision, 100 tokens staked
+                // one year, 10%apr, 10% commission, 100 tokens staked
                 vec![(reward_receiver, 100 / 10 * 9 / 10)],
             );
 
@@ -1715,7 +1715,7 @@ mod test {
             )
             .unwrap();
 
-            // one year, 10%apr, 10%commision, 100 tokens staked
+            // one year, 10%apr, 10% commission, 100 tokens staked
             let rewards_yr = 100 / 10 * 9 / 10;
 
             assert_balances(

@@ -21,7 +21,7 @@ use sha2::{Digest, Sha256};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
-// Contract state is kept in Storage, separate from the contracts themselves
+/// Contract state kept in storage, separate from the contracts themselves (contract code).
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 
 pub const NAMESPACE_WASM: &[u8] = b"wasm";
@@ -44,7 +44,7 @@ impl WasmSudo {
 }
 
 /// Contract data includes information about contract,
-/// equivalent of `ContractInfo` in **wasmd** interface.
+/// equivalent of `ContractInfo` in `wasmd` interface.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ContractData {
     /// Identifier of stored contract code
@@ -126,9 +126,10 @@ pub struct WasmKeeper<ExecC, QueryC> {
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
     /// Code data with code base identifier and additional attributes.  
     code_data: Vec<CodeData>,
+    /// Contract address generator.
+    generator: Box<dyn AddressGenerator>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
-    generator: Box<dyn AddressGenerator>,
 }
 
 pub trait AddressGenerator {
@@ -157,8 +158,8 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
         Self {
             code_base: Vec::default(),
             code_data: Vec::default(),
-            _p: std::marker::PhantomData,
             generator: Box::new(SimpleAddressGenerator()),
+            _p: std::marker::PhantomData,
         }
     }
 }
@@ -698,7 +699,7 @@ where
                     }),
                 };
                 // do reply and combine it with the original response
-                let reply_res = self._reply(api, router, storage, block, contract, reply)?;
+                let reply_res = self.reply(api, router, storage, block, contract, reply)?;
                 // override data
                 r.data = reply_res.data;
                 // append the events
@@ -715,7 +716,7 @@ where
                     id,
                     result: SubMsgResult::Err(format!("{:?}", e)),
                 };
-                self._reply(api, router, storage, block, contract, reply)
+                self.reply(api, router, storage, block, contract, reply)
             } else {
                 Err(e)
             }
@@ -724,7 +725,7 @@ where
         }
     }
 
-    fn _reply(
+    fn reply(
         &self,
         api: &dyn Api,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,

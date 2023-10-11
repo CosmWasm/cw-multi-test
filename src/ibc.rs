@@ -1,6 +1,9 @@
 use crate::error::AnyResult;
 use crate::{AppResponse, FailingModule, Module};
 use cosmwasm_std::{Binary, Empty, IbcMsg, IbcQuery};
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 
 pub trait Ibc: Module<ExecT = IbcMsg, QueryT = IbcQuery, SudoT = Empty> {}
 
@@ -23,13 +26,8 @@ impl Module for IbcAcceptingModule {
         _msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: cosmwasm_std::CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }
@@ -43,13 +41,8 @@ impl Module for IbcAcceptingModule {
         _msg: Self::SudoT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: cosmwasm_std::CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }
