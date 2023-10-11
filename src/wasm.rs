@@ -824,9 +824,11 @@ where
         Ok(AppResponse { events, data })
     }
 
-    /// This just creates an address and empty storage instance, returning the new address
-    /// You must call init after this to set up the contract properly.
-    /// These are separated into two steps to have cleaner return values.
+    /// Creates a contract address and empty storage instance.
+    /// Returns the new contract address.
+    ///
+    /// You have to call init after this to set up the contract properly.
+    /// These two steps are separated to have cleaner return values.
     pub fn register_contract(
         &self,
         storage: &mut dyn Storage,
@@ -836,6 +838,7 @@ where
         label: String,
         created: u64,
     ) -> AnyResult<Addr> {
+        // check if contract code with code_id exists
         if code_id as usize > self.code_data.len() {
             bail!("Cannot init contract with unregistered code id");
         }
