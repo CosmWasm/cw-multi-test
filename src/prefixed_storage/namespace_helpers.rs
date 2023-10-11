@@ -90,8 +90,13 @@ mod tests {
         let prefix = to_length_prefixed(b"foo");
 
         set_with_prefix(&mut storage, &prefix, b"bar", b"gotcha");
+<<<<<<< HEAD
         let value = get_with_prefix(&storage, &prefix, b"bar");
         assert_eq!(value, Some(b"gotcha".to_vec()));
+=======
+        let r_foo = get_with_prefix(&storage, &prefix, b"bar");
+        assert_eq!(r_foo, Some(b"gotcha".to_vec()));
+>>>>>>> e5e3c03 (Refactored prefixed_storage.)
 
         // no collisions with other prefixes
         let other_prefix = to_length_prefixed(b"fo");
