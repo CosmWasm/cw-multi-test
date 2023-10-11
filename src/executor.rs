@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use schemars::JsonSchema;
 use serde::Serialize;
-use std::fmt;
+use std::fmt::Debug;
 
 #[derive(Default, Clone, Debug)]
 pub struct AppResponse {
@@ -60,7 +60,7 @@ impl From<SubMsgResponse> for AppResponse {
 
 pub trait Executor<C>
 where
-    C: Clone + fmt::Debug + PartialEq + JsonSchema + 'static,
+    C: Clone + Debug + PartialEq + JsonSchema + 'static,
 {
     /// Runs arbitrary CosmosMsg.
     /// This will create a cache before the execution, so no state changes are persisted if this
@@ -95,7 +95,7 @@ where
     /// Execute a contract and process all returned messages.
     /// This is just a helper around execute(),
     /// but we parse out the data field to that what is returned by the contract (not the protobuf wrapper)
-    fn execute_contract<T: Serialize + std::fmt::Debug>(
+    fn execute_contract<T: Serialize + Debug>(
         &mut self,
         sender: Addr,
         contract_addr: Addr,

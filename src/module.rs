@@ -4,16 +4,17 @@ use crate::AppResponse;
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 
-/// Interface of the module.
+/// Module interface.
 pub trait Module {
     type ExecT;
     type QueryT;
     type SudoT;
 
-    /// execute runs any ExecT message, which can be called by any external actor
-    /// or smart contract
+    /// Runs any [ExecT](Self::ExecT) message,
+    /// which can be called by any external actor or smart contract.
     fn execute<ExecC, QueryC>(
         &self,
         api: &dyn Api,
@@ -24,10 +25,10 @@ pub trait Module {
         msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
 
-    /// sudo runs privileged actions, like minting tokens, or governance proposals.
+    /// Runs privileged actions, like minting tokens, or governance proposals.
     /// This allows modules to have full access to these privileged actions,
     /// that cannot be triggered by smart contracts.
     ///
@@ -41,9 +42,11 @@ pub trait Module {
         msg: Self::SudoT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
 
+    /// Runs any [QueryT](Self::QueryT) message,
+    /// which can be called by any external actor or smart contract.
     fn query(
         &self,
         api: &dyn Api,
@@ -56,28 +59,29 @@ pub trait Module {
 
 pub struct FailingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
 
-impl<Exec, Query, Sudo> FailingModule<Exec, Query, Sudo> {
+impl<ExecT, QueryT, SudoT> FailingModule<ExecT, QueryT, SudoT> {
     pub fn new() -> Self {
-        FailingModule(PhantomData)
+        Self(PhantomData)
     }
 }
 
-impl<Exec, Query, Sudo> Default for FailingModule<Exec, Query, Sudo> {
+impl<ExecT, QueryT, SudoT> Default for FailingModule<ExecT, QueryT, SudoT> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<Exec, Query, Sudo> Module for FailingModule<Exec, Query, Sudo>
+impl<ExecT, QueryT, SudoT> Module for FailingModule<ExecT, QueryT, SudoT>
 where
-    Exec: std::fmt::Debug,
-    Query: std::fmt::Debug,
-    Sudo: std::fmt::Debug,
+    ExecT: Debug,
+    QueryT: Debug,
+    SudoT: Debug,
 {
-    type ExecT = Exec;
-    type QueryT = Query;
-    type SudoT = Sudo;
+    type ExecT = ExecT;
+    type QueryT = QueryT;
+    type SudoT = SudoT;
 
+    /// Runs any [ExecT](Self::ExecT) message, always returns an error.
     fn execute<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -90,6 +94,7 @@ where
         bail!("Unexpected exec msg {:?} from {:?}", msg, sender)
     }
 
+    /// Runs any [SudoT](Self::SudoT) privileged action, always returns an error.
     fn sudo<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -101,6 +106,7 @@ where
         bail!("Unexpected sudo msg {:?}", msg)
     }
 
+    /// Runs any [QueryT](Self::QueryT) message, always returns an error.
     fn query(
         &self,
         _api: &dyn Api,

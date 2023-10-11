@@ -10,8 +10,10 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-/// This is essential to create a custom app with custom handler.
-///   let mut app = BasicAppBuilder::<E, Q>::new_custom().with_custom(handler).build();
+/// This is essential to create a custom app with custom handler, like this:
+/// ```text
+/// let mut app = BasicAppBuilder::<E, Q>::new_custom().with_custom(handler).build();
+/// ```
 pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     BankKeeper,
     MockApi,
@@ -24,8 +26,8 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     FailingModule<GovMsg, Empty, Empty>,
 >;
 
-/// Utility to build [App] in stages. If particular items/properties are not explicitly set,
-/// then default values are used.
+/// Utility to build [App] in stages.
+/// When particular properties are not explicitly set, then default values are used.
 pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov> {
     api: Api,
     block: BlockInfo,

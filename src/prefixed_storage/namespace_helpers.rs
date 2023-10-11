@@ -94,8 +94,8 @@ mod tests {
         let prefix = to_length_prefixed(b"foo");
 
         set_with_prefix(&mut storage, &prefix, b"bar", b"gotcha");
-        let rfoo = get_with_prefix(&storage, &prefix, b"bar");
-        assert_eq!(rfoo, Some(b"gotcha".to_vec()));
+        let value = get_with_prefix(&storage, &prefix, b"bar");
+        assert_eq!(value, Some(b"gotcha".to_vec()));
 
         // no collisions with other prefixes
         let other_prefix = to_length_prefixed(b"fo");
@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     #[cfg(feature = "iterator")]
-    fn range_with_prefix_wrapover() {
+    fn range_with_prefix_wrap_over() {
         let mut storage = MockStorage::new();
         // if we don't properly wrap over there will be issues here (note 255+1 is used to calculate end)
         let prefix = to_length_prefixed(b"f\xff\xff");
