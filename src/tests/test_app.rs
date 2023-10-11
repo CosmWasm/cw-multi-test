@@ -9,7 +9,7 @@ use crate::{
     custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
     Module, Router, Staking, Wasm, WasmSudo,
 };
-use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier};
+use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_json, to_json_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
     BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomQuery, Empty, Event, OverflowError,
@@ -1631,7 +1631,7 @@ mod custom_messages {
         let sender = app.api().addr_validate("sender").unwrap();
         let owner = app.api().addr_validate("owner").unwrap();
 
-        let contract_id = app.store_code(echo::custom_contract());
+        let contract_id = app.store_code(owner.clone(), echo::custom_contract());
 
         let contract = app
             .instantiate_contract(contract_id, owner, &Empty {}, &[], "Echo", None)
