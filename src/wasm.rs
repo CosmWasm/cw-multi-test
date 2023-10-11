@@ -824,7 +824,7 @@ where
         created: u64,
         salt: impl Into<Option<Binary>>,
     ) -> AnyResult<Addr> {
-        // check if contract's code with code_id exists
+        // check if the contract's code with specified code_id exists
         if code_id as usize > self.code_data.len() {
             bail!("Cannot init contract with unregistered code id");
         }
@@ -837,6 +837,7 @@ where
             let canonical_addr = &api.addr_canonicalize(creator.as_ref())?;
             self.generator.predictable_contract_address(
                 api,
+                storage,
                 code_id,
                 instance_id,
                 code_data.checksum.as_slice(),
@@ -846,7 +847,7 @@ where
         } else {
             // generate classic, unpredictable contract address
             self.generator
-                .classic_contract_address(api, code_id, instance_id)
+                .classic_contract_address(api, storage, code_id, instance_id)
         };
 
         //TODO Check here if contract address already exists, return error if this is the case.
@@ -1844,6 +1845,7 @@ mod test {
         fn classic_contract_address(
             &self,
             _api: &dyn Api,
+            _storage: &mut dyn Storage,
             _code_id: u64,
             _instance_id: u64,
         ) -> Addr {
@@ -1853,6 +1855,7 @@ mod test {
         fn predictable_contract_address(
             &self,
             _api: &dyn Api,
+            _storage: &mut dyn Storage,
             _code_id: u64,
             _instance_id: u64,
             _checksum: &[u8],

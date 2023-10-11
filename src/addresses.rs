@@ -14,12 +14,19 @@ pub trait AddressGenerator {
     }
 
     /// Returns a classic contract address (not predictable).
-    fn classic_contract_address(&self, api: &dyn Api, code_id: u64, instance_id: u64) -> Addr;
+    fn classic_contract_address(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        code_id: u64,
+        instance_id: u64,
+    ) -> Addr;
 
     /// Returns a predictable contract address.
     fn predictable_contract_address(
         &self,
         api: &dyn Api,
+        storage: &mut dyn Storage,
         code_id: u64,
         instance_id: u64,
         checksum: &[u8],
@@ -31,13 +38,20 @@ pub trait AddressGenerator {
 pub struct SimpleAddressGenerator();
 
 impl AddressGenerator for SimpleAddressGenerator {
-    fn classic_contract_address(&self, _api: &dyn Api, _code_id: u64, instance_id: u64) -> Addr {
+    fn classic_contract_address(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _code_id: u64,
+        instance_id: u64,
+    ) -> Addr {
         Addr::unchecked(format!("contract{}", instance_id))
     }
 
     fn predictable_contract_address(
         &self,
         _api: &dyn Api,
+        _storage: &mut dyn Storage,
         _code_id: u64,
         instance_id: u64,
         _checksum: &[u8],
