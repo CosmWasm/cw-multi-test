@@ -27,6 +27,9 @@ pub enum Error {
 
     #[error("code id {0}: no such code")]
     UnregisteredCodeId(u64),
+
+    #[error("Invalid address input data: {0}")]
+    InvalidAddressInputData(String),
 }
 
 impl Error {
@@ -44,7 +47,11 @@ impl Error {
         Self::ReservedAttributeKey(key.into())
     }
 
-    pub fn event_type_too_short(ty: impl Into<String>) -> Self {
-        Self::EventTypeTooShort(ty.into())
+    pub fn event_type_too_short(typ: impl Into<String>) -> Self {
+        Self::EventTypeTooShort(typ.into())
+    }
+
+    pub fn invalid_address_input_data(reason: impl Into<String>) -> Self {
+        Self::InvalidAddressInputData(reason.into())
     }
 }

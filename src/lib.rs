@@ -6,6 +6,7 @@
 //!
 //! To understand the design of this module, please refer to `../DESIGN.md`
 
+mod addresses;
 mod app;
 mod app_builder;
 mod bank;
@@ -25,6 +26,7 @@ mod tests;
 mod transactions;
 mod wasm;
 
+pub use crate::addresses::{AddressGenerator, SimpleAddressGenerator};
 pub use crate::app::{custom_app, next_block, App, BasicApp, CosmosRouter, Router, SudoMsg};
 pub use crate::app_builder::{AppBuilder, BasicAppBuilder};
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
@@ -37,4 +39,4 @@ pub use crate::module::{FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
-pub use crate::wasm::{AddressGenerator, ContractData, Wasm, WasmKeeper, WasmSudo};
+pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
