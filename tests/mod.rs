@@ -10,6 +10,7 @@ use cw_multi_test::error::AnyResult;
 use cw_multi_test::{AddressGenerator, Contract, ContractWrapper};
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
+use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
 mod test_app_builder;
@@ -188,12 +189,11 @@ mod test_addresses {
             &self,
             api: &dyn Api,
             _storage: &mut dyn Storage,
-            _code_id: u64,
+            code_id: u64,
             instance_id: u64,
-        ) -> Addr {
-            let digest = Sha256::digest(format!("contract{}", instance_id)).to_vec();
-            let canonical_addr = CanonicalAddr::from(digest);
-            Addr::unchecked(api.addr_humanize(&canonical_addr).unwrap())
+        ) -> AnyResult<Addr> {
+            let canonical_addr = instantiate_address(code_id, instance_id);
+            Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
         }
 
         fn predictable_contract_address(
@@ -206,9 +206,21 @@ mod test_addresses {
             creator: &CanonicalAddr,
             salt: &[u8],
         ) -> AnyResult<Addr> {
-            Ok(Addr::unchecked(api.addr_humanize(
-                &instantiate2_address(checksum, creator, salt)?,
-            )?))
+            let canonical_addr = instantiate2_address(checksum, creator, salt)?;
+            Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
         }
     }
+}
+
+fn instantiate_address(code_id: u64, instance_id: u64) -> CanonicalAddr {
+    let mut key = Vec::<u8>::new();
+    key.extend_from_slice(b"wasm\0");
+    key.extend_from_slice(&code_id.to_be_bytes());
+    key.extend_from_slice(&instance_id.to_be_bytes());
+    hash("module", &key).into()
+}
+
+fn hash(typ: &str, key: &[u8]) -> Vec<u8> {
+    let inner = Sha256::digest(typ.as_bytes());
+    Sha256::new().chain(inner).chain(key).finalize().to_vec()
 }

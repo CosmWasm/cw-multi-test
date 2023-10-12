@@ -20,7 +20,7 @@ pub trait AddressGenerator {
         storage: &mut dyn Storage,
         code_id: u64,
         instance_id: u64,
-    ) -> Addr;
+    ) -> AnyResult<Addr>;
 
     /// Generates a predictable contract address.
     fn predictable_contract_address(
@@ -57,10 +57,10 @@ impl AddressGenerator for SimpleAddressGenerator {
     /// # let mut storage = MockStorage::default();
     /// let address_generator = SimpleAddressGenerator{};
     ///
-    /// let addr = address_generator.classic_contract_address(&api, &mut storage, 100, 0);
+    /// let addr = address_generator.classic_contract_address(&api, &mut storage, 100, 0).unwrap();
     /// assert_eq!(addr.to_string(),"contract0");
     ///
-    /// let addr = address_generator.classic_contract_address(&api, &mut storage, 100, 1);
+    /// let addr = address_generator.classic_contract_address(&api, &mut storage, 100, 1).unwrap();
     /// assert_eq!(addr.to_string(),"contract1");
     /// ```
     fn classic_contract_address(
@@ -69,8 +69,8 @@ impl AddressGenerator for SimpleAddressGenerator {
         _storage: &mut dyn Storage,
         _code_id: u64,
         instance_id: u64,
-    ) -> Addr {
-        Addr::unchecked(format!("contract{}", instance_id))
+    ) -> AnyResult<Addr> {
+        Ok(Addr::unchecked(format!("contract{}", instance_id)))
     }
 
     /// Generates a predictable contract address based on contract's instance id only.
@@ -103,6 +103,6 @@ impl AddressGenerator for SimpleAddressGenerator {
         _creator: &CanonicalAddr,
         _salt: &[u8],
     ) -> AnyResult<Addr> {
-        Ok(self.classic_contract_address(api, storage, code_id, instance_id))
+        self.classic_contract_address(api, storage, code_id, instance_id)
     }
 }

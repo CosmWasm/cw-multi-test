@@ -12,7 +12,7 @@ fn classic_contract_address_should_work() {
 
     // prepare application with custom api
     let mut app = AppBuilder::default()
-        .with_api(MockApiBech32::new("juno"))
+        .with_api(MockApiBech32::new("purple"))
         .with_wasm(wasm_keeper)
         .build(|_, _, _| {});
 
@@ -34,6 +34,16 @@ fn classic_contract_address_should_work() {
 
     // addresses of the two contract instances should be different
     assert_ne!(contract_addr_1, contract_addr_2);
+
+    // make sure that generated addresses are in valid Bech32 encoding
+    assert_eq!(
+        contract_addr_1.to_string(),
+        "purple1mzdhwvvh22wrt07w59wxyd58822qavwkx5lcej7aqfkpqqlhaqfs5efvjk"
+    );
+    assert_eq!(
+        contract_addr_2.to_string(),
+        "purple14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9smc2vxm"
+    );
 }
 
 #[test]
