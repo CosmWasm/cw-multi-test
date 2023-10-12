@@ -313,21 +313,17 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     fn verify_attributes(attributes: &[Attribute]) -> AnyResult<()> {
         for attr in attributes {
             let key = attr.key.trim();
-            let val = attr.value.trim();
-
+            let value = attr.value.trim();
             if key.is_empty() {
-                bail!(Error::empty_attribute_key(val));
+                bail!(Error::empty_attribute_key(value));
             }
-
-            if val.is_empty() {
+            if value.is_empty() {
                 bail!(Error::empty_attribute_value(key));
             }
-
             if key.starts_with('_') {
                 bail!(Error::reserved_attribute_key(key));
             }
         }
-
         Ok(())
     }
 
@@ -336,7 +332,6 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         T: Clone + Debug + PartialEq + JsonSchema,
     {
         Self::verify_attributes(&response.attributes)?;
-
         for event in &response.events {
             Self::verify_attributes(&event.attributes)?;
             let ty = event.ty.trim();
@@ -344,7 +339,6 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
                 bail!(Error::event_type_too_short(ty));
             }
         }
-
         Ok(response)
     }
 }
@@ -850,7 +844,10 @@ where
                 .classic_contract_address(api, storage, code_id, instance_id)
         };
 
-        //TODO Check here if contract address already exists, return error if this is the case.
+        // contract with the same address must not already exist
+        if self.contract_data(storage, &addr).is_ok() {
+            bail!(Error::duplicated_contract_address(addr));
+        }
 
         // prepare contract data and save new contract instance
         let info = ContractData {

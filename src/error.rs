@@ -28,8 +28,11 @@ pub enum Error {
     #[error("code id {0}: no such code")]
     UnregisteredCodeId(u64),
 
-    #[error("Invalid address input data: {0}")]
-    InvalidAddressInputData(String),
+    #[error("Address generator failure: {0}")]
+    AddressGeneratorFailure(String),
+
+    #[error("Contract with this address already exists: {0}")]
+    DuplicatedContractAddress(String),
 }
 
 impl Error {
@@ -51,7 +54,11 @@ impl Error {
         Self::EventTypeTooShort(typ.into())
     }
 
-    pub fn invalid_address_input_data(reason: impl Into<String>) -> Self {
-        Self::InvalidAddressInputData(reason.into())
+    pub fn address_generator_failure(reason: impl Into<String>) -> Self {
+        Self::AddressGeneratorFailure(reason.into())
+    }
+
+    pub fn duplicated_contract_address(address: impl Into<String>) -> Self {
+        Self::DuplicatedContractAddress(address.into())
     }
 }
