@@ -2,10 +2,12 @@
 
 use bech32::{decode, encode, FromBase32, ToBase32, Variant};
 use cosmwasm_std::{
-    to_binary, Addr, Api, Binary, CanonicalAddr, Deps, DepsMut, Empty, Env, MessageInfo,
-    RecoverPubkeyError, Response, StdError, StdResult, VerificationError, WasmMsg,
+    instantiate2_address, to_binary, Addr, Api, Binary, CanonicalAddr, Deps, DepsMut, Empty, Env,
+    MessageInfo, RecoverPubkeyError, Response, StdError, StdResult, Storage, VerificationError,
+    WasmMsg,
 };
-use cw_multi_test::{Contract, ContractWrapper};
+use cw_multi_test::error::AnyResult;
+use cw_multi_test::{AddressGenerator, Contract, ContractWrapper};
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -176,5 +178,37 @@ mod test_api {
 }
 
 mod test_addresses {
-    //
+    use super::*;
+
+    #[derive(Default)]
+    pub struct MockAddressGenerator;
+
+    impl AddressGenerator for MockAddressGenerator {
+        fn classic_contract_address(
+            &self,
+            api: &dyn Api,
+            _storage: &mut dyn Storage,
+            _code_id: u64,
+            instance_id: u64,
+        ) -> Addr {
+            let digest = Sha256::digest(format!("contract{}", instance_id)).to_vec();
+            let canonical_addr = CanonicalAddr::from(digest);
+            Addr::unchecked(api.addr_humanize(&canonical_addr).unwrap())
+        }
+
+        fn predictable_contract_address(
+            &self,
+            api: &dyn Api,
+            _storage: &mut dyn Storage,
+            _code_id: u64,
+            _instance_id: u64,
+            checksum: &[u8],
+            creator: &CanonicalAddr,
+            salt: &[u8],
+        ) -> AnyResult<Addr> {
+            Ok(Addr::unchecked(api.addr_humanize(
+                &instantiate2_address(checksum, creator, salt)?,
+            )?))
+        }
+    }
 }

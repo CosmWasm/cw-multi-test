@@ -1,47 +1,14 @@
+use crate::test_addresses::MockAddressGenerator;
 use crate::test_api::MockApiBech32;
 use crate::test_contracts;
-use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, Empty, Storage};
-use cw_multi_test::error::AnyResult;
-use cw_multi_test::{AddressGenerator, AppBuilder, Executor, WasmKeeper};
-use sha2::{Digest, Sha256};
-
-#[derive(Default)]
-struct TestAddressGenerator;
-
-impl AddressGenerator for TestAddressGenerator {
-    fn classic_contract_address(
-        &self,
-        api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _code_id: u64,
-        instance_id: u64,
-    ) -> Addr {
-        let digest = Sha256::digest(format!("contract{}", instance_id)).to_vec();
-        let canonical_addr = CanonicalAddr::from(digest);
-        Addr::unchecked(api.addr_humanize(&canonical_addr).unwrap())
-    }
-
-    fn predictable_contract_address(
-        &self,
-        api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _code_id: u64,
-        _instance_id: u64,
-        checksum: &[u8],
-        creator: &CanonicalAddr,
-        salt: &[u8],
-    ) -> AnyResult<Addr> {
-        Ok(Addr::unchecked(api.addr_humanize(
-            &instantiate2_address(checksum, creator, salt)?,
-        )?))
-    }
-}
+use cosmwasm_std::{Addr, Empty};
+use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
 
 #[test]
 fn classic_contract_address_should_work() {
     // prepare wasm module with custom address generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new_with_custom_address_generator(TestAddressGenerator);
+        WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
 
     // prepare application with custom api
     let mut app = AppBuilder::default()
@@ -74,7 +41,7 @@ fn classic_contract_address_should_work() {
 fn predictable_contract_address_should_work() {
     // prepare wasm module with custom address generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new_with_custom_address_generator(TestAddressGenerator);
+        WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
 
     // prepare application with custom api
     let mut app = AppBuilder::default()
