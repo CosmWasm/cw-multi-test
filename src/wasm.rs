@@ -1838,6 +1838,7 @@ mod test {
         classic_address: Addr,
         predictable_address: Addr,
     }
+
     impl AddressGenerator for TestAddressGenerator {
         fn classic_contract_address(
             &self,

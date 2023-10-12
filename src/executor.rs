@@ -67,29 +67,68 @@ where
     /// returns an error, but all are persisted on success.
     fn execute(&mut self, sender: Addr, msg: CosmosMsg<C>) -> AnyResult<AppResponse>;
 
-    /// Create a contract and get the new address.
-    /// This is just a helper around execute()
-    fn instantiate_contract<T: Serialize, U: Into<String>>(
+    /// Instantiates a new contract and returns its address.
+    /// This is a helper function around [execute][Self::execute] function
+    /// with `WasmMsg::Instantiate` message.
+    fn instantiate_contract<M, L, A>(
         &mut self,
         code_id: u64,
         sender: Addr,
-        init_msg: &T,
+        init_msg: &M,
         send_funds: &[Coin],
-        label: U,
-        admin: Option<String>,
-    ) -> AnyResult<Addr> {
-        // instantiate contract
-        let init_msg = to_binary(init_msg)?;
+        label: L,
+        admin: A,
+    ) -> AnyResult<Addr>
+    where
+        M: Serialize,
+        L: Into<String>,
+        A: Into<Option<String>>,
+    {
         let msg = WasmMsg::Instantiate {
-            admin,
+            admin: admin.into(),
             code_id,
-            msg: init_msg,
+            msg: to_binary(init_msg)?,
             funds: send_funds.to_vec(),
             label: label.into(),
         };
-        let res = self.execute(sender, msg.into())?;
-        let data = parse_instantiate_response_data(res.data.unwrap_or_default().as_slice())?;
-        Ok(Addr::unchecked(data.contract_address))
+        let execute_response = self.execute(sender, msg.into())?;
+        let instantiate_response =
+            parse_instantiate_response_data(execute_response.data.unwrap_or_default().as_slice())?;
+        Ok(Addr::unchecked(instantiate_response.contract_address))
+    }
+
+    /// Instantiates a new contract and returns its predictable address.
+    /// This is a helper function around [execute][Self::execute] function
+    /// with `WasmMsg::Instantiate2` message.
+    #[cfg(feature = "cosmwasm_1_2")]
+    fn instantiate2_contract<M, L, A, S>(
+        &mut self,
+        code_id: u64,
+        sender: Addr,
+        init_msg: &M,
+        funds: &[Coin],
+        label: L,
+        admin: A,
+        salt: S,
+    ) -> AnyResult<Addr>
+    where
+        M: Serialize,
+        L: Into<String>,
+        A: Into<Option<String>>,
+        S: Into<Binary>,
+    {
+        let msg = WasmMsg::Instantiate2 {
+            admin: admin.into(),
+            code_id,
+            msg: to_binary(init_msg)?,
+            funds: funds.to_vec(),
+            label: label.into(),
+            salt: salt.into(),
+        };
+        let execute_response = self.execute(sender, msg.into())?;
+        let instantiate_response =
+            parse_instantiate_response_data(execute_response.data.unwrap_or_default().as_slice())?;
+        Ok(Addr::unchecked(instantiate_response.contract_address))
     }
 
     /// Execute a contract and process all returned messages.
