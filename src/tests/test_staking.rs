@@ -11,6 +11,9 @@ use cosmwasm_std::{
     Empty, GovMsg, IbcMsg, IbcQuery, Validator,
 };
 
+/// Year duration in seconds.
+const YEAR: u64 = 60 * 60 * 24 * 365;
+
 /// Type alias for default build `Router` to make its reference in typical scenario
 type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
     BankKeeper,
@@ -422,6 +425,58 @@ fn rewards_work_for_multiple_delegators() {
         .unwrap()
         .unwrap();
     assert_eq!(rewards.amount.u128(), 45);
+}
+
+#[test]
+fn rewards_should_fail_for_non_existing_validator() {
+    let (api, mut store, router, mut block, validator) =
+        setup_test_env(Decimal::percent(10), Decimal::percent(10));
+    let stake = &router.staking;
+    let delegator = Addr::unchecked("delegator");
+
+    let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
+
+    // stake 200 tokens
+    stake
+        .add_stake(
+            &api,
+            &mut staking_storage,
+            &block,
+            &delegator,
+            &validator,
+            coin(200, "TOKEN"),
+        )
+        .unwrap();
+
+    // wait 1/2 year
+    block.time = block.time.plus_seconds(YEAR / 2);
+
+    // should fail because the address of non-existing validator was provided
+    let invalid_validator = api.addr_validate("non-existing-validator").unwrap();
+    assert_eq!(
+        stake
+            .get_rewards(&store, &block, &delegator, &invalid_validator)
+            .unwrap_err()
+            .to_string(),
+        "validator non-existing-validator not found"
+    );
+}
+
+#[test]
+fn rewards_should_fail_for_invalid_stakes() {
+    let (_, store, router, mut block, validator) =
+        setup_test_env(Decimal::percent(10), Decimal::percent(10));
+    let stake = &router.staking;
+    let delegator = Addr::unchecked("delegator");
+
+    // wait 1/2 year
+    block.time = block.time.plus_seconds(YEAR / 2);
+
+    // should fail because there are no stakes
+    assert!(stake
+        .get_rewards(&store, &block, &delegator, &validator)
+        .unwrap()
+        .is_none());
 }
 
 mod msg {
@@ -1477,7 +1532,6 @@ mod msg {
             .unwrap();
 
         // wait a year before staking
-        const YEAR: u64 = 60 * 60 * 24 * 365;
         test_env.block.time = test_env.block.time.plus_seconds(YEAR);
 
         // delegate some tokens
