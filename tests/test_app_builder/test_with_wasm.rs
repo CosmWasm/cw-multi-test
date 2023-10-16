@@ -1,4 +1,4 @@
-use crate::app_builder::{contracts, MyKeeper};
+use crate::test_app_builder::{contracts, MyKeeper};
 use cosmwasm_std::{
     Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, WasmMsg, WasmQuery,
 };

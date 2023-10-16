@@ -2,6 +2,9 @@ use crate::error::AnyResult;
 use crate::test_helpers::{stargate, stargate::ExecMsg};
 use crate::{App, AppBuilder, AppResponse, CosmosRouter, Executor, Gov, Module};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, GovMsg, Querier, Storage};
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 
 struct AcceptingModule;
 
@@ -20,33 +23,8 @@ impl Module for AcceptingModule {
         _msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
-    {
-        Ok(AppResponse::default())
-    }
-
-    fn sudo<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        _msg: Self::SudoT,
-    ) -> AnyResult<AppResponse>
-    where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: cosmwasm_std::CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }
@@ -60,6 +38,21 @@ impl Module for AcceptingModule {
         _request: Self::QueryT,
     ) -> AnyResult<Binary> {
         Ok(Binary::default())
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _msg: Self::SudoT,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: Debug + Clone + PartialEq + schemars::JsonSchema + DeserializeOwned + 'static,
+        QueryC: cosmwasm_std::CustomQuery + DeserializeOwned + 'static,
+    {
+        Ok(AppResponse::default())
     }
 }
 

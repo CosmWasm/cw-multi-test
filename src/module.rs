@@ -28,6 +28,17 @@ pub trait Module {
         ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
 
+    /// Runs any [QueryT](Self::QueryT) message,
+    /// which can be called by any external actor or smart contract.
+    fn query(
+        &self,
+        api: &dyn Api,
+        storage: &dyn Storage,
+        querier: &dyn Querier,
+        block: &BlockInfo,
+        request: Self::QueryT,
+    ) -> AnyResult<Binary>;
+
     /// Runs privileged actions, like minting tokens, or governance proposals.
     /// This allows modules to have full access to these privileged actions,
     /// that cannot be triggered by smart contracts.
@@ -44,17 +55,6 @@ pub trait Module {
     where
         ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
-
-    /// Runs any [QueryT](Self::QueryT) message,
-    /// which can be called by any external actor or smart contract.
-    fn query(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        request: Self::QueryT,
-    ) -> AnyResult<Binary>;
 }
 
 pub struct FailingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
@@ -94,18 +94,6 @@ where
         bail!("Unexpected exec msg {:?} from {:?}", msg, sender)
     }
 
-    /// Runs any [SudoT](Self::SudoT) privileged action, always returns an error.
-    fn sudo<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        msg: Self::SudoT,
-    ) -> AnyResult<AppResponse> {
-        bail!("Unexpected sudo msg {:?}", msg)
-    }
-
     /// Runs any [QueryT](Self::QueryT) message, always returns an error.
     fn query(
         &self,
@@ -116,5 +104,17 @@ where
         request: Self::QueryT,
     ) -> AnyResult<Binary> {
         bail!("Unexpected custom query {:?}", request)
+    }
+
+    /// Runs any [SudoT](Self::SudoT) privileged action, always returns an error.
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        msg: Self::SudoT,
+    ) -> AnyResult<AppResponse> {
+        bail!("Unexpected sudo msg {:?}", msg)
     }
 }

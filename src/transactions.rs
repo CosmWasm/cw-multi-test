@@ -62,21 +62,6 @@ impl<'a> Storage for StorageTransaction<'a> {
         }
     }
 
-    fn set(&mut self, key: &[u8], value: &[u8]) {
-        let op = Op::Set {
-            key: key.to_vec(),
-            value: value.to_vec(),
-        };
-        self.local_state.insert(key.to_vec(), op.to_delta());
-        self.rep_log.append(op);
-    }
-
-    fn remove(&mut self, key: &[u8]) {
-        let op = Op::Delete { key: key.to_vec() };
-        self.local_state.insert(key.to_vec(), op.to_delta());
-        self.rep_log.append(op);
-    }
-
     #[cfg(feature = "iterator")]
     /// range allows iteration over a set of keys, either forwards or backwards
     /// uses standard rust range notation, and eg db.range(b"foo"..b"bar") also works reverse
@@ -107,6 +92,21 @@ impl<'a> Storage for StorageTransaction<'a> {
         let base = self.storage.range(start, end, order);
         let merged = MergeOverlay::new(local, base, order);
         Box::new(merged)
+    }
+
+    fn set(&mut self, key: &[u8], value: &[u8]) {
+        let op = Op::Set {
+            key: key.to_vec(),
+            value: value.to_vec(),
+        };
+        self.local_state.insert(key.to_vec(), op.to_delta());
+        self.rep_log.append(op);
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        let op = Op::Delete { key: key.to_vec() };
+        self.local_state.insert(key.to_vec(), op.to_delta());
+        self.rep_log.append(op);
     }
 }
 
