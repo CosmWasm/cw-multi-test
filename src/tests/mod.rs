@@ -1,5 +1,6 @@
 #![cfg(test)]
 
-mod app;
-mod gov;
-mod ibc;
+mod test_app;
+mod test_custom_handler;
+mod test_gov;
+mod test_ibc;

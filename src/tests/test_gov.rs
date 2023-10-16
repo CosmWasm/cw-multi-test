@@ -1,7 +1,10 @@
 use crate::error::AnyResult;
 use crate::test_helpers::{stargate, stargate::ExecMsg};
 use crate::{App, AppBuilder, AppResponse, CosmosRouter, Executor, Gov, Module};
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, GovMsg, Querier, Storage};
+use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Empty, GovMsg, Querier, Storage};
+use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
 
 struct AcceptingModule;
 
@@ -20,13 +23,8 @@ impl Module for AcceptingModule {
         _msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }
@@ -40,13 +38,8 @@ impl Module for AcceptingModule {
         _msg: Self::SudoT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
-        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+        ExecC: Debug + Clone + PartialEq + schemars::JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         Ok(AppResponse::default())
     }

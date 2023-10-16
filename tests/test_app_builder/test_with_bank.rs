@@ -1,4 +1,4 @@
-use crate::app_builder::MyKeeper;
+use crate::test_app_builder::MyKeeper;
 use cosmwasm_std::{coins, Addr, BankMsg, BankQuery};
 use cw_multi_test::{AppBuilder, Bank, BankSudo, Executor};
 
