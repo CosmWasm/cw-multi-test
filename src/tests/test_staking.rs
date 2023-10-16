@@ -231,7 +231,7 @@ fn rewards_work_for_single_delegator() {
         .unwrap();
 
     // wait 1/2 year
-    block.time = block.time.plus_seconds(60 * 60 * 24 * 365 / 2);
+    block.time = block.time.plus_seconds(YEAR / 2);
 
     // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
     let rewards = stake
@@ -262,7 +262,7 @@ fn rewards_work_for_single_delegator() {
     assert_eq!(rewards.amount.u128(), 0);
 
     // wait another 1/2 year
-    block.time = block.time.plus_seconds(60 * 60 * 24 * 365 / 2);
+    block.time = block.time.plus_seconds(YEAR / 2);
     // should now have 9 tokens again
     let rewards = stake
         .get_rewards(&store, &block, &delegator, &validator)
@@ -306,7 +306,7 @@ fn rewards_work_for_multiple_delegators() {
         .unwrap();
 
     // wait 1 year
-    block.time = block.time.plus_seconds(60 * 60 * 24 * 365);
+    block.time = block.time.plus_seconds(YEAR);
 
     // delegator1 should now have 100 * 10% - 10% commission = 9 tokens
     let rewards = stake
@@ -336,7 +336,7 @@ fn rewards_work_for_multiple_delegators() {
         .unwrap();
 
     // wait another year
-    block.time = block.time.plus_seconds(60 * 60 * 24 * 365);
+    block.time = block.time.plus_seconds(YEAR);
 
     // delegator1 should now have 9 + 200 * 10% - 10% commission = 27 tokens
     let rewards = stake
@@ -410,7 +410,7 @@ fn rewards_work_for_multiple_delegators() {
     );
 
     // wait another year
-    block.time = block.time.plus_seconds(60 * 60 * 24 * 365);
+    block.time = block.time.plus_seconds(YEAR);
 
     // delegator1 should now have 0 + 200 * 10% - 10% commission = 18 tokens
     let rewards = stake
@@ -622,7 +622,7 @@ mod msg {
         assert_balances(&test_env, vec![(delegator1.clone(), 900)]);
 
         // wait a year
-        test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+        test_env.block.time = test_env.block.time.plus_seconds(YEAR);
 
         // change the withdrawal address
         execute_distr(
@@ -749,7 +749,7 @@ mod msg {
         .unwrap();
 
         // A year passes.
-        test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+        test_env.block.time = test_env.block.time.plus_seconds(YEAR);
 
         // Withdraw rewards to reward receiver.
         execute_distr(
@@ -772,7 +772,7 @@ mod msg {
         .unwrap();
 
         // Another year passes.
-        test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+        test_env.block.time = test_env.block.time.plus_seconds(YEAR);
 
         // Withdraw rewards to delegator.
         execute_distr(
