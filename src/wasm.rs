@@ -7,16 +7,15 @@ use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
-    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order, Querier,
-    QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse,
-    SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, HexBinary, MessageInfo, Order,
+    Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg,
+    SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
 use cw_storage_plus::Map;
 use prost::Message;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "cosmwasm_1_2")]
 use sha2::{Digest, Sha256};
 use std::borrow::Borrow;
 use std::fmt::Debug;
@@ -62,13 +61,9 @@ pub struct ContractData {
 /// Contract code base data.
 struct CodeData {
     /// Address of an account that initially stored the contract code.
-    //FIXME Remove this feature flag when the default flag is `cosmwasm_1_2` or higher.
-    #[cfg_attr(feature = "cosmwasm_1_1", allow(dead_code))]
     creator: Addr,
-    /// Seed used to generate a checksum for underlying code base.
-    //FIXME Remove this feature flag when the default flag is `cosmwasm_1_2` or higher.
-    #[cfg_attr(feature = "cosmwasm_1_1", allow(dead_code))]
-    seed: usize,
+    /// Checksum of the contract's code base.
+    checksum: HexBinary,
     /// Identifier of the code base where the contract code is stored in memory.
     code_base_id: usize,
 }
@@ -201,9 +196,7 @@ where
                 let mut res = cosmwasm_std::CodeInfoResponse::default();
                 res.code_id = code_id;
                 res.creator = code_data.creator.to_string();
-                res.checksum = cosmwasm_std::HexBinary::from(
-                    Sha256::digest(format!("contract code {}", code_data.seed)).to_vec(),
-                );
+                res.checksum = code_data.checksum.clone();
                 to_binary(&res).map_err(Into::into)
             }
             other => bail!(Error::UnsupportedWasmQuery(other)),
@@ -248,9 +241,11 @@ where
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
         let code_id = self.code_data.len() + 1;
+        let checksum =
+            HexBinary::from(Sha256::digest(format!("contract code {}", code_id)).to_vec());
         self.code_data.push(CodeData {
             creator,
-            seed: code_id,
+            checksum,
             code_base_id,
         });
         code_id as u64
@@ -262,7 +257,7 @@ where
         let code_data = self.code_data(code_id)?;
         self.code_data.push(CodeData {
             creator: code_data.creator.clone(),
-            seed: code_data.seed,
+            checksum: code_data.checksum.clone(),
             code_base_id: code_data.code_base_id,
         });
         Ok(code_id + 1)
