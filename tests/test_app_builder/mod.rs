@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-mod with_api;
-mod with_bank;
-mod with_block;
-mod with_distribution;
-mod with_staking;
-mod with_storage;
-mod with_wasm;
+mod test_with_api;
+mod test_with_bank;
+mod test_with_block;
+mod test_with_distribution;
+mod test_with_staking;
+mod test_with_storage;
+mod test_with_wasm;
 
 const COUNTER: Item<u64> = Item::new("count");
 
