@@ -9,6 +9,7 @@
 mod app;
 mod app_builder;
 mod bank;
+mod checksums;
 #[allow(clippy::type_complexity)]
 mod contracts;
 pub mod custom_handler;
@@ -27,6 +28,7 @@ mod wasm;
 pub use crate::app::{custom_app, next_block, App, BasicApp, CosmosRouter, Router, SudoMsg};
 pub use crate::app_builder::{AppBuilder, BasicAppBuilder};
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
+pub use crate::checksums::ChecksumGenerator;
 pub use crate::contracts::{Contract, ContractWrapper};
 pub use crate::executor::{AppResponse, Executor};
 pub use crate::gov::Gov;
