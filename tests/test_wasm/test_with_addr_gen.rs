@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
 
 #[test]
-fn classic_contract_address_should_work() {
+fn contract_address_should_work() {
     // prepare wasm module with custom address generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
         WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
@@ -92,6 +92,50 @@ fn predictable_contract_address_should_work() {
     assert_ne!(contract_addr_1, contract_addr_2);
 
     // instantiating a contract with the same salt should fail
+    app.instantiate2_contract(
+        code_id,
+        creator,
+        &Empty {},
+        &[],
+        "Counter",
+        None,
+        [1, 2, 3, 4, 5, 6],
+    )
+    .unwrap_err();
+}
+
+#[test]
+#[cfg(feature = "cosmwasm_1_2")]
+fn creating_contract_with_the_same_predictable_address_should_fail() {
+    // prepare wasm module with custom address generator
+    let wasm_keeper: WasmKeeper<Empty, Empty> =
+        WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
+
+    // prepare application with custom api
+    let mut app = AppBuilder::default()
+        .with_api(MockApiBech32::new("juno"))
+        .with_wasm(wasm_keeper)
+        .build(|_, _, _| {});
+
+    let creator = app.api().addr_make("creator");
+
+    // store contract's code
+    let code_id = app.store_code_with_creator(creator.clone(), test_contracts::counter::contract());
+
+    // instantiating for the first time should work
+    app.instantiate2_contract(
+        code_id,
+        creator.clone(),
+        &Empty {},
+        &[],
+        "Counter",
+        None,
+        [1, 2, 3, 4, 5, 6],
+    )
+    .unwrap();
+
+    // this instantiating should fail,
+    // the same address is generated for a contract instance
     app.instantiate2_contract(
         code_id,
         creator,

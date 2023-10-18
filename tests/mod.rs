@@ -184,7 +184,7 @@ mod test_addresses {
     pub struct MockAddressGenerator;
 
     impl AddressGenerator for MockAddressGenerator {
-        fn classic_contract_address(
+        fn contract_address(
             &self,
             api: &dyn Api,
             _storage: &mut dyn Storage,

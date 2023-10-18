@@ -846,9 +846,9 @@ where
                 salt_binary.as_slice(),
             )?
         } else {
-            // generate classic, unpredictable contract address
+            // generate non-predictable contract address
             self.address_generator
-                .classic_contract_address(api, storage, code_id, instance_id)?
+                .contract_address(api, storage, code_id, instance_id)?
         };
 
         // contract with the same address must not already exist
@@ -1831,30 +1831,30 @@ mod test {
                 Addr::unchecked("admin"),
                 "label".to_owned(),
                 1000,
-                Binary::from(HexBinary::from_hex("FA886B3C").unwrap()),
+                Binary::from(HexBinary::from_hex("01C0FFEE").unwrap()),
             )
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract1",
+            contract_addr, "contract01c0ffee",
             "default address generator returned incorrect address"
         );
     }
 
     struct TestAddressGenerator {
-        classic_address: Addr,
+        address: Addr,
         predictable_address: Addr,
     }
 
     impl AddressGenerator for TestAddressGenerator {
-        fn classic_contract_address(
+        fn contract_address(
             &self,
             _api: &dyn Api,
             _storage: &mut dyn Storage,
             _code_id: u64,
             _instance_id: u64,
         ) -> AnyResult<Addr> {
-            Ok(self.classic_address.clone())
+            Ok(self.address.clone())
         }
 
         fn predictable_contract_address(
@@ -1874,11 +1874,11 @@ mod test {
     #[test]
     fn can_use_custom_address_generator() {
         let api = MockApi::default();
-        let expected_classic_addr = Addr::unchecked("classic_address");
+        let expected_addr = Addr::unchecked("address");
         let expected_predictable_addr = Addr::unchecked("predictable_address");
         let mut wasm_keeper: WasmKeeper<Empty, Empty> =
             WasmKeeper::new_with_custom_address_generator(TestAddressGenerator {
-                classic_address: expected_classic_addr.clone(),
+                address: expected_addr.clone(),
                 predictable_address: expected_predictable_addr.clone(),
             });
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
@@ -1899,7 +1899,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr, expected_classic_addr,
+            contract_addr, expected_addr,
             "custom address generator returned incorrect address"
         );
 
