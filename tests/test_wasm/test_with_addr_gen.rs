@@ -8,7 +8,7 @@ use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
 fn contract_address_should_work() {
     // prepare wasm module with custom address generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
+        WasmKeeper::new().with_address_generator(MockAddressGenerator);
 
     // prepare application with custom api
     let mut app = AppBuilder::default()
@@ -51,7 +51,7 @@ fn contract_address_should_work() {
 fn predictable_contract_address_should_work() {
     // prepare wasm module with custom address generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
+        WasmKeeper::new().with_address_generator(MockAddressGenerator);
 
     // prepare application with custom api
     let mut app = AppBuilder::default()
@@ -109,7 +109,7 @@ fn predictable_contract_address_should_work() {
 fn creating_contract_with_the_same_predictable_address_should_fail() {
     // prepare wasm module with custom address generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new_with_custom_address_generator(MockAddressGenerator);
+        WasmKeeper::new().with_address_generator(MockAddressGenerator);
 
     // prepare application with custom api
     let mut app = AppBuilder::default()
