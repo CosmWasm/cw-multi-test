@@ -2,12 +2,11 @@
 
 use bech32::{decode, encode, FromBase32, ToBase32, Variant};
 use cosmwasm_std::{
-    instantiate2_address, to_binary, Addr, Api, Binary, CanonicalAddr, Deps, DepsMut, Empty, Env,
-    MessageInfo, RecoverPubkeyError, Response, StdError, StdResult, Storage, VerificationError,
-    WasmMsg,
+    instantiate2_address, Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult,
+    Storage, VerificationError,
 };
 use cw_multi_test::error::AnyResult;
-use cw_multi_test::{AddressGenerator, Contract, ContractWrapper};
+use cw_multi_test::AddressGenerator;
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 use sha2::digest::Update;

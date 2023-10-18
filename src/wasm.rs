@@ -829,7 +829,7 @@ where
             // generate predictable contract address when salt is provided
             let code_data = self.code_data(code_id)?;
             let canonical_addr = &api.addr_canonicalize(creator.as_ref())?;
-            self.generator.predictable_contract_address(
+            self.address_generator.predictable_contract_address(
                 api,
                 storage,
                 code_id,
@@ -840,7 +840,7 @@ where
             )?
         } else {
             // generate classic, unpredictable contract address
-            self.generator
+            self.address_generator
                 .classic_contract_address(api, storage, code_id, instance_id)?
         };
 
