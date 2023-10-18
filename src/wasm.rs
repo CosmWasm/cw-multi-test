@@ -1933,4 +1933,20 @@ mod test {
             "custom address generator returned incorrect address"
         );
     }
+
+    #[test]
+    #[allow(deprecated)]
+    fn remove_this_test_in_version_1_0() {
+        //TODO Remove this test in version 1.0.0 of multitest, now provided only for code coverage.
+
+        let addr_gen = TestAddressGenerator {
+            address: Addr::unchecked("a"),
+            predictable_address: Addr::unchecked("b"),
+        };
+        let mut storage = MockStorage::default();
+        let contract_addr = addr_gen.next_address(&mut storage);
+        assert_eq!(contract_addr, "contract0");
+
+        let _: WasmKeeper<Empty, Empty> = WasmKeeper::new_with_custom_address_generator(addr_gen);
+    }
 }
