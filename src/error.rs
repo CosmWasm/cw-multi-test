@@ -50,8 +50,8 @@ impl Error {
         Self::ReservedAttributeKey(key.into())
     }
 
-    pub fn event_type_too_short(typ: impl Into<String>) -> Self {
-        Self::EventTypeTooShort(typ.into())
+    pub fn event_type_too_short(ty: impl Into<String>) -> Self {
+        Self::EventTypeTooShort(ty.into())
     }
 
     pub fn address_generator_failure(reason: impl Into<String>) -> Self {
