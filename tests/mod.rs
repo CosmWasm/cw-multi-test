@@ -191,7 +191,7 @@ mod test_addresses {
             code_id: u64,
             instance_id: u64,
         ) -> AnyResult<Addr> {
-            let canonical_addr = instantiate_address(code_id, instance_id);
+            let canonical_addr = Self::instantiate_address(code_id, instance_id);
             Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
         }
 
@@ -209,17 +209,22 @@ mod test_addresses {
             Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
         }
     }
-}
 
-fn instantiate_address(code_id: u64, instance_id: u64) -> CanonicalAddr {
-    let mut key = Vec::<u8>::new();
-    key.extend_from_slice(b"wasm\0");
-    key.extend_from_slice(&code_id.to_be_bytes());
-    key.extend_from_slice(&instance_id.to_be_bytes());
-    hash("module", &key).into()
-}
-
-fn hash(typ: &str, key: &[u8]) -> Vec<u8> {
-    let inner = Sha256::digest(typ.as_bytes());
-    Sha256::new().chain(inner).chain(key).finalize().to_vec()
+    impl MockAddressGenerator {
+        // non-predictable contract address generator, see `BuildContractAddressClassic`
+        // implementation in wasmd: https://github.com/CosmWasm/wasmd/blob/main/x/wasm/keeper/addresses.go#L35-L42
+        fn instantiate_address(code_id: u64, instance_id: u64) -> CanonicalAddr {
+            let mut key = Vec::<u8>::new();
+            key.extend_from_slice(b"wasm\0");
+            key.extend_from_slice(&code_id.to_be_bytes());
+            key.extend_from_slice(&instance_id.to_be_bytes());
+            let module = Sha256::digest("module".as_bytes());
+            Sha256::new()
+                .chain(module)
+                .chain(key)
+                .finalize()
+                .to_vec()
+                .into()
+        }
+    }
 }
