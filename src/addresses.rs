@@ -1,7 +1,9 @@
 //! Implementation of address generators.
 
 use crate::error::AnyResult;
-use cosmwasm_std::{Addr, Api, CanonicalAddr, Storage};
+use crate::prefixed_storage::prefixed_read;
+use crate::wasm::{CONTRACTS, NAMESPACE_WASM};
+use cosmwasm_std::{Addr, Api, CanonicalAddr, Order, Storage};
 
 /// Common address generator interface.
 pub trait AddressGenerator {
@@ -9,8 +11,17 @@ pub trait AddressGenerator {
         since = "0.18.0",
         note = "use `classic_contract_address` or `predictable_contract_address` instead; will be removed in version 1.0.0"
     )]
-    fn next_address(&self, _storage: &mut dyn Storage) -> Addr {
-        unimplemented!()
+    fn next_address(&self, storage: &mut dyn Storage) -> Addr {
+        //TODO After removing this function in version 1.0, make `CONTRACTS` and `NAMESPACE_WASM` private in `wasm.rs`.
+        let count = CONTRACTS
+            .range_raw(
+                &prefixed_read(storage, NAMESPACE_WASM),
+                None,
+                None,
+                Order::Ascending,
+            )
+            .count();
+        Addr::unchecked(format!("contract{}", count))
     }
 
     /// Generates a classic contract address (not predictable).
