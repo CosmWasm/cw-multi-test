@@ -244,7 +244,7 @@ where
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
         let code_id = (self.code_data.len() + 1) as u64;
-        let checksum = self.checksum_generator.checksum(creator.clone(), code_id);
+        let checksum = self.checksum_generator.checksum(&creator, code_id);
         self.code_data.push(CodeData {
             creator,
             checksum,
@@ -385,7 +385,7 @@ where
         }
     }
 
-    pub fn new_with_checksum_generator(
+    pub fn with_checksum_generator(
         mut self,
         checksum_generator: impl ChecksumGenerator + 'static,
     ) -> Self {

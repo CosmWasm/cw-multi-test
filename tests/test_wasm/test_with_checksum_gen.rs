@@ -28,7 +28,7 @@ fn default_checksum_generator_should_work() {
 struct MyChecksumGenerator;
 
 impl ChecksumGenerator for MyChecksumGenerator {
-    fn checksum(&self, _creator: Addr, _code_id: u64) -> HexBinary {
+    fn checksum(&self, _creator: &Addr, _code_id: u64) -> HexBinary {
         HexBinary::from_hex("c0ffee01c0ffee02c0ffee03c0ffee04c0ffee05c0ffee06c0ffee07c0ffee08")
             .unwrap()
     }
@@ -38,7 +38,7 @@ impl ChecksumGenerator for MyChecksumGenerator {
 fn custom_checksum_generator_should_work() {
     // prepare wasm keeper with custom checksum generator
     let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::default().new_with_checksum_generator(MyChecksumGenerator);
+        WasmKeeper::default().with_checksum_generator(MyChecksumGenerator);
 
     // prepare application with custom wasm keeper
     let mut app = AppBuilder::default()
