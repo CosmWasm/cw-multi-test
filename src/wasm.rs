@@ -1,4 +1,5 @@
 use crate::app::{CosmosRouter, RouterQuerier};
+use crate::checksums::{ChecksumGenerator, SimpleChecksumGenerator};
 use crate::contracts::Contract;
 use crate::error::{bail, AnyContext, AnyError, AnyResult, Error};
 use crate::executor::AppResponse;
@@ -16,7 +17,6 @@ use prost::Message;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
@@ -121,8 +121,10 @@ pub struct WasmKeeper<ExecC, QueryC> {
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
     /// Code data with code base identifier and additional attributes.  
     code_data: Vec<CodeData>,
-    /// Contract address generator.
-    generator: Box<dyn AddressGenerator>,
+    /// Contract's address generator.
+    address_generator: Box<dyn AddressGenerator>,
+    /// Contract's code checksum generator.
+    checksum_generator: Box<dyn ChecksumGenerator>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
 }
@@ -153,7 +155,8 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
         Self {
             code_base: Vec::default(),
             code_data: Vec::default(),
-            generator: Box::new(SimpleAddressGenerator()),
+            address_generator: Box::new(SimpleAddressGenerator()),
+            checksum_generator: Box::new(SimpleChecksumGenerator),
             _p: std::marker::PhantomData,
         }
     }
@@ -240,15 +243,14 @@ where
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
-        let code_id = self.code_data.len() + 1;
-        let checksum =
-            HexBinary::from(Sha256::digest(format!("contract code {}", code_id)).to_vec());
+        let code_id = (self.code_data.len() + 1) as u64;
+        let checksum = self.checksum_generator.checksum(&creator, code_id);
         self.code_data.push(CodeData {
             creator,
             checksum,
             code_base_id,
         });
-        code_id as u64
+        code_id
     }
 
     /// Duplicates the contract's code with specified identifier.
@@ -374,11 +376,21 @@ where
         Self::default()
     }
 
-    pub fn new_with_custom_address_generator(generator: impl AddressGenerator + 'static) -> Self {
+    pub fn new_with_custom_address_generator(
+        address_generator: impl AddressGenerator + 'static,
+    ) -> Self {
         Self {
-            generator: Box::new(generator),
+            address_generator: Box::new(address_generator),
             ..Default::default()
         }
+    }
+
+    pub fn with_checksum_generator(
+        mut self,
+        checksum_generator: impl ChecksumGenerator + 'static,
+    ) -> Self {
+        self.checksum_generator = Box::new(checksum_generator);
+        self
     }
 
     pub fn query_smart(
@@ -828,7 +840,7 @@ where
             bail!("Cannot init contract with unregistered code id");
         }
 
-        let addr = self.generator.next_address(storage);
+        let addr = self.address_generator.next_address(storage);
 
         let info = ContractData {
             code_id,

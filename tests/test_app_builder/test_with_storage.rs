@@ -1,4 +1,4 @@
-use crate::test_app_builder::{contracts, CounterQueryMsg, CounterResponseMsg};
+use crate::{test_contracts, CounterQueryMsg, CounterResponseMsg};
 use cosmwasm_std::{to_binary, Addr, Empty, Order, Record, Storage, WasmMsg};
 use cw_multi_test::{AppBuilder, Executor};
 use std::collections::BTreeMap;
@@ -47,7 +47,7 @@ fn building_app_with_custom_storage_should_work() {
         .build(|_, _, _| {});
 
     // store a contract code
-    let code_id = app.store_code(contracts::counter::contract());
+    let code_id = app.store_code(test_contracts::counter::contract());
 
     // instantiate contract, this initializes a counter with value 1
     let contract_addr = app
