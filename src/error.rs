@@ -27,6 +27,9 @@ pub enum Error {
 
     #[error("code id {0}: no such code")]
     UnregisteredCodeId(u64),
+
+    #[error("Contract with this address already exists: {0}")]
+    DuplicatedContractAddress(String),
 }
 
 impl Error {
@@ -46,5 +49,9 @@ impl Error {
 
     pub fn event_type_too_short(ty: impl Into<String>) -> Self {
         Self::EventTypeTooShort(ty.into())
+    }
+
+    pub fn duplicated_contract_address(address: impl Into<String>) -> Self {
+        Self::DuplicatedContractAddress(address.into())
     }
 }

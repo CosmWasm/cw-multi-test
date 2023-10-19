@@ -92,6 +92,40 @@ where
         Ok(Addr::unchecked(data.contract_address))
     }
 
+    /// Instantiates a new contract and returns its predictable address.
+    /// This is a helper function around [execute][Self::execute] function
+    /// with `WasmMsg::Instantiate2` message.
+    #[cfg(feature = "cosmwasm_1_2")]
+    fn instantiate2_contract<M, L, A, S>(
+        &mut self,
+        code_id: u64,
+        sender: Addr,
+        init_msg: &M,
+        funds: &[Coin],
+        label: L,
+        admin: A,
+        salt: S,
+    ) -> AnyResult<Addr>
+    where
+        M: Serialize,
+        L: Into<String>,
+        A: Into<Option<String>>,
+        S: Into<Binary>,
+    {
+        let msg = WasmMsg::Instantiate2 {
+            admin: admin.into(),
+            code_id,
+            msg: to_binary(init_msg)?,
+            funds: funds.to_vec(),
+            label: label.into(),
+            salt: salt.into(),
+        };
+        let execute_response = self.execute(sender, msg.into())?;
+        let instantiate_response =
+            parse_instantiate_response_data(execute_response.data.unwrap_or_default().as_slice())?;
+        Ok(Addr::unchecked(instantiate_response.contract_address))
+    }
+
     /// Execute a contract and process all returned messages.
     /// This is just a helper around execute(),
     /// but we parse out the data field to that what is returned by the contract (not the protobuf wrapper)

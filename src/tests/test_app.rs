@@ -1573,7 +1573,7 @@ mod contract_instantiation {
             msg: init_msg,
             funds: vec![],
             label: "label".into(),
-            salt: [0, 1, 2, 3, 4, 5].as_slice().into(),
+            salt: [1, 2, 3, 4, 5, 6].as_slice().into(),
         };
         let res = app.execute(sender, msg.into()).unwrap();
 
@@ -1581,22 +1581,9 @@ mod contract_instantiation {
         let parsed = parse_instantiate_response_data(res.data.unwrap().as_slice()).unwrap();
         assert!(parsed.data.is_none());
 
-        // assert contract's address is exactly the predicted one
-        //
-        // REMARK:
-        //   Currently implemented address generator is used to generate
-        //   the predictable address of newly instantiated contract.
-        //
-        //   Conceptually, the address of the contract is fully predictable,
-        //   because it is just the contract0 for the first instance,
-        //   contract1 for the second and so forth.
-        //
-        //   Comparing this address to real-life blockchain and the implementation
-        //   of cosmwasm_std::instantiate2_address, this approach is totally incompatible.
-        //   This problem will be handled in the next step, please see:
-        //   https://github.com/CosmWasm/cosmwasm/issues/1873
-        //   for details.
-        assert_eq!("contract0", parsed.contract_address);
+        // assert contract's address is exactly the predicted one,
+        // in default address generator, this is like `contract` + salt in hex
+        assert_eq!(parsed.contract_address, "contract010203040506");
     }
 }
 
