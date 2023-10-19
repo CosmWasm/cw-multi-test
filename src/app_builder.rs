@@ -367,21 +367,11 @@ where
     }
 
     /// Overwrites the default distribution interface.
-    pub fn with_distribution<NewDistribution: Distribution>(
+    pub fn with_distribution<NewDistr: Distribution>(
         self,
-        distribution: NewDistribution,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        NewDistribution,
-        IbcT,
-        GovT,
-        StargateT,
-    > {
+        distribution: NewDistr,
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, NewDistr, IbcT, GovT, StargateT>
+    {
         let AppBuilder {
             wasm,
             api,
