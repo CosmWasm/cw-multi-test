@@ -22,6 +22,7 @@ mod ibc;
 mod module;
 mod prefixed_storage;
 mod staking;
+mod stargate;
 mod test_helpers;
 mod tests;
 mod transactions;
@@ -40,4 +41,5 @@ pub use crate::module::{AcceptingModule, FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
+pub use crate::stargate::{FailingStargate, Stargate, StargateMsg, StargateQuery};
 pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};

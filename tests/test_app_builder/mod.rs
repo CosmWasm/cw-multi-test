@@ -13,6 +13,7 @@ mod test_with_distribution;
 mod test_with_gov;
 mod test_with_ibc;
 mod test_with_staking;
+mod test_with_stargate;
 mod test_with_storage;
 mod test_with_wasm;
 
