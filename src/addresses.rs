@@ -53,7 +53,7 @@ pub trait AddressGenerator {
 /// or [predictable_contract_address](SimpleAddressGenerator::predictable_contract_address)
 /// is used, but users should not make any assumptions according
 /// the value of the generated addresses.
-pub struct SimpleAddressGenerator();
+pub struct SimpleAddressGenerator;
 
 impl AddressGenerator for SimpleAddressGenerator {
     /// Generates a contract address based on contract's instance id only.

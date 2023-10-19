@@ -138,7 +138,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
         Self {
             code_base: Vec::default(),
             code_data: Vec::default(),
-            address_generator: Box::new(SimpleAddressGenerator()),
+            address_generator: Box::new(SimpleAddressGenerator),
             checksum_generator: Box::new(SimpleChecksumGenerator),
             _p: std::marker::PhantomData,
         }
