@@ -1,7 +1,7 @@
 #![cfg(feature = "cosmwasm_1_2")]
 
 use crate::test_contracts;
-use cosmwasm_std::{Addr, Empty, HexBinary};
+use cosmwasm_std::{Addr, Api, Empty, HexBinary};
 use cw_multi_test::{no_init, App, AppBuilder, ChecksumGenerator, WasmKeeper};
 
 #[test]
@@ -10,10 +10,8 @@ fn default_checksum_generator_should_work() {
     let mut app = App::default();
 
     // store contract's code
-    let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
-        test_contracts::counter::contract(),
-    );
+    let creator = app.api().addr_validate("creator").unwrap();
+    let code_id = app.store_code(creator, test_contracts::counter::contract());
 
     // get code info
     let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
@@ -44,10 +42,8 @@ fn custom_checksum_generator_should_work() {
     let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
 
     // store contract's code
-    let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
-        test_contracts::counter::contract(),
-    );
+    let creator = app.api().addr_validate("creator").unwrap();
+    let code_id = app.store_code(creator, test_contracts::counter::contract());
 
     // get code info
     let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
