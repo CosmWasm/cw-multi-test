@@ -24,7 +24,7 @@ fn default_ibc() {
 #[test]
 fn substituting_ibc() {
     let mut app = AppBuilder::new()
-        .with_ibc(IbcAcceptingModule)
+        .with_ibc(IbcAcceptingModule::new())
         .build(|_, _, _| ());
     let code = app.store_code(stargate::contract());
     let contract = app

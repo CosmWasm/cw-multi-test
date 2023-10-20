@@ -1,11 +1,11 @@
 //! Implementation of the builder for [App].
 
 use crate::{
-    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, Ibc, Module,
-    Router, StakeKeeper, Staking, Wasm, WasmKeeper,
+    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
+    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, GovMsg, IbcMsg, IbcQuery, Storage};
+use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, Storage};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -33,8 +33,8 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    FailingModule<IbcMsg, IbcQuery, Empty>,
-    FailingModule<GovMsg, Empty, Empty>,
+    IbcFailingModule,
+    GovFailingModule,
 >;
 
 /// Utility to build [App] in stages.
@@ -61,8 +61,8 @@ impl Default
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        IbcFailingModule,
+        GovFailingModule,
     >
 {
     fn default() -> Self {
@@ -79,8 +79,8 @@ impl
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        IbcFailingModule,
+        GovFailingModule,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -94,8 +94,8 @@ impl
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: IbcFailingModule::new(),
+            gov: GovFailingModule::new(),
         }
     }
 }
@@ -109,8 +109,8 @@ impl<ExecC, QueryC>
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
-        FailingModule<GovMsg, Empty, Empty>,
+        IbcFailingModule,
+        GovFailingModule,
     >
 where
     ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
@@ -128,8 +128,8 @@ where
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: IbcFailingModule::new(),
+            gov: GovFailingModule::new(),
         }
     }
 }
