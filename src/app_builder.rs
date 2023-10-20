@@ -1,11 +1,11 @@
 //! Implementation of the builder for [App].
 
 use crate::{
-    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, Ibc, Module,
-    Router, StakeKeeper, Staking, Wasm, WasmKeeper,
+    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, Ibc,
+    IbcFailingModule, Module, Router, StakeKeeper, Staking, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, GovMsg, IbcMsg, IbcQuery, Storage};
+use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, GovMsg, Storage};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -33,7 +33,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    FailingModule<IbcMsg, IbcQuery, Empty>,
+    IbcFailingModule,
     FailingModule<GovMsg, Empty, Empty>,
 >;
 
@@ -61,7 +61,7 @@ impl Default
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
+        IbcFailingModule,
         FailingModule<GovMsg, Empty, Empty>,
     >
 {
@@ -79,7 +79,7 @@ impl
         WasmKeeper<Empty, Empty>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
+        IbcFailingModule,
         FailingModule<GovMsg, Empty, Empty>,
     >
 {
@@ -109,7 +109,7 @@ impl<ExecC, QueryC>
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
+        IbcFailingModule,
         FailingModule<GovMsg, Empty, Empty>,
     >
 where

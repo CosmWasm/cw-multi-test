@@ -1119,10 +1119,11 @@ mod test {
     use crate::staking::{DistributionKeeper, StakeKeeper};
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
+    use crate::IbcFailingModule;
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
         coin, from_slice, to_vec, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, GovMsg,
-        HexBinary, IbcMsg, IbcQuery, StdError,
+        HexBinary, StdError,
     };
 
     /// Type alias for default build `Router` to make its reference in typical scenario
@@ -1132,7 +1133,7 @@ mod test {
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
+        IbcFailingModule,
         FailingModule<GovMsg, Empty, Empty>,
     >;
 

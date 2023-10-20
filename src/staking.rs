@@ -987,14 +987,12 @@ impl Module for DistributionKeeper {
 
 #[cfg(test)]
 mod test {
-    use crate::{app::MockRouter, BankKeeper, FailingModule, Router, WasmKeeper};
-
     use super::*;
-
+    use crate::{app::MockRouter, BankKeeper, FailingModule, IbcFailingModule, Router, WasmKeeper};
     use cosmwasm_std::{
         from_slice,
         testing::{mock_env, MockApi, MockStorage},
-        BalanceResponse, BankQuery, GovMsg, IbcMsg, IbcQuery,
+        BalanceResponse, BankQuery, GovMsg,
     };
 
     /// Type alias for default build `Router` to make its reference in typical scenario
@@ -1004,7 +1002,7 @@ mod test {
         WasmKeeper<ExecC, QueryC>,
         StakeKeeper,
         DistributionKeeper,
-        FailingModule<IbcMsg, IbcQuery, Empty>,
+        IbcFailingModule,
         FailingModule<GovMsg, Empty, Empty>,
     >;
 
