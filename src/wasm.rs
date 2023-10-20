@@ -21,12 +21,10 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::fmt::Debug;
 
-//TODO Make `CONTRACTS` private in version 1.0 when the function AddressGenerator::next_address will be removed.
 /// Contract state kept in storage, separate from the contracts themselves (contract code).
-pub(crate) const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
+const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 
-//TODO Make `NAMESPACE_WASM` private in version 1.0 when the function AddressGenerator::next_address will be removed.
-pub(crate) const NAMESPACE_WASM: &[u8] = b"wasm";
+const NAMESPACE_WASM: &[u8] = b"wasm";
 /// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
 const CONTRACT_ATTR: &str = "_contract_address";
 
@@ -357,19 +355,6 @@ where
 {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    #[deprecated(
-        since = "0.18.0",
-        note = "use `WasmKeeper::new().with_address_generator` instead; will be removed in version 1.0.0"
-    )]
-    pub fn new_with_custom_address_generator(
-        address_generator: impl AddressGenerator + 'static,
-    ) -> Self {
-        Self {
-            address_generator: Box::new(address_generator),
-            ..Default::default()
-        }
     }
 
     pub fn with_address_generator(
@@ -1933,21 +1918,5 @@ mod test {
             contract_addr, expected_predictable_addr,
             "custom address generator returned incorrect address"
         );
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn remove_this_test_in_version_1_0() {
-        //TODO Remove this test in version 1.0.0 of multitest, now provided only for code coverage.
-
-        let addr_gen = TestAddressGenerator {
-            address: Addr::unchecked("a"),
-            predictable_address: Addr::unchecked("b"),
-        };
-        let mut storage = MockStorage::default();
-        let contract_addr = addr_gen.next_address(&mut storage);
-        assert_eq!(contract_addr, "contract0");
-
-        let _: WasmKeeper<Empty, Empty> = WasmKeeper::new_with_custom_address_generator(addr_gen);
     }
 }
