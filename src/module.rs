@@ -118,3 +118,65 @@ where
         bail!("Unexpected custom query {:?}", request)
     }
 }
+
+pub struct AcceptingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
+
+impl<ExecT, QueryT, SudoT> AcceptingModule<ExecT, QueryT, SudoT> {
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<ExecT, QueryT, SudoT> Default for AcceptingModule<ExecT, QueryT, SudoT> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<ExecT, QueryT, SudoT> Module for AcceptingModule<ExecT, QueryT, SudoT>
+where
+    ExecT: Debug,
+    QueryT: Debug,
+    SudoT: Debug,
+{
+    type ExecT = ExecT;
+    type QueryT = QueryT;
+    type SudoT = SudoT;
+
+    /// Runs any [ExecT](Self::ExecT) message, always returns a default response.
+    fn execute<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _msg: Self::ExecT,
+    ) -> AnyResult<AppResponse> {
+        Ok(AppResponse::default())
+    }
+
+    /// Runs any [SudoT](Self::SudoT) privileged action, always returns a default response.
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _msg: Self::SudoT,
+    ) -> AnyResult<AppResponse> {
+        Ok(AppResponse::default())
+    }
+
+    /// Runs any [QueryT](Self::QueryT) message, always returns an empty binary.
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: Self::QueryT,
+    ) -> AnyResult<Binary> {
+        Ok(Binary::default())
+    }
+}
