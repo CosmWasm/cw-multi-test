@@ -1,4 +1,4 @@
-use crate::{FailingModule, Module};
+use crate::{AcceptingModule, FailingModule, Module};
 use cosmwasm_std::{Binary, CosmosMsg, Empty, QueryRequest};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -18,6 +18,10 @@ pub struct StargateQuery {
 }
 
 pub trait Stargate: Module<ExecT = StargateMsg, QueryT = StargateQuery, SudoT = Empty> {}
+
+pub type StargateAcceptingModule = AcceptingModule<StargateMsg, StargateQuery, Empty>;
+
+impl Stargate for StargateAcceptingModule {}
 
 pub type StargateFailingModule = FailingModule<StargateMsg, StargateQuery, Empty>;
 

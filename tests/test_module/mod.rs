@@ -1,2 +1,2 @@
-mod test_accepting_module;
-mod test_failing_module;
+mod accepting_module;
+mod failing_module;

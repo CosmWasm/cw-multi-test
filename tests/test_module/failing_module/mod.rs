@@ -1,0 +1,2 @@
+mod test_failing_module;
+mod test_stargate_failing_module;
