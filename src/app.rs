@@ -8,12 +8,12 @@ use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
-use crate::{AppBuilder, IbcFailingModule};
+use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
     from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
-    Empty, GovMsg, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage,
-    SystemError, SystemResult,
+    Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage, SystemError,
+    SystemResult,
 };
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
@@ -35,6 +35,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     StakeKeeper,
     DistributionKeeper,
     IbcFailingModule,
+    GovFailingModule,
 >;
 
 /// Router is a persisted state. You can query this.
@@ -50,7 +51,7 @@ pub struct App<
     Staking = StakeKeeper,
     Distr = DistributionKeeper,
     Ibc = IbcFailingModule,
-    Gov = FailingModule<GovMsg, Empty, Empty>,
+    Gov = GovFailingModule,
 > {
     pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov>,
     pub(crate) api: Api,
@@ -83,7 +84,7 @@ impl BasicApp {
                 StakeKeeper,
                 DistributionKeeper,
                 IbcFailingModule,
-                FailingModule<GovMsg, Empty, Empty>,
+                GovFailingModule,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -107,7 +108,7 @@ where
             StakeKeeper,
             DistributionKeeper,
             IbcFailingModule,
-            FailingModule<GovMsg, Empty, Empty>,
+            GovFailingModule,
         >,
         &dyn Api,
         &mut dyn Storage,

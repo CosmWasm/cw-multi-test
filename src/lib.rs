@@ -33,7 +33,7 @@ pub use crate::bank::{Bank, BankKeeper, BankSudo};
 pub use crate::checksums::ChecksumGenerator;
 pub use crate::contracts::{Contract, ContractWrapper};
 pub use crate::executor::{AppResponse, Executor};
-pub use crate::gov::Gov;
+pub use crate::gov::{Gov, GovAcceptingModule, GovFailingModule};
 pub use crate::ibc::{Ibc, IbcAcceptingModule, IbcFailingModule};
 pub use crate::module::{AcceptingModule, FailingModule, Module};
 pub use crate::staking::{

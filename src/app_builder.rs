@@ -1,11 +1,11 @@
 //! Implementation of the builder for [App].
 
 use crate::{
-    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, Ibc,
-    IbcFailingModule, Module, Router, StakeKeeper, Staking, Wasm, WasmKeeper,
+    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
+    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, GovMsg, Storage};
+use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, Storage};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -34,7 +34,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     StakeKeeper,
     DistributionKeeper,
     IbcFailingModule,
-    FailingModule<GovMsg, Empty, Empty>,
+    GovFailingModule,
 >;
 
 /// Utility to build [App] in stages.
@@ -62,7 +62,7 @@ impl Default
         StakeKeeper,
         DistributionKeeper,
         IbcFailingModule,
-        FailingModule<GovMsg, Empty, Empty>,
+        GovFailingModule,
     >
 {
     fn default() -> Self {
@@ -80,7 +80,7 @@ impl
         StakeKeeper,
         DistributionKeeper,
         IbcFailingModule,
-        FailingModule<GovMsg, Empty, Empty>,
+        GovFailingModule,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -94,8 +94,8 @@ impl
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: IbcFailingModule::new(),
+            gov: GovFailingModule::new(),
         }
     }
 }
@@ -110,7 +110,7 @@ impl<ExecC, QueryC>
         StakeKeeper,
         DistributionKeeper,
         IbcFailingModule,
-        FailingModule<GovMsg, Empty, Empty>,
+        GovFailingModule,
     >
 where
     ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
@@ -128,8 +128,8 @@ where
             custom: FailingModule::new(),
             staking: StakeKeeper::new(),
             distribution: DistributionKeeper::new(),
-            ibc: FailingModule::new(),
-            gov: FailingModule::new(),
+            ibc: IbcFailingModule::new(),
+            gov: GovFailingModule::new(),
         }
     }
 }
