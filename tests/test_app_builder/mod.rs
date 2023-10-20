@@ -10,9 +10,13 @@ mod test_with_api;
 mod test_with_bank;
 mod test_with_block;
 mod test_with_distribution;
+mod test_with_gov;
+mod test_with_ibc;
 mod test_with_staking;
 mod test_with_storage;
 mod test_with_wasm;
+
+const NO_MESSAGE: &str = "";
 
 struct MyKeeper<ExecT, QueryT, SudoT>(
     PhantomData<(ExecT, QueryT, SudoT)>,

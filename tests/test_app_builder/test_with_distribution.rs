@@ -1,4 +1,4 @@
-use crate::test_app_builder::MyKeeper;
+use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{Addr, DistributionMsg, Empty};
 use cw_multi_test::{AppBuilder, Distribution, Executor};
 
@@ -12,7 +12,7 @@ const EXECUTE_MSG: &str = "distribution execute called";
 fn building_app_with_custom_distribution_should_work() {
     // build custom distribution keeper
     // distribution keeper has no query or sudo messages
-    let distribution_keeper = MyDistributionKeeper::new(EXECUTE_MSG, "", "");
+    let distribution_keeper = MyDistributionKeeper::new(EXECUTE_MSG, NO_MESSAGE, NO_MESSAGE);
 
     // build the application with custom distribution keeper
     let app_builder = AppBuilder::default();
