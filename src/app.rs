@@ -6,7 +6,7 @@ use crate::gov::Gov;
 use crate::ibc::Ibc;
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{FailingStargate, Stargate, StargateMsg, StargateQuery};
+use crate::stargate::{Stargate, StargateFailingModule, StargateMsg, StargateQuery};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
@@ -37,7 +37,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    FailingStargate,
+    StargateFailingModule,
 >;
 
 /// Router is a persisted state. You can query this.
@@ -54,7 +54,7 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = IbcFailingModule,
     Gov = GovFailingModule,
-    Stargate = FailingStargate,
+    Stargate = StargateFailingModule,
 > {
     pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate>,
     pub(crate) api: Api,
@@ -88,7 +88,7 @@ impl BasicApp {
                 DistributionKeeper,
                 IbcFailingModule,
                 GovFailingModule,
-                FailingStargate,
+                StargateFailingModule,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -113,7 +113,7 @@ where
             DistributionKeeper,
             IbcFailingModule,
             GovFailingModule,
-            FailingStargate,
+            StargateFailingModule,
         >,
         &dyn Api,
         &mut dyn Storage,

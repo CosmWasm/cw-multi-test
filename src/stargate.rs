@@ -19,9 +19,9 @@ pub struct StargateQuery {
 
 pub trait Stargate: Module<ExecT = StargateMsg, QueryT = StargateQuery, SudoT = Empty> {}
 
-pub type FailingStargate = FailingModule<StargateMsg, StargateQuery, Empty>;
+pub type StargateFailingModule = FailingModule<StargateMsg, StargateQuery, Empty>;
 
-impl Stargate for FailingStargate {}
+impl Stargate for StargateFailingModule {}
 
 impl<T> From<StargateMsg> for CosmosMsg<T> {
     fn from(msg: StargateMsg) -> Self {

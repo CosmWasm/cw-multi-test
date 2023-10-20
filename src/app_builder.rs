@@ -1,6 +1,6 @@
 //! Implementation of the builder for [App].
 
-use crate::stargate::{FailingStargate, Stargate};
+use crate::stargate::{Stargate, StargateFailingModule};
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
     Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Wasm, WasmKeeper,
@@ -36,7 +36,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    FailingStargate,
+    StargateFailingModule,
 >;
 
 /// Utility to build [App] in stages.
@@ -66,7 +66,7 @@ impl Default
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        FailingStargate,
+        StargateFailingModule,
     >
 {
     fn default() -> Self {
@@ -85,7 +85,7 @@ impl
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        FailingStargate,
+        StargateFailingModule,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -101,7 +101,7 @@ impl
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: FailingStargate::new(),
+            stargate: StargateFailingModule::new(),
         }
     }
 }
@@ -117,7 +117,7 @@ impl<ExecC, QueryC>
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        FailingStargate,
+        StargateFailingModule,
     >
 where
     ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
@@ -137,7 +137,7 @@ where
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: FailingStargate::new(),
+            stargate: StargateFailingModule::new(),
         }
     }
 }
