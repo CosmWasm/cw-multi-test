@@ -35,7 +35,8 @@ mod test_contracts {
     pub mod counter {
         use super::*;
         use cosmwasm_std::{
-            to_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, WasmMsg,
+            to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+            WasmMsg,
         };
         use cw_multi_test::{Contract, ContractWrapper};
 
@@ -64,7 +65,7 @@ mod test_contracts {
 
         fn query(deps: Deps, _env: Env, msg: CounterQueryMsg) -> Result<Binary, StdError> {
             match msg {
-                CounterQueryMsg::Counter { .. } => Ok(to_binary(&CounterResponseMsg {
+                CounterQueryMsg::Counter { .. } => Ok(to_json_binary(&CounterResponseMsg {
                     value: COUNTER.may_load(deps.storage).unwrap().unwrap(),
                 })?),
             }

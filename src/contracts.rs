@@ -1,6 +1,6 @@
 use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
-    from_slice, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
+    from_json, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
     QuerierWrapper, Reply, Response, SubMsg,
 };
 use schemars::JsonSchema;
@@ -387,7 +387,7 @@ where
         info: MessageInfo,
         msg: Vec<u8>,
     ) -> AnyResult<Response<C>> {
-        let msg: T1 = from_slice(&msg)?;
+        let msg: T1 = from_json(msg)?;
         (self.execute_fn)(deps, env, info, msg).map_err(|err| anyhow!(err))
     }
 
@@ -398,18 +398,18 @@ where
         info: MessageInfo,
         msg: Vec<u8>,
     ) -> AnyResult<Response<C>> {
-        let msg: T2 = from_slice(&msg)?;
+        let msg: T2 = from_json(msg)?;
         (self.instantiate_fn)(deps, env, info, msg).map_err(|err| anyhow!(err))
     }
 
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
-        let msg: T3 = from_slice(&msg)?;
+        let msg: T3 = from_json(msg)?;
         (self.query_fn)(deps, env, msg).map_err(|err| anyhow!(err))
     }
 
     // this returns an error if the contract doesn't implement sudo
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
-        let msg = from_slice(&msg)?;
+        let msg = from_json(msg)?;
         match &self.sudo_fn {
             Some(sudo) => sudo(deps, env, msg).map_err(|err| anyhow!(err)),
             None => bail!("sudo not implemented for contract"),
@@ -426,7 +426,7 @@ where
 
     // this returns an error if the contract doesn't implement migrate
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
-        let msg = from_slice(&msg)?;
+        let msg = from_json(msg)?;
         match &self.migrate_fn {
             Some(migrate) => migrate(deps, env, msg).map_err(|err| anyhow!(err)),
             None => bail!("migrate not implemented for contract"),

@@ -8,7 +8,7 @@ use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, Readonly
 use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
-    to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
+    to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
     ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, HexBinary, MessageInfo, Order,
     Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg,
     SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
@@ -40,7 +40,7 @@ impl WasmSudo {
     pub fn new<T: Serialize>(contract_addr: &Addr, msg: &T) -> StdResult<WasmSudo> {
         Ok(WasmSudo {
             contract_addr: contract_addr.clone(),
-            msg: to_binary(msg)?,
+            msg: to_json_binary(msg)?,
         })
     }
 }
@@ -174,7 +174,7 @@ where
                 res.code_id = contract.code_id;
                 res.creator = contract.creator.to_string();
                 res.admin = contract.admin.map(|x| x.into());
-                to_binary(&res).map_err(Into::into)
+                to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_2")]
             WasmQuery::CodeInfo { code_id } => {
@@ -183,7 +183,7 @@ where
                 res.code_id = code_id;
                 res.creator = code_data.creator.to_string();
                 res.checksum = code_data.checksum.clone();
-                to_binary(&res).map_err(Into::into)
+                to_json_binary(&res).map_err(Into::into)
             }
             other => bail!(Error::UnsupportedWasmQuery(other)),
         }
@@ -1122,7 +1122,7 @@ mod test {
     use crate::{GovFailingModule, IbcFailingModule};
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
-        coin, from_slice, to_vec, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, HexBinary,
+        coin, from_json, to_json_vec, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, HexBinary,
         StdError,
     };
 
@@ -1284,7 +1284,7 @@ mod test {
             .query(&api, &wasm_storage, &querier, &block, query)
             .unwrap();
 
-        let actual: ContractInfoResponse = from_slice(&contract_info).unwrap();
+        let actual: ContractInfoResponse = from_json(contract_info).unwrap();
         let mut expected = ContractInfoResponse::default();
         expected.code_id = code_id;
         expected.creator = creator.into();
@@ -1305,7 +1305,7 @@ mod test {
         let code_info = wasm_keeper
             .query(&api, &wasm_storage, &querier, &block, query)
             .unwrap();
-        let actual: cosmwasm_std::CodeInfoResponse = from_slice(&code_info).unwrap();
+        let actual: cosmwasm_std::CodeInfoResponse = from_json(code_info).unwrap();
         assert_eq!(code_id, actual.code_id);
         assert_eq!("creator", actual.creator);
         assert!(!actual.checksum.is_empty());
@@ -1333,8 +1333,8 @@ mod test {
         let code_info_caller = wasm_keeper
             .query(&api, &wasm_storage, &querier, &block, query_caller)
             .unwrap();
-        let info_payout: cosmwasm_std::CodeInfoResponse = from_slice(&code_info_payout).unwrap();
-        let info_caller: cosmwasm_std::CodeInfoResponse = from_slice(&code_info_caller).unwrap();
+        let info_payout: cosmwasm_std::CodeInfoResponse = from_json(code_info_payout).unwrap();
+        let info_caller: cosmwasm_std::CodeInfoResponse = from_json(code_info_caller).unwrap();
         assert_eq!(code_id_payout, info_payout.code_id);
         assert_eq!(code_id_caller, info_caller.code_id);
         assert_ne!(info_caller.code_id, info_payout.code_id);
@@ -1393,7 +1393,7 @@ mod test {
                 &mock_router(),
                 &block,
                 mock_info("foobar", &[]),
-                to_vec(&msg).unwrap(),
+                to_json_vec(&msg).unwrap(),
             )
             .unwrap();
 
@@ -1403,11 +1403,11 @@ mod test {
         // check contents
         let (k, v) = &state[0];
         assert_eq!(k.as_slice(), b"count");
-        let count: u32 = from_slice(v).unwrap();
+        let count: u32 = from_json(v).unwrap();
         assert_eq!(count, 1);
         let (k, v) = &state[1];
         assert_eq!(k.as_slice(), b"payout");
-        let stored_pay: payout::InstantiateMessage = from_slice(v).unwrap();
+        let stored_pay: payout::InstantiateMessage = from_json(v).unwrap();
         assert_eq!(stored_pay.payout, payout);
     }
 
@@ -1438,7 +1438,7 @@ mod test {
 
         // init the contract
         let info = mock_info("foobar", &[]);
-        let init_msg = to_vec(&payout::InstantiateMessage {
+        let init_msg = to_json_vec(&payout::InstantiateMessage {
             payout: payout.clone(),
         })
         .unwrap();
@@ -1481,12 +1481,12 @@ mod test {
         cache.prepare().commit(&mut wasm_storage);
 
         // query the contract
-        let query = to_vec(&payout::QueryMsg::Payout {}).unwrap();
+        let query = to_json_vec(&payout::QueryMsg::Payout {}).unwrap();
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let data = wasm_keeper
             .query_smart(contract_addr, &api, &wasm_storage, &querier, &block, query)
             .unwrap();
-        let res: payout::InstantiateMessage = from_slice(&data).unwrap();
+        let res: payout::InstantiateMessage = from_json(data).unwrap();
         assert_eq!(res.payout, payout);
     }
 
@@ -1550,7 +1550,7 @@ mod test {
                 )
                 .unwrap();
             let info = mock_info("foobar", &[]);
-            let init_msg = to_vec(&payout::InstantiateMessage {
+            let init_msg = to_json_vec(&payout::InstantiateMessage {
                 payout: payout1.clone(),
             })
             .unwrap();
@@ -1591,7 +1591,7 @@ mod test {
                 )
                 .unwrap();
             let info = mock_info("foobar", &[]);
-            let init_msg = to_vec(&payout::InstantiateMessage {
+            let init_msg = to_json_vec(&payout::InstantiateMessage {
                 payout: payout2.clone(),
             })
             .unwrap();
@@ -1627,7 +1627,7 @@ mod test {
                     )
                     .unwrap();
                 let info = mock_info("johnny", &[]);
-                let init_msg = to_vec(&payout::InstantiateMessage {
+                let init_msg = to_json_vec(&payout::InstantiateMessage {
                     payout: payout3.clone(),
                 })
                 .unwrap();
@@ -1690,7 +1690,7 @@ mod test {
                 },
             )
             .unwrap();
-        let res: ContractInfoResponse = from_slice(&data).unwrap();
+        let res: ContractInfoResponse = from_json(data).unwrap();
         assert_eq!(res.admin, admin.as_ref().map(Addr::to_string));
     }
 
@@ -1722,7 +1722,7 @@ mod test {
 
         // init the contract
         let info = mock_info("admin", &[]);
-        let init_msg = to_vec(&Empty {}).unwrap();
+        let init_msg = to_json_vec(&Empty {}).unwrap();
         let res = wasm_keeper
             .call_instantiate(
                 contract_addr.clone(),

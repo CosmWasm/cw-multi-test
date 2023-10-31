@@ -1,7 +1,8 @@
 use crate::test_helpers::COUNT;
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+    to_json_binary, BankMsg, Binary, Coin, Deps, DepsMut, Empty, Env, MessageInfo, Response,
+    StdError,
 };
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -64,11 +65,11 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
         QueryMsg::Count {} => {
             let count = COUNT.load(deps.storage)?;
             let res = CountResponse { count };
-            to_binary(&res)
+            to_json_binary(&res)
         }
         QueryMsg::Payout {} => {
             let payout = PAYOUT.load(deps.storage)?;
-            to_binary(&payout)
+            to_json_binary(&payout)
         }
     }
 }
