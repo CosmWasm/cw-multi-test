@@ -1,8 +1,8 @@
 use crate::test_helpers::{payout, CustomMsg, COUNT};
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response, StdError,
-    SubMsg,
+    to_json_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
+    StdError, SubMsg,
 };
 use cw_storage_plus::Map;
 use serde::{Deserialize, Serialize};
@@ -46,11 +46,11 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
         QueryMsg::Count {} => {
             let count = COUNT.load(deps.storage)?;
             let res = payout::CountResponse { count };
-            to_binary(&res)
+            to_json_binary(&res)
         }
         QueryMsg::Reply { id } => {
             let reply = REFLECT.load(deps.storage, id)?;
-            to_binary(&reply)
+            to_json_binary(&reply)
         }
     }
 }

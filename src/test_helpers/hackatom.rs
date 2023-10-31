@@ -2,7 +2,7 @@
 
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+    to_json_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -55,7 +55,7 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
     match msg {
         QueryMsg::Beneficiary {} => {
             let res = HACKATOM.load(deps.storage)?;
-            to_binary(&res)
+            to_json_binary(&res)
         }
     }
 }

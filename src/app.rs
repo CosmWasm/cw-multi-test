@@ -11,9 +11,9 @@ use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
-    from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
-    Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage, SystemError,
-    SystemResult,
+    from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg,
+    CustomQuery, Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage,
+    SystemError, SystemResult,
 };
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
@@ -387,7 +387,7 @@ where
         contract_addr: U,
         msg: &T,
     ) -> AnyResult<AppResponse> {
-        let msg = to_binary(msg)?;
+        let msg = to_json_binary(msg)?;
 
         let Self {
             block,
@@ -685,7 +685,7 @@ where
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
-        let request: QueryRequest<QueryC> = match from_slice(bin_request) {
+        let request: QueryRequest<QueryC> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {

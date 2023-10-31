@@ -1,5 +1,5 @@
 use crate::{test_contracts, CounterQueryMsg, CounterResponseMsg};
-use cosmwasm_std::{to_binary, Addr, Empty, Order, Record, Storage, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Empty, Order, Record, Storage, WasmMsg};
 use cw_multi_test::{AppBuilder, Executor};
 use std::collections::BTreeMap;
 use std::iter;
@@ -35,7 +35,7 @@ impl Storage for MyStorage {
 fn building_app_with_custom_storage_should_work() {
     // prepare additional test input data
     let owner = Addr::unchecked("owner");
-    let msg = to_binary(&Empty {}).unwrap();
+    let msg = to_json_binary(&Empty {}).unwrap();
     let admin = None;
     let funds = vec![];
     let label = "my-counter";

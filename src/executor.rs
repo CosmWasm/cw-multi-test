@@ -1,6 +1,7 @@
 use crate::error::AnyResult;
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, Event, SubMsgResponse, WasmMsg,
+    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, Event, SubMsgResponse,
+    WasmMsg,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use schemars::JsonSchema;
@@ -79,7 +80,7 @@ where
         admin: Option<String>,
     ) -> AnyResult<Addr> {
         // instantiate contract
-        let init_msg = to_binary(init_msg)?;
+        let init_msg = to_json_binary(init_msg)?;
         let msg = WasmMsg::Instantiate {
             admin,
             code_id,
@@ -115,7 +116,7 @@ where
         let msg = WasmMsg::Instantiate2 {
             admin: admin.into(),
             code_id,
-            msg: to_binary(init_msg)?,
+            msg: to_json_binary(init_msg)?,
             funds: funds.to_vec(),
             label: label.into(),
             salt: salt.into(),
@@ -136,7 +137,7 @@ where
         msg: &T,
         send_funds: &[Coin],
     ) -> AnyResult<AppResponse> {
-        let binary_msg = to_binary(msg)?;
+        let binary_msg = to_json_binary(msg)?;
         let wrapped_msg = WasmMsg::Execute {
             contract_addr: contract_addr.into_string(),
             msg: binary_msg,
@@ -158,7 +159,7 @@ where
         msg: &T,
         new_code_id: u64,
     ) -> AnyResult<AppResponse> {
-        let msg = to_binary(msg)?;
+        let msg = to_json_binary(msg)?;
         let msg = WasmMsg::Migrate {
             contract_addr: contract_addr.into(),
             msg,

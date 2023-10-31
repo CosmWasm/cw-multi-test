@@ -4,8 +4,8 @@ use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};
 use cosmwasm_std::{
-    coin, ensure, ensure_eq, to_binary, Addr, AllDelegationsResponse, AllValidatorsResponse, Api,
-    BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
+    coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
+    Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
     DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier, StakingMsg,
     StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
@@ -746,7 +746,7 @@ impl Module for StakeKeeper {
     ) -> AnyResult<Binary> {
         let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
         match request {
-            StakingQuery::BondedDenom {} => Ok(to_binary(&BondedDenomResponse {
+            StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse {
                 denom: Self::get_staking_info(&staking_storage)?.bonded_denom,
             })?),
             StakingQuery::AllDelegations { delegator } => {
@@ -773,7 +773,9 @@ impl Module for StakeKeeper {
                     })
                     .collect();
 
-                Ok(to_binary(&AllDelegationsResponse { delegations: res? })?)
+                Ok(to_json_binary(&AllDelegationsResponse {
+                    delegations: res?,
+                })?)
             }
             StakingQuery::Delegation {
                 delegator,
@@ -824,13 +826,13 @@ impl Module for StakeKeeper {
                     }
                 };
 
-                let res = to_binary(&full_delegation_response)?;
+                let res = to_json_binary(&full_delegation_response)?;
                 Ok(res)
             }
-            StakingQuery::AllValidators {} => Ok(to_binary(&AllValidatorsResponse {
+            StakingQuery::AllValidators {} => Ok(to_json_binary(&AllValidatorsResponse {
                 validators: self.get_validators(&staking_storage)?,
             })?),
-            StakingQuery::Validator { address } => Ok(to_binary(&ValidatorResponse {
+            StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse {
                 validator: self.get_validator(&staking_storage, &Addr::unchecked(address))?,
             })?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
@@ -993,7 +995,7 @@ mod test {
         WasmKeeper,
     };
     use cosmwasm_std::{
-        from_slice,
+        from_json,
         testing::{mock_env, MockApi, MockStorage},
         BalanceResponse, BankQuery,
     };
@@ -1363,19 +1365,18 @@ mod test {
             )
             .unwrap();
 
-        let balance: BalanceResponse = from_slice(
-            &bank
-                .query(
-                    &api,
-                    &store,
-                    &router.querier(&api, &store, &block),
-                    &block,
-                    BankQuery::Balance {
-                        address: delegator1.to_string(),
-                        denom: "TOKEN".to_string(),
-                    },
-                )
-                .unwrap(),
+        let balance: BalanceResponse = from_json(
+            bank.query(
+                &api,
+                &store,
+                &router.querier(&api, &store, &block),
+                &block,
+                BankQuery::Balance {
+                    address: delegator1.to_string(),
+                    denom: "TOKEN".to_string(),
+                },
+            )
+            .unwrap(),
         )
         .unwrap();
         assert_eq!(
@@ -1413,7 +1414,7 @@ mod test {
 
     mod msg {
         use cosmwasm_std::{
-            coins, from_slice, Addr, BondedDenomResponse, Decimal, QuerierWrapper, StakingQuery,
+            coins, Addr, BondedDenomResponse, Decimal, QuerierWrapper, StakingQuery,
         };
         use serde::de::DeserializeOwned;
 
@@ -1457,7 +1458,7 @@ mod test {
         }
 
         fn query_stake<T: DeserializeOwned>(env: &TestEnv, msg: StakingQuery) -> AnyResult<T> {
-            Ok(from_slice(&env.router.staking.query(
+            Ok(from_json(env.router.staking.query(
                 &env.api,
                 &env.store,
                 &env.router.querier(&env.api, &env.store, &env.block),
@@ -1482,7 +1483,7 @@ mod test {
         }
 
         fn query_bank<T: DeserializeOwned>(env: &TestEnv, msg: BankQuery) -> AnyResult<T> {
-            Ok(from_slice(&env.router.bank.query(
+            Ok(from_json(env.router.bank.query(
                 &env.api,
                 &env.store,
                 &env.router.querier(&env.api, &env.store, &env.block),

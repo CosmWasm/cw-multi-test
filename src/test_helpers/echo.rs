@@ -5,8 +5,8 @@
 
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
-    StdError, SubMsg, SubMsgResponse, SubMsgResult,
+    to_json_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply,
+    Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use derivative::Derivative;
@@ -84,7 +84,7 @@ where
 }
 
 fn query(_deps: Deps, _env: Env, msg: Empty) -> Result<Binary, StdError> {
-    to_binary(&msg)
+    to_json_binary(&msg)
 }
 
 #[allow(clippy::unnecessary_wraps)]
