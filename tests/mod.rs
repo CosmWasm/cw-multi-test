@@ -5,6 +5,7 @@ use cosmwasm_std::{
     instantiate2_address, Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult,
     Storage, VerificationError,
 };
+pub extern crate abstract_cw_multi_test as cw_multi_test;
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::AddressGenerator;
 use cw_storage_plus::Item;
