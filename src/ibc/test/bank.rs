@@ -8,7 +8,6 @@ use crate::{
     ibc::{
         relayer::{create_channel, create_connection, relay_packets_in_tx, ChannelCreationResult},
         simple_ibc::IbcSimpleModule,
-        test::init,
     },
     AppBuilder, Executor,
 };
@@ -18,8 +17,6 @@ use crate::{
 
 #[test]
 fn simple_transfer() -> anyhow::Result<()> {
-    init();
-
     let funds = coin(100_000, "ufund");
     let fund_owner = "owner";
     let fund_recipient = "recipient";
@@ -116,8 +113,6 @@ fn simple_transfer() -> anyhow::Result<()> {
 
 #[test]
 fn transfer_and_back() -> anyhow::Result<()> {
-    init();
-
     let funds = coin(100_000, "ufund");
     let fund_owner = "owner";
     let fund_recipient = "recipient";

@@ -593,7 +593,7 @@ where
     E11: Display + Debug + Send + Sync + 'static,
     E12: Display + Debug + Send + Sync + 'static,
     C: Clone + Debug + PartialEq + JsonSchema,
-    Q: CustomQuery + DeserializeOwned + 'static,
+    Q: CustomQuery + DeserializeOwned,
 {
     fn execute(
         &self,

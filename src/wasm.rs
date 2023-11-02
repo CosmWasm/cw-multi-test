@@ -1,5 +1,4 @@
 use crate::addresses::{AddressGenerator, SimpleAddressGenerator};
-
 use crate::app::{CosmosRouter, RouterQuerier};
 use crate::checksums::{ChecksumGenerator, SimpleChecksumGenerator};
 use crate::contracts::Contract;
@@ -1130,7 +1129,6 @@ where
     ///
     /// You have to call init after this to set up the contract properly.
     /// These two steps are separated to have cleaner return values.
-    #[allow(clippy::too_many_arguments)]
     pub fn register_contract(
         &self,
         api: &dyn Api,

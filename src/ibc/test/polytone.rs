@@ -8,7 +8,6 @@ use crate::{
         api::MockApiBech32,
         relayer::{create_channel, create_connection, get_event_attr_value, relay_packets_in_tx},
         simple_ibc::IbcSimpleModule,
-        test::init,
     },
     AppBuilder, ContractWrapper, Executor, FailingModule, WasmKeeper,
 };
@@ -192,8 +191,6 @@ where
 
 #[test]
 fn polytone() -> anyhow::Result<()> {
-    init();
-
     let sender = Addr::unchecked("sender");
 
     // prepare wasm module with custom address generator

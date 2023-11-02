@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::ibc::types::{AppIbcBasicResponse, AppIbcReceiveResponse};
+use crate::error::{bail, AnyResult};
 use crate::AppResponse;
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
 use schemars::JsonSchema;
@@ -7,7 +7,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use crate::error::{bail, AnyResult};
+use crate::ibc::types::{AppIbcBasicResponse, AppIbcReceiveResponse};
 use cosmwasm_std::{
     IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcChannelOpenResponse,
     IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,

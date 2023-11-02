@@ -50,7 +50,6 @@ once_cell = "1.18.0"
 # we tighten versions that builds with `-Zminimal-versions` work.
 ecdsa = "0.16.8"
 
-env_logger = "0.10.0"
 polytone-note = {version="1.0.0" }
 polytone-voice = {version="1.0.0" }
 polytone-proxy = {version="1.0.0" }

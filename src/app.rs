@@ -3,8 +3,10 @@ use crate::contracts::Contract;
 use crate::error::{bail, AnyResult};
 use crate::executor::{AppResponse, Executor};
 use crate::gov::Gov;
-use crate::ibc::types::MockIbcQuery;
-use crate::ibc::{types::IbcResponse, Ibc, IbcModuleMsg, IbcPacketRelayingMsg as IbcSudo};
+use crate::ibc::Ibc;
+use crate::ibc::{
+    types::IbcResponse, types::MockIbcQuery, IbcModuleMsg, IbcPacketRelayingMsg as IbcSudo,
+};
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::transactions::transactional;
@@ -262,7 +264,7 @@ where
     ///
     /// ```
     /// use cosmwasm_std::Addr;
-    /// use abstract_cw_multi_test::App;
+    /// use cw_multi_test::App;
     ///
     /// // contract implementation
     /// mod echo {
@@ -270,7 +272,7 @@ where
     /// #  use std::todo;
     /// #  use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg};
     /// #  use serde::{Deserialize, Serialize};
-    /// #  use abstract_cw_multi_test::{Contract, ContractWrapper};
+    /// #  use cw_multi_test::{Contract, ContractWrapper};
     /// #
     /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {  
     /// #    todo!()
