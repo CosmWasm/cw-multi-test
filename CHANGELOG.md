@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.18.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.18.0) (2023-10-20)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.17.0...v0.18.0)
+
+**Closed issues:**
+
+- Function `register_contract` in wasm module should behave more like in real blockchain [\#66](https://github.com/CosmWasm/cw-multi-test/issues/66)
+
+**Merged pull requests:**
+
+- Improving address generation [\#83](https://github.com/CosmWasm/cw-multi-test/pull/83) ([DariuszDepta](https://github.com/DariuszDepta))
+- Custom checksum generator [\#87](https://github.com/CosmWasm/cw-multi-test/pull/87) ([DariuszDepta](https://github.com/DariuszDepta))
+- Checksum calculated once per contract [\#86](https://github.com/CosmWasm/cw-multi-test/pull/86) ([DariuszDepta](https://github.com/DariuszDepta))
+- Derive Clone for App [\#55](https://github.com/CosmWasm/cw-multi-test/pull/55) ([Eric Woolsey](https://github.com/ewoolsey))
+
 ## [v0.17.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.17.0) (2023-09-27)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.16.5...v0.17.0)
@@ -7,7 +22,7 @@
 **Closed issues:**
 
 - Refactoring: replace EmptyMsg with cosmwasm_std::Empty [\#61](https://github.com/CosmWasm/cw-multi-test/issues/61)
-- Better error loggin when a message execution fails [\#60](https://github.com/CosmWasm/cw-multi-test/issues/60)
+- Better error logging when a message execution fails [\#60](https://github.com/CosmWasm/cw-multi-test/issues/60)
 - Add function App::duplicate_code [\#58](https://github.com/CosmWasm/cw-multi-test/issues/58)
 - Include CodeData support [\#49](https://github.com/CosmWasm/cw-multi-test/issues/49)
 
