@@ -1,5 +1,5 @@
 use crate::test_app_builder::MyKeeper;
-use cosmwasm_std::{to_vec, Addr, Empty, QueryRequest};
+use cosmwasm_std::{to_json_vec, Addr, Empty, QueryRequest};
 use cw_multi_test::{AppBuilder, Executor, Stargate, StargateMsg, StargateQuery};
 
 type MyStargateKeeper = MyKeeper<StargateMsg, StargateQuery, Empty>;
@@ -44,7 +44,7 @@ fn building_app_with_custom_stargate_should_work() {
     // executing stargate query should return an error defined in custom keeper
     assert_eq!(
         app.wrap()
-            .raw_query(to_vec(&query).unwrap().as_slice())
+            .raw_query(to_json_vec(&query).unwrap().as_slice())
             .unwrap()
             .unwrap_err(),
         QUERY_MSG
