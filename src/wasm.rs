@@ -122,7 +122,7 @@ pub trait Wasm<ExecC, QueryC> {
 pub struct WasmKeeper<ExecC, QueryC> {
     /// Contract codes that stand for wasm code in real-life blockchain.
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
-    /// Code data with code base identifier and additional attributes.  
+    /// Code data with code base identifier and additional attributes.
     code_data: Vec<CodeData>,
     /// Contract's address generator.
     address_generator: Box<dyn AddressGenerator>,

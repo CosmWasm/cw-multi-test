@@ -271,7 +271,7 @@ where
     /// #  use serde::{Deserialize, Serialize};
     /// #  use cw_multi_test::{Contract, ContractWrapper};
     /// #
-    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {  
+    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {
     /// #    todo!()
     /// #  }
     /// #
@@ -282,7 +282,7 @@ where
     /// #  fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
     /// #    todo!()
     /// #  }
-    /// #  
+    /// #
     ///   pub fn contract() -> Box<dyn Contract<Empty>> {
     ///     // should return the contract
     /// #   Box::new(ContractWrapper::new(execute, instantiate, query))
