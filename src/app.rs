@@ -334,11 +334,19 @@ where
     GovT: Gov,
 {
     pub fn set_block(&mut self, block: BlockInfo) {
+        self.router
+            .staking
+            .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
+            .unwrap();
         self.block = block;
     }
 
     // this let's use use "next block" steps that add eg. one height and 5 seconds
     pub fn update_block<F: Fn(&mut BlockInfo)>(&mut self, action: F) {
+        self.router
+            .staking
+            .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
+            .unwrap();
         action(&mut self.block);
     }
 
