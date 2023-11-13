@@ -207,7 +207,7 @@ mod test_addresses {
             creator: &CanonicalAddr,
             salt: &[u8],
         ) -> AnyResult<Addr> {
-            //TODO the line below before merging
+            //TODO remove the line below before merging
             println!(
                 "\nSalt in MockAddressGenerator.predictable_contract_address:\n\n{:?}\n",
                 salt
