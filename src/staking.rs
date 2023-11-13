@@ -113,6 +113,7 @@ pub enum StakingSudo {
     /// Causes the unbonding queue to be processed.
     /// This needs to be triggered manually, since there is no good place to do this right now.
     /// In cosmos-sdk, this is done in `EndBlock`, but we don't have that here.
+    #[deprecated(note = "This is not needed anymore. Just call `update_block`")]
     ProcessQueue {},
 }
 
@@ -518,6 +519,73 @@ impl StakeKeeper {
         ensure!(percentage <= Decimal::one(), anyhow!("expected percentage"));
         Ok(())
     }
+
+    fn process_staking_queue<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+    ) -> AnyResult<AppResponse> {
+        let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+        let mut unbonding_queue = UNBONDING_QUEUE
+            .may_load(&staking_storage)?
+            .unwrap_or_default();
+        loop {
+            let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+            match unbonding_queue.front() {
+                // assuming the queue is sorted by payout_at
+                Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
+                    // remove from queue
+                    let Unbonding {
+                        delegator,
+                        validator,
+                        amount,
+                        ..
+                    } = unbonding_queue.pop_front().unwrap();
+
+                    // remove staking entry if it is empty
+                    let delegation = self
+                        .get_stake(&staking_storage, &delegator, &validator)?
+                        .map(|mut stake| {
+                            // add unbonding amounts
+                            stake.amount += unbonding_queue
+                                .iter()
+                                .filter(|u| u.delegator == delegator && u.validator == validator)
+                                .map(|u| u.amount)
+                                .sum::<Uint128>();
+                            stake
+                        });
+                    match delegation {
+                        Some(delegation) if delegation.amount.is_zero() => {
+                            STAKES.remove(&mut staking_storage, (&delegator, &validator));
+                        }
+                        None => STAKES.remove(&mut staking_storage, (&delegator, &validator)),
+                        _ => {}
+                    }
+
+                    let staking_info = Self::get_staking_info(&staking_storage)?;
+                    if !amount.is_zero() {
+                        router.execute(
+                            api,
+                            storage,
+                            block,
+                            self.module_addr.clone(),
+                            BankMsg::Send {
+                                to_address: delegator.into_string(),
+                                amount: vec![coin(amount.u128(), &staking_info.bonded_denom)],
+                            }
+                            .into(),
+                        )?;
+                    }
+                }
+                _ => break,
+            }
+        }
+        let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+        UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
+        Ok(AppResponse::default())
+    }
 }
 
 impl Staking for StakeKeeper {}
@@ -666,73 +734,8 @@ impl Module for StakeKeeper {
 
                 Ok(AppResponse::default())
             }
-            StakingSudo::ProcessQueue {} => {
-                let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
-                let mut unbonding_queue = UNBONDING_QUEUE
-                    .may_load(&staking_storage)?
-                    .unwrap_or_default();
-                loop {
-                    let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                    match unbonding_queue.front() {
-                        // assuming the queue is sorted by payout_at
-                        Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
-                            // remove from queue
-                            let Unbonding {
-                                delegator,
-                                validator,
-                                amount,
-                                ..
-                            } = unbonding_queue.pop_front().unwrap();
-
-                            // remove staking entry if it is empty
-                            let delegation = self
-                                .get_stake(&staking_storage, &delegator, &validator)?
-                                .map(|mut stake| {
-                                    // add unbonding amounts
-                                    stake.amount += unbonding_queue
-                                        .iter()
-                                        .filter(|u| {
-                                            u.delegator == delegator && u.validator == validator
-                                        })
-                                        .map(|u| u.amount)
-                                        .sum::<Uint128>();
-                                    stake
-                                });
-                            match delegation {
-                                Some(delegation) if delegation.amount.is_zero() => {
-                                    STAKES.remove(&mut staking_storage, (&delegator, &validator));
-                                }
-                                None => {
-                                    STAKES.remove(&mut staking_storage, (&delegator, &validator))
-                                }
-                                _ => {}
-                            }
-
-                            let staking_info = Self::get_staking_info(&staking_storage)?;
-                            if !amount.is_zero() {
-                                router.execute(
-                                    api,
-                                    storage,
-                                    block,
-                                    self.module_addr.clone(),
-                                    BankMsg::Send {
-                                        to_address: delegator.into_string(),
-                                        amount: vec![coin(
-                                            amount.u128(),
-                                            &staking_info.bonded_denom,
-                                        )],
-                                    }
-                                    .into(),
-                                )?;
-                            }
-                        }
-                        _ => break,
-                    }
-                }
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
-                Ok(AppResponse::default())
-            }
+            #[allow(deprecated)]
+            StakingSudo::ProcessQueue {} => self.process_staking_queue(api, storage, router, block),
         }
     }
 
