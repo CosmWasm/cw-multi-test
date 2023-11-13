@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
+mod test_app;
 mod test_app_builder;
 mod test_module;
 mod test_wasm;
@@ -206,6 +207,11 @@ mod test_addresses {
             creator: &CanonicalAddr,
             salt: &[u8],
         ) -> AnyResult<Addr> {
+            //TODO the line below before merging
+            println!(
+                "\nSalt in MockAddressGenerator.predictable_contract_address:\n\n{:?}\n",
+                salt
+            );
             let canonical_addr = instantiate2_address(checksum, creator, salt)?;
             Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
         }
