@@ -117,7 +117,15 @@ pub enum StakingSudo {
     ProcessQueue {},
 }
 
-pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = StakingSudo> {}
+pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = StakingSudo> {
+    fn process_queue<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+    ) -> AnyResult<AppResponse>;
+}
 
 pub trait Distribution: Module<ExecT = DistributionMsg, QueryT = Empty, SudoT = Empty> {}
 
@@ -520,7 +528,7 @@ impl StakeKeeper {
         Ok(())
     }
 
-    fn process_staking_queue<ExecC, QueryC: CustomQuery>(
+    fn process_queue<ExecC, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
@@ -588,7 +596,17 @@ impl StakeKeeper {
     }
 }
 
-impl Staking for StakeKeeper {}
+impl Staking for StakeKeeper {
+    fn process_queue<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+    ) -> AnyResult<AppResponse> {
+        self.process_queue(api, storage, router, block)
+    }
+}
 
 impl Module for StakeKeeper {
     type ExecT = StakingMsg;
@@ -735,7 +753,7 @@ impl Module for StakeKeeper {
                 Ok(AppResponse::default())
             }
             #[allow(deprecated)]
-            StakingSudo::ProcessQueue {} => self.process_staking_queue(api, storage, router, block),
+            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
         }
     }
 
@@ -1636,12 +1654,11 @@ mod test {
             test_env
                 .router
                 .staking
-                .sudo(
+                .process_queue(
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.router,
                     &test_env.block,
-                    StakingSudo::ProcessQueue {},
                 )
                 .unwrap();
 
@@ -2297,12 +2314,11 @@ mod test {
             test_env
                 .router
                 .staking
-                .sudo(
+                .process_queue(
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.router,
                     &test_env.block,
-                    StakingSudo::ProcessQueue {},
                 )
                 .unwrap();
 
@@ -2331,12 +2347,11 @@ mod test {
             test_env
                 .router
                 .staking
-                .sudo(
+                .process_queue(
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.router,
                     &test_env.block,
-                    StakingSudo::ProcessQueue {},
                 )
                 .unwrap();
 
@@ -2436,12 +2451,11 @@ mod test {
             test_env
                 .router
                 .staking
-                .sudo(
+                .process_queue(
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.router,
                     &test_env.block,
-                    StakingSudo::ProcessQueue {},
                 )
                 .unwrap();
             let balance = QuerierWrapper::<Empty>::new(&test_env.router.querier(
