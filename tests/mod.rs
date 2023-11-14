@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
+mod test_app;
 mod test_app_builder;
 mod test_module;
 mod test_wasm;
