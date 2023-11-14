@@ -207,11 +207,6 @@ mod test_addresses {
             creator: &CanonicalAddr,
             salt: &[u8],
         ) -> AnyResult<Addr> {
-            //TODO remove the line below before merging
-            println!(
-                "\nSalt in MockAddressGenerator.predictable_contract_address:\n\n{:?}\n",
-                salt
-            );
             let canonical_addr = instantiate2_address(checksum, creator, salt)?;
             Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
         }
