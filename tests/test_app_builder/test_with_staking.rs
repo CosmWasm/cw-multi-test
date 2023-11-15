@@ -1,10 +1,22 @@
 use crate::test_app_builder::MyKeeper;
-use cosmwasm_std::{Addr, Coin, StakingMsg, StakingQuery};
-use cw_multi_test::{AppBuilder, Executor, Staking, StakingSudo};
+use cosmwasm_std::{Addr, Api, BlockInfo, Coin, CustomQuery, StakingMsg, StakingQuery, Storage};
+use cw_multi_test::error::AnyResult;
+use cw_multi_test::{AppBuilder, AppResponse, CosmosRouter, Executor, Staking, StakingSudo};
 
 type MyStakeKeeper = MyKeeper<StakingMsg, StakingQuery, StakingSudo>;
 
-impl Staking for MyStakeKeeper {}
+impl Staking for MyStakeKeeper {
+    fn process_queue<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+    ) -> AnyResult<AppResponse> {
+        let _ = (api, storage, router, block);
+        todo!()
+    }
+}
 
 const EXECUTE_MSG: &str = "staking execute called";
 const QUERY_MSG: &str = "staking query called";
