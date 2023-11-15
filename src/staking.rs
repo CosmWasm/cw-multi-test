@@ -118,6 +118,10 @@ pub enum StakingSudo {
 }
 
 pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = StakingSudo> {
+    /// This is called from the end blocker (`update_block` / `set_block`) to process the
+    /// staking queue.
+    /// Needed because unbonding has a waiting time.
+    /// If you're implementing a dummy staking module, this can be a no-op.
     fn process_queue<ExecC, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
