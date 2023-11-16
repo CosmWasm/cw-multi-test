@@ -1,7 +1,6 @@
-use crate::test_addresses::MockAddressGenerator;
-use crate::test_api::MockApiBech32;
 use crate::test_contracts;
 use cosmwasm_std::{Addr, Empty};
+use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
 
 #[test]
