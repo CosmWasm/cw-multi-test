@@ -3,6 +3,7 @@
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
+mod test_addons;
 mod test_app;
 mod test_app_builder;
 mod test_module;

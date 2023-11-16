@@ -10,13 +10,19 @@ use sha2::{Digest, Sha256};
 pub struct MockApiBech32 {
     api: MockApi,
     prefix: &'static str,
+    variant: Variant,
 }
 
 impl MockApiBech32 {
     pub fn new(prefix: &'static str) -> Self {
+        Self::new_with_variant(prefix, Variant::Bech32)
+    }
+
+    pub(crate) fn new_with_variant(prefix: &'static str, variant: Variant) -> Self {
         Self {
             api: MockApi::default(),
             prefix,
+            variant,
         }
     }
 }
@@ -35,8 +41,8 @@ impl Api for MockApiBech32 {
     }
 
     fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
-        if let Ok((prefix, decoded, Variant::Bech32)) = decode(input) {
-            if prefix == self.prefix {
+        if let Ok((prefix, decoded, variant)) = decode(input) {
+            if prefix == self.prefix && variant == self.variant {
                 if let Ok(bytes) = Vec::<u8>::from_base32(&decoded) {
                     return Ok(bytes.into());
                 }
@@ -46,11 +52,7 @@ impl Api for MockApiBech32 {
     }
 
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        if let Ok(encoded) = encode(
-            self.prefix,
-            canonical.as_slice().to_base32(),
-            Variant::Bech32,
-        ) {
+        if let Ok(encoded) = encode(self.prefix, canonical.as_slice().to_base32(), self.variant) {
             Ok(Addr::unchecked(encoded))
         } else {
             Err(StdError::generic_err("Invalid canonical address"))
@@ -104,7 +106,7 @@ impl Api for MockApiBech32 {
 impl MockApiBech32 {
     pub fn addr_make(&self, input: &str) -> Addr {
         let digest = Sha256::digest(input).to_vec();
-        match encode(self.prefix, digest.to_base32(), Variant::Bech32) {
+        match encode(self.prefix, digest.to_base32(), self.variant) {
             Ok(address) => Addr::unchecked(address),
             Err(reason) => panic!("Generating address failed with reason: {}", reason),
         }
