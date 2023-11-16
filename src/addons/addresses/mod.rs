@@ -1,4 +1,3 @@
-//! aaa
-//!
+//! prepare docs
 
 pub mod mock;

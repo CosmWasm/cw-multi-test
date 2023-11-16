@@ -1,5 +1,4 @@
-//! # Addons
-//!
+//! prepare docs
 
 mod addresses;
 mod api;

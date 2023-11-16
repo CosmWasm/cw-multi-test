@@ -1,26 +1,31 @@
-//!
+//! prepare docs
 
 use crate::addons::MockApiBech32;
 use bech32::Variant;
 use cosmwasm_std::{Addr, Api, CanonicalAddr, RecoverPubkeyError, StdResult, VerificationError};
 
+/// prepare docs
 pub struct MockApiBech32m(MockApiBech32);
 
 impl MockApiBech32m {
+    /// prepare docs
     pub fn new(prefix: &'static str) -> Self {
         Self(MockApiBech32::new_with_variant(prefix, Variant::Bech32m))
     }
 }
 
 impl Api for MockApiBech32m {
+    /// prepare docs
     fn addr_validate(&self, input: &str) -> StdResult<Addr> {
         self.0.addr_validate(input)
     }
 
+    /// prepare docs
     fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
         self.0.addr_canonicalize(input)
     }
 
+    /// prepare docs
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
         self.0.addr_humanize(canonical)
     }
@@ -69,6 +74,7 @@ impl Api for MockApiBech32m {
 }
 
 impl MockApiBech32m {
+    /// prepare docs
     pub fn addr_make(&self, input: &str) -> Addr {
         self.0.addr_make(input)
     }

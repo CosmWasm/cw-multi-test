@@ -1,4 +1,4 @@
-//!
+//! prepare docs
 
 use bech32::{decode, encode, FromBase32, ToBase32, Variant};
 use cosmwasm_std::testing::MockApi;
@@ -7,6 +7,7 @@ use cosmwasm_std::{
 };
 use sha2::{Digest, Sha256};
 
+/// prepare docs
 pub struct MockApiBech32 {
     api: MockApi,
     prefix: &'static str,
@@ -14,10 +15,12 @@ pub struct MockApiBech32 {
 }
 
 impl MockApiBech32 {
+    /// prepare docs
     pub fn new(prefix: &'static str) -> Self {
         Self::new_with_variant(prefix, Variant::Bech32)
     }
 
+    /// prepare docs
     pub(crate) fn new_with_variant(prefix: &'static str, variant: Variant) -> Self {
         Self {
             api: MockApi::default(),
@@ -28,6 +31,7 @@ impl MockApiBech32 {
 }
 
 impl Api for MockApiBech32 {
+    /// prepare docs
     fn addr_validate(&self, input: &str) -> StdResult<Addr> {
         let canonical = self.addr_canonicalize(input)?;
         let normalized = self.addr_humanize(&canonical)?;
@@ -40,6 +44,7 @@ impl Api for MockApiBech32 {
         }
     }
 
+    /// prepare docs
     fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
         if let Ok((prefix, decoded, variant)) = decode(input) {
             if prefix == self.prefix && variant == self.variant {
@@ -51,6 +56,7 @@ impl Api for MockApiBech32 {
         Err(StdError::generic_err("Invalid input"))
     }
 
+    /// prepare docs
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
         if let Ok(encoded) = encode(self.prefix, canonical.as_slice().to_base32(), self.variant) {
             Ok(Addr::unchecked(encoded))
@@ -104,6 +110,7 @@ impl Api for MockApiBech32 {
 }
 
 impl MockApiBech32 {
+    /// prepare docs
     pub fn addr_make(&self, input: &str) -> Addr {
         let digest = Sha256::digest(input).to_vec();
         match encode(self.prefix, digest.to_base32(), self.variant) {

@@ -1,4 +1,4 @@
-//!
+//! prepare docs
 
 use crate::error::AnyResult;
 use crate::AddressGenerator;
@@ -6,6 +6,7 @@ use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, Storage};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
+/// prepare docs
 #[derive(Default)]
 pub struct MockAddressGenerator;
 
@@ -38,8 +39,9 @@ impl AddressGenerator for MockAddressGenerator {
     }
 }
 
-// Non-predictable contract address generator, see `BuildContractAddressClassic` implementation
-// in wasmd: https://github.com/CosmWasm/wasmd/blob/main/x/wasm/keeper/addresses.go#L35-L42
+/// prepare docs
+/// Non-predictable contract address generator, see `BuildContractAddressClassic` implementation
+/// in wasmd: https://github.com/CosmWasm/wasmd/blob/main/x/wasm/keeper/addresses.go#L35-L42
 fn instantiate_address(code_id: u64, instance_id: u64) -> CanonicalAddr {
     let mut key = Vec::<u8>::new();
     key.extend_from_slice(b"wasm\0");
