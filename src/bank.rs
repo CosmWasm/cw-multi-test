@@ -5,8 +5,10 @@ use crate::module::Module;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use cosmwasm_std::{
     coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
-    Binary, BlockInfo, Coin, Event, Order, Querier, StdResult, Storage, SupplyResponse, Uint128,
+    Binary, BlockInfo, Coin, Event, Querier, Storage,
 };
+#[cfg(feature = "cosmwasm_1_1")]
+use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint128};
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
 use itertools::Itertools;
@@ -64,6 +66,7 @@ impl BankKeeper {
         Ok(val.unwrap_or_default().into_vec())
     }
 
+    #[cfg(feature = "cosmwasm_1_1")]
     fn get_supply(&self, bank_storage: &dyn Storage, denom: String) -> AnyResult<Coin> {
         let supply: Uint128 = BALANCES
             .range(bank_storage, None, None, Order::Ascending)
@@ -220,6 +223,7 @@ impl Module for BankKeeper {
                 let res = BalanceResponse { amount };
                 Ok(to_json_binary(&res)?)
             }
+            #[cfg(feature = "cosmwasm_1_1")]
             BankQuery::Supply { denom } => {
                 let amount = self.get_supply(&bank_storage, denom)?;
                 let mut res = SupplyResponse::default();
@@ -319,13 +323,16 @@ mod test {
         let res: BalanceResponse = from_json(raw).unwrap();
         assert_eq!(res.amount, coin(0, "eth"));
 
-        // Query total supply of a denom
-        let req = BankQuery::Supply {
-            denom: "eth".into(),
-        };
-        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: SupplyResponse = from_json(raw).unwrap();
-        assert_eq!(res.amount, coin(100, "eth"));
+        #[cfg(feature = "cosmwasm_1_1")]
+        {
+            // Query total supply of a denom
+            let req = BankQuery::Supply {
+                denom: "eth".into(),
+            };
+            let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+            let res: SupplyResponse = from_json(raw).unwrap();
+            assert_eq!(res.amount, coin(100, "eth"));
+        }
 
         // Mint tokens for recipient account
         let msg = BankSudo::Mint {
@@ -342,13 +349,16 @@ mod test {
         let res: AllBalanceResponse = from_json(raw).unwrap();
         assert_eq!(res.amount, norm);
 
-        // Check that the total supply of a denom is updated
-        let req = BankQuery::Supply {
-            denom: "eth".into(),
-        };
-        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: SupplyResponse = from_json(raw).unwrap();
-        assert_eq!(res.amount, coin(200, "eth"));
+        #[cfg(feature = "cosmwasm_1_1")]
+        {
+            // Check that the total supply of a denom is updated
+            let req = BankQuery::Supply {
+                denom: "eth".into(),
+            };
+            let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+            let res: SupplyResponse = from_json(raw).unwrap();
+            assert_eq!(res.amount, coin(200, "eth"));
+        }
     }
 
     #[test]
