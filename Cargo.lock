@@ -256,7 +256,6 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "derivative",
- "ecdsa",
  "itertools 0.12.0",
  "once_cell",
  "prost",
