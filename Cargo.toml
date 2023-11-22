@@ -9,7 +9,7 @@ repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
 
 [features]
-default = ["iterator", "staking", "stargate"]
+default = ["iterator", "staking"]
 iterator = ["cosmwasm-std/iterator"]
 stargate = ["cosmwasm-std/stargate"]
 staking = ["cosmwasm-std/staking"]

@@ -1,3 +1,5 @@
+#![cfg(feature = "stargate")]
+
 use crate::test_helpers::{stargate, stargate::ExecMsg};
 use crate::{App, AppBuilder, Executor, IbcAcceptingModule};
 use cosmwasm_std::{Addr, Empty};

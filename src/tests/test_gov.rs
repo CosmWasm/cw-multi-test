@@ -1,3 +1,5 @@
+#![cfg(feature = "stargate")]
+
 use crate::error::AnyResult;
 use crate::test_helpers::{stargate, stargate::ExecMsg};
 use crate::{App, AppBuilder, AppResponse, CosmosRouter, Executor, Gov, Module};

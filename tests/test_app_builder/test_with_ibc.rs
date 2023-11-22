@@ -1,3 +1,5 @@
+#![cfg(feature = "stargate")]
+
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{Addr, Empty, IbcMsg, IbcQuery, QueryRequest};
 use cw_multi_test::{AppBuilder, Executor, Ibc};
