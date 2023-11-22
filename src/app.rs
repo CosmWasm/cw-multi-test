@@ -562,9 +562,7 @@ where
             CosmosMsg::Distribution(msg) => self
                 .distribution
                 .execute(api, storage, self, block, sender, msg),
-            #[cfg(feature = "stargate")]
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
-            #[cfg(feature = "stargate")]
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
             _ => bail!("Cannot execute {:?}", msg),
         }
@@ -586,7 +584,6 @@ where
             QueryRequest::Bank(req) => self.bank.query(api, storage, &querier, block, req),
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
-            #[cfg(feature = "stargate")]
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
             _ => unimplemented!(),
         }

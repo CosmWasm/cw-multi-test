@@ -1,11 +1,5 @@
 use crate::{AcceptingModule, FailingModule, Module};
-use cosmwasm_std::Empty;
-
-#[cfg(feature = "stargate")]
-type GovMsg = cosmwasm_std::GovMsg;
-
-#[cfg(not(feature = "stargate"))]
-type GovMsg = cosmwasm_std::Empty;
+use cosmwasm_std::{Empty, GovMsg};
 
 pub trait Gov: Module<ExecT = GovMsg, QueryT = Empty, SudoT = Empty> {}
 
