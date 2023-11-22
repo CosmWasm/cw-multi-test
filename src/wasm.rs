@@ -1548,7 +1548,7 @@ mod test {
 
         // Default error message from router when not found
         assert_eq!(
-            StdError::not_found("cw_multi_test::wasm::ContractData"),
+            StdError::not_found("abstract_cw_multi_test::wasm::ContractData"),
             err.downcast().unwrap()
         );
     }

@@ -16,7 +16,7 @@ use std::fmt::Debug;
 ///
 /// ```
 /// # use cosmwasm_std::Empty;
-/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module};
+/// # use  abstract_cw_multi_test::{BasicAppBuilder, FailingModule, Module};
 /// # type MyHandler = FailingModule<Empty, Empty, Empty>;
 /// # type MyExecC = Empty;
 /// # type MyQueryC = Empty;

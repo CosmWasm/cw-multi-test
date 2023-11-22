@@ -41,7 +41,7 @@ pub trait AddressGenerator {
     ///
     /// ```
     /// # use cosmwasm_std::testing::{MockApi, MockStorage};
-    /// # use cw_multi_test::{AddressGenerator, SimpleAddressGenerator};
+    /// # use  abstract_cw_multi_test::{AddressGenerator, SimpleAddressGenerator};
     /// # let api = MockApi::default();
     /// # let mut storage = MockStorage::default();
     /// struct MyAddressGenerator;
@@ -84,7 +84,7 @@ pub trait AddressGenerator {
     /// ```
     /// # use cosmwasm_std::Api;
     /// # use cosmwasm_std::testing::{MockApi, MockStorage};
-    /// # use cw_multi_test::{AddressGenerator, SimpleAddressGenerator};
+    /// # use abstract_cw_multi_test::{AddressGenerator, SimpleAddressGenerator};
     /// # let api = MockApi::default();
     /// # let mut storage = MockStorage::default();
     /// # let creator = api.addr_canonicalize("creator").unwrap();
