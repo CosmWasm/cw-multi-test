@@ -1,5 +1,3 @@
-//! prepare docs
-
 use crate::addons::MockApiBech32;
 use bech32::Variant;
 use cosmwasm_std::{Addr, Api, CanonicalAddr, RecoverPubkeyError, StdResult, VerificationError};
