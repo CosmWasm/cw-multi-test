@@ -256,14 +256,9 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "derivative",
-<<<<<<< HEAD
- "itertools 0.12.0",
-=======
- "ecdsa",
  "hex",
  "hex-literal",
- "itertools",
->>>>>>> d2ed622 (Added tests.)
+ "itertools 0.12.0",
  "once_cell",
  "prost",
  "schemars",
