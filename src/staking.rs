@@ -735,32 +735,6 @@ impl Module for StakeKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC: CustomQuery>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        msg: StakingSudo,
-    ) -> AnyResult<AppResponse> {
-        match msg {
-            StakingSudo::Slash {
-                validator,
-                percentage,
-            } => {
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                let validator = api.addr_validate(&validator)?;
-                self.validate_percentage(percentage)?;
-
-                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
-
-                Ok(AppResponse::default())
-            }
-            #[allow(deprecated)]
-            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
-        }
-    }
-
     fn query(
         &self,
         api: &dyn Api,
@@ -861,6 +835,32 @@ impl Module for StakeKeeper {
                 validator: self.get_validator(&staking_storage, &Addr::unchecked(address))?,
             })?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
+        }
+    }
+
+    fn sudo<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: StakingSudo,
+    ) -> AnyResult<AppResponse> {
+        match msg {
+            StakingSudo::Slash {
+                validator,
+                percentage,
+            } => {
+                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                let validator = api.addr_validate(&validator)?;
+                self.validate_percentage(percentage)?;
+
+                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
+
+                Ok(AppResponse::default())
+            }
+            #[allow(deprecated)]
+            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
         }
     }
 }
