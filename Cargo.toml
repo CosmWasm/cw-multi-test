@@ -20,7 +20,7 @@ cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
 anyhow = "1.0.75"
 cosmwasm-std = { version = "1.5.0", features = ["iterator", "staking", "stargate"] }
 cw-storage-plus = "1.2.0"
-cw-utils = "1.0.2"
+cw-utils = "1.0.3"
 derivative = "2.2.0"
 itertools = "0.12.0"
 prost = "0.12.3"
