@@ -1,5 +1,18 @@
 # Changelog
 
+## [v0.18.1](https://github.com/CosmWasm/cw-multi-test/tree/v0.18.1) (2023-11-23)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.18.0...v0.18.1)
+
+**Closed issues:**
+
+- Allowed to disable `cosmwasm_1_1` feature [\#99](https://github.com/CosmWasm/cw-multi-test/issues/99)
+
+**Merged pull requests:**
+
+- Removed `cosmwasm_1_1` from default features [\#100](https://github.com/CosmWasm/cw-multi-test/pull/100) ([DariuszDepta](https://github.com/DariuszDepta))
+- Removed always enabled features from defaults [\#101](https://github.com/CosmWasm/cw-multi-test/pull/101) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v0.18.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.18.0) (2023-10-20)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.17.0...v0.18.0)
