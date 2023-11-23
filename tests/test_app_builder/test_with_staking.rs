@@ -23,7 +23,6 @@ const QUERY_MSG: &str = "staking query called";
 const SUDO_MSG: &str = "staking sudo called";
 
 #[test]
-#[cfg(feature = "staking")]
 fn building_app_with_custom_staking_should_work() {
     // build custom stake keeper
     let stake_keeper = MyStakeKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
