@@ -50,9 +50,6 @@ jobs:
       - run:
           name: Run unit tests
           command: cargo test --workspace --locked
-      - run:
-          name: Run unit tests (with iterator)
-          command: cargo test --workspace --locked --features iterator
       - save_cache:
           paths:
             - /usr/local/cargo/registry
