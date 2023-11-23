@@ -6,6 +6,7 @@
 //!
 //! To understand the design of this module, please refer to `../DESIGN.md`
 
+pub mod addons;
 mod addresses;
 mod app;
 mod app_builder;

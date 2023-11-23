@@ -1,9 +1,8 @@
 #![cfg(feature = "cosmwasm_1_2")]
 
-use crate::test_addresses::MockAddressGenerator;
-use crate::test_api::MockApiBech32;
 use crate::test_contracts::counter;
 use cosmwasm_std::{instantiate2_address, to_json_binary, Api, Empty, WasmMsg};
+use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
 use cw_utils::parse_instantiate_response_data;
 
