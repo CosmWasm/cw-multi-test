@@ -1,5 +1,4 @@
 use cosmwasm_std::Storage;
-#[cfg(feature = "iterator")]
 use cosmwasm_std::{Order, Record};
 
 pub(crate) fn get_with_prefix(
@@ -30,7 +29,6 @@ fn concat(namespace: &[u8], key: &[u8]) -> Vec<u8> {
     k
 }
 
-#[cfg(feature = "iterator")]
 pub(crate) fn range_with_prefix<'a>(
     storage: &'a dyn Storage,
     namespace: &[u8],
@@ -58,7 +56,6 @@ pub(crate) fn range_with_prefix<'a>(
     Box::new(mapped)
 }
 
-#[cfg(feature = "iterator")]
 #[inline]
 fn trim(namespace: &[u8], key: &[u8]) -> Vec<u8> {
     key[namespace.len()..].to_vec()
@@ -67,7 +64,6 @@ fn trim(namespace: &[u8], key: &[u8]) -> Vec<u8> {
 /// Returns a new vec of same length and last byte incremented by one
 /// If last bytes are 255, we handle overflow up the chain.
 /// If all bytes are 255, this returns wrong data - but that is never possible as a namespace
-#[cfg(feature = "iterator")]
 fn namespace_upper_bound(input: &[u8]) -> Vec<u8> {
     let mut copy = input.to_vec();
     // zero out all trailing 255, increment first that is not such
@@ -104,7 +100,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "iterator")]
     fn range_works() {
         let mut storage = MockStorage::new();
         let prefix = to_length_prefixed(b"foo");
@@ -137,7 +132,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "iterator")]
     fn range_with_prefix_wrap_over() {
         let mut storage = MockStorage::new();
         // if we don't properly wrap over there will be issues here (note 255+1 is used to calculate end)
@@ -164,7 +158,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "iterator")]
     fn range_with_start_end_set() {
         let mut storage = MockStorage::new();
         // if we don't properly wrap over there will be issues here (note 255+1 is used to calculate end)
@@ -204,7 +197,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "iterator")]
     fn namespace_upper_bound_works() {
         assert_eq!(namespace_upper_bound(b"bob"), b"boc".to_vec());
         assert_eq!(namespace_upper_bound(b"fo\xfe"), b"fo\xff".to_vec());

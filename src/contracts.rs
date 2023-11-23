@@ -351,9 +351,7 @@ where
             CosmosMsg::Staking(staking) => CosmosMsg::Staking(staking),
             CosmosMsg::Distribution(distribution) => CosmosMsg::Distribution(distribution),
             CosmosMsg::Custom(_) => unreachable!(),
-            #[cfg(feature = "stargate")]
             CosmosMsg::Ibc(ibc) => CosmosMsg::Ibc(ibc),
-            #[cfg(feature = "stargate")]
             CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
             _ => panic!("unknown message variant {:?}", msg),
         },
