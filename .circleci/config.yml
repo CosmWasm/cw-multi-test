@@ -76,10 +76,10 @@ jobs:
             - cargocache-v2-multi-test:1.65.0-minimal-{{ checksum "Cargo.toml" }}
       - run:
           name: Build library for native target
-          command: cargo build -Zminimal-versions --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,iterator,staking,stargate
+          command: cargo build -Zminimal-versions --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4
       - run:
           name: Run unit tests
-          command: cargo test --workspace -Zminimal-versions --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,iterator,staking,stargate
+          command: cargo test --workspace -Zminimal-versions --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -106,7 +106,7 @@ jobs:
           command: cargo build --locked --all-features
       - run:
           name: Run unit tests
-          command: cargo test --workspace --locked --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4,iterator,staking,stargate
+          command: cargo test --workspace --locked --features backtrace,cosmwasm_1_1,cosmwasm_1_2,cosmwasm_1_3,cosmwasm_1_4
       - save_cache:
           paths:
             - /usr/local/cargo/registry
