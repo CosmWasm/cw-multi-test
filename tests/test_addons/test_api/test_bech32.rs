@@ -73,8 +73,8 @@ fn address_humanize_prefix_too_long() {
 }
 
 #[test]
-fn debug_should_work() {
-    assert_debug_works(&MockApiBech32::new("juno"));
+fn debug_should_not_panic() {
+    assert_debug_does_not_panic(&MockApiBech32::new("juno"));
 }
 
 #[test]

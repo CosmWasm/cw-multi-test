@@ -41,6 +41,6 @@ fn assert_ed25519_batch_verify_works(api: &dyn Api) {
         .unwrap());
 }
 
-fn assert_debug_works(api: &dyn Api) {
-    api.debug("debug works");
+fn assert_debug_does_not_panic(api: &dyn Api) {
+    api.debug("debug should not panic");
 }
