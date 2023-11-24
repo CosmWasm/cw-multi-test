@@ -15,7 +15,7 @@
 [apache-url]: LICENSE
 [notice-url]: NOTICE
 
-<span style="background-color:#154360;color:white;padding:8px;font-weight:bold;font-size:1.2em">Testing tools for multi-contract interactions<span>
+### Testing tools for multi-contract interactions
 
 ## Introduction 
 
