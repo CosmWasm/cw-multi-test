@@ -19,7 +19,7 @@ fn instantiate2_works() {
     let creator = app.api().addr_make("creator");
 
     // store the contract's code
-    let code_id = app.store_code_with_creator(creator, counter::contract());
+    let code_id = app.store_code(creator, counter::contract());
 
     // prepare the salt for predictable address
     let salt = "bad kids".as_bytes();
