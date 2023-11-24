@@ -1,5 +1,20 @@
 # CosmWasm MultiTest 
 
+[![cw-multi-test on crates.io][crates-badge]][crates-url]
+[![docs][docs-badge]][docs-url]
+[![codecov][codecov-badge]][codecov-url]
+[![license][apache-badge]][apache-url]
+
+[crates-badge]: https://img.shields.io/crates/v/cw-multi-test.svg
+[crates-url]: https://crates.io/crates/cw-multi-test
+[docs-badge]: https://docs.rs/cw-multi-test/badge.svg
+[docs-url]: https://docs.rs/cw-multi-test
+[codecov-badge]: https://codecov.io/gh/CosmWasm/cw-multi-test/branch/main/graph/badge.svg?token=IYY72ZVS3X
+[codecov-url]: https://codecov.io/gh/CosmWasm/cw-multi-test
+[apache-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
+[apache-url]: LICENSE
+[notice-url]: NOTICE
+
 **Testing tools for multi-contract interactions**
 
 ## Introduction 
@@ -42,3 +57,11 @@ the [CosmWasm](https://github.com/CosmWasm) ecosystem, especially for developers
 in building complex decentralized applications. As the framework evolves, it is poised to become
 an even more integral part of the [CosmWasm](https://github.com/CosmWasm) development toolkit.
 Users are encouraged to stay updated with its progress and contribute to its development. 
+
+## License
+
+Licensed under [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+(see [LICENSE][apache-url] and [NOTICE][notice-url]).
+
+Any contribution intentionally submitted for inclusion in this crate by you,
+shall be licensed as above, without any additional terms or conditions.
