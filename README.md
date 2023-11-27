@@ -26,13 +26,7 @@ complex contract interactions and bank operations. Currently, **CosmWasm MultiTe
 is in the _alpha_ stage, and primarily used internally for testing
 [cw-plus](https://github.com/CosmWasm/cw-plus) contracts. 
 
-## Warning and Current Status 
-
-### Alpha Stage Caution 
-
-**CosmWasm MultiTest** is currently in its alpha development phase, primarily intended for internal use.
-Developers are advised to use this framework cautiously, understanding that it is still undergoing 
-significant development and refinement. **The current version's API is not stable yet**.
+## Current Status 
 
 ### Internal Use and Refinement 
 
