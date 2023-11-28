@@ -22,6 +22,7 @@ mod ibc;
 mod module;
 mod prefixed_storage;
 mod staking;
+mod stargate;
 mod test_helpers;
 mod tests;
 mod transactions;
