@@ -54,7 +54,82 @@ pub trait Stargate {
 }
 
 /// Always failing stargate mock implementation.
-#[derive(Default)]
 pub struct StargateFailing;
 
-impl Stargate for StargateFailing {}
+impl Stargate for StargateFailing {
+    /// Rejects all stargate messages.
+    fn execute<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        sender: Addr,
+        type_url: String,
+        value: Binary,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        bail!(
+            "Unexpected stargate message: (type_ur = {}, value = {:?}) from {:?}",
+            type_url,
+            value,
+            sender
+        )
+    }
+
+    /// Rejects stargate queries.
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        path: String,
+        data: Binary,
+    ) -> AnyResult<Binary> {
+        bail!(
+            "Unexpected stargate query: path = {:?}, data = {:?}",
+            path,
+            data
+        )
+    }
+}
+
+/// Always accepting stargate mock implementation.
+pub struct StargateAccepting;
+
+impl Stargate for StargateAccepting {
+    /// Accepts all stargate messages.
+    fn execute<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _type_url: String,
+        _value: Binary,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        Ok(AppResponse::default())
+    }
+
+    /// Accepts all stargate queries.
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _path: String,
+        _data: Binary,
+    ) -> AnyResult<Binary> {
+        Ok(Binary::default())
+    }
+}
