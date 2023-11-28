@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.19.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.19.0) (2023-11-28)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.18.1...v0.19.0)
+
+**Closed issues:**
+
+- Removed `ProcessQueue` made-up sudo message for staking processing [\#53](https://github.com/CosmWasm/cw-multi-test/issues/53)
+
+**Merged pull requests:**
+
+- Deprecate sudo process queue [\#97](https://github.com/CosmWasm/cw-multi-test/pull/97) ([maurolacy](https://github.com/maurolacy))
+- Addons [\#98](https://github.com/CosmWasm/cw-multi-test/pull/98) ([DariuszDepta](https://github.com/DariuszDepta))
+- Update README.md [\#103](https://github.com/CosmWasm/cw-multi-test/pull/103) ([costa2400](https://github.com/costa2400))
+- Updates to README [\#104](https://github.com/CosmWasm/cw-multi-test/pull/104) ([costa2400](https://github.com/costa2400))
+
 ## [v0.18.1](https://github.com/CosmWasm/cw-multi-test/tree/v0.18.1) (2023-11-23)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.18.0...v0.18.1)

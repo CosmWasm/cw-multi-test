@@ -15,7 +15,7 @@
 [apache-url]: LICENSE
 [notice-url]: NOTICE
 
-> **Testing tools for multi-contract interactions**
+**Testing tools for multi-contract interactions**
 
 ## Introduction 
 
