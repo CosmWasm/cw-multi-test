@@ -23,16 +23,7 @@ pub trait Stargate {
     ) -> AnyResult<AppResponse>
     where
         ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static,
-    {
-        let _ = (api, storage, router, block);
-        bail!(
-            "Unexpected stargate message: (type_ur = {}, value = {:?}) from {:?}",
-            type_url,
-            value,
-            sender
-        )
-    }
+        QueryC: CustomQuery + DeserializeOwned + 'static;
 
     /// Processes stargate queries.
     fn query(
@@ -43,14 +34,7 @@ pub trait Stargate {
         block: &BlockInfo,
         path: String,
         data: Binary,
-    ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block);
-        bail!(
-            "Unexpected stargate query: path = {:?}, data = {:?}",
-            path,
-            data
-        )
-    }
+    ) -> AnyResult<Binary>;
 }
 
 /// Always failing stargate mock implementation.

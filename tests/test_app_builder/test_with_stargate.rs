@@ -4,7 +4,9 @@ use cosmwasm_std::{
     QueryRequest, Storage,
 };
 use cw_multi_test::error::AnyResult;
-use cw_multi_test::{AppBuilder, AppResponse, CosmosRouter, Executor, Stargate};
+use cw_multi_test::{
+    AppBuilder, AppResponse, CosmosRouter, Executor, Stargate, StargateAccepting, StargateFailing,
+};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
@@ -90,4 +92,54 @@ fn building_app_with_custom_stargate_should_work() {
             .unwrap_err(),
         QUERY_MSG
     );
+}
+
+#[test]
+fn building_app_with_accepting_stargate_should_work() {
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder
+        .with_stargate(StargateAccepting)
+        .build(|_, _, _| {});
+
+    app.execute(
+        Addr::unchecked("sender"),
+        CosmosMsg::Stargate {
+            type_url: "test".to_string(),
+            value: Default::default(),
+        },
+    )
+    .unwrap();
+
+    let _ = app
+        .wrap()
+        .query::<Empty>(&QueryRequest::Stargate {
+            path: "test".to_string(),
+            data: Default::default(),
+        })
+        .is_ok();
+}
+
+#[test]
+fn building_app_with_failing_stargate_should_work() {
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder
+        .with_stargate(StargateFailing)
+        .build(|_, _, _| {});
+
+    app.execute(
+        Addr::unchecked("sender"),
+        CosmosMsg::Stargate {
+            type_url: "test".to_string(),
+            value: Default::default(),
+        },
+    )
+    .unwrap_err();
+
+    let _ = app
+        .wrap()
+        .query::<Empty>(&QueryRequest::Stargate {
+            path: "test".to_string(),
+            data: Default::default(),
+        })
+        .unwrap_err();
 }
