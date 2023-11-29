@@ -28,7 +28,9 @@ mod transactions;
 mod wasm;
 
 pub use crate::addresses::{AddressGenerator, SimpleAddressGenerator};
-pub use crate::app::{custom_app, next_block, App, BasicApp, CosmosRouter, Router, SudoMsg};
+pub use crate::app::{
+    custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
+};
 pub use crate::app_builder::{AppBuilder, BasicAppBuilder};
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
 pub use crate::checksums::ChecksumGenerator;
