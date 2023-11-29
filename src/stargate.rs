@@ -23,7 +23,16 @@ pub trait Stargate {
     ) -> AnyResult<AppResponse>
     where
         ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static;
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        let _ = (api, storage, router, block);
+        bail!(
+            "Unexpected stargate message: (type_ur = {}, value = {:?}) from {:?}",
+            type_url,
+            value,
+            sender
+        )
+    }
 
     /// Processes stargate queries.
     fn query(
@@ -34,46 +43,8 @@ pub trait Stargate {
         block: &BlockInfo,
         path: String,
         data: Binary,
-    ) -> AnyResult<Binary>;
-}
-
-/// Always failing stargate mock implementation.
-pub struct StargateFailing;
-
-impl Stargate for StargateFailing {
-    /// Rejects all stargate messages.
-    fn execute<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        sender: Addr,
-        type_url: String,
-        value: Binary,
-    ) -> AnyResult<AppResponse>
-    where
-        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static,
-    {
-        bail!(
-            "Unexpected stargate message: (type_ur = {}, value = {:?}) from {:?}",
-            type_url,
-            value,
-            sender
-        )
-    }
-
-    /// Rejects stargate queries.
-    fn query(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        path: String,
-        data: Binary,
     ) -> AnyResult<Binary> {
+        let _ = (api, storage, querier, block);
         bail!(
             "Unexpected stargate query: path = {:?}, data = {:?}",
             path,
@@ -81,6 +52,11 @@ impl Stargate for StargateFailing {
         )
     }
 }
+
+/// Always failing stargate mock implementation.
+pub struct StargateFailing;
+
+impl Stargate for StargateFailing {}
 
 /// Always accepting stargate mock implementation.
 pub struct StargateAccepting;
