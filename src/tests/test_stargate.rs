@@ -13,14 +13,13 @@ fn default_stargate() {
     // instantiate contract
     let owner_addr = app.api().addr_make("owner");
     let contract_addr = app
-        .instantiate_contract(code, owner_addr, &Empty {}, &[], "tauri", None)
+        .instantiate_contract(code, owner_addr.clone(), &Empty {}, &[], "tauri", None)
         .unwrap();
 
     // execute empty message on the contract, this contract returns stargate message
     // which is rejected by default failing stargate keeper
-    let sender_addr = app.api().addr_make("sender");
     let err = app
-        .execute_contract(sender_addr, contract_addr, &Empty {}, &[])
+        .execute_contract(owner_addr, contract_addr, &Empty {}, &[])
         .unwrap_err();
 
     // source error message comes from failing stargate keeper
@@ -44,13 +43,12 @@ fn accepting_stargate() {
     // instantiate contract
     let owner_addr = app.api().addr_make("owner");
     let contract_addr = app
-        .instantiate_contract(code, owner_addr, &Empty {}, &[], "tauri", None)
+        .instantiate_contract(code, owner_addr.clone(), &Empty {}, &[], "tauri", None)
         .unwrap();
 
     // execute empty message on the contract, this contract returns stargate message
     // which is just silently processed by accepting stargate keeper
-    let sender_addr = app.api().addr_make("sender");
     assert!(app
-        .execute_contract(sender_addr, contract_addr, &Empty {}, &[])
+        .execute_contract(owner_addr, contract_addr, &Empty {}, &[])
         .is_ok());
 }
