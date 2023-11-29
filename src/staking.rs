@@ -117,6 +117,8 @@ pub enum StakingSudo {
     ProcessQueue {},
 }
 
+///Manages staking operations, vital for testing contracts in proof-of-stake (PoS) blockchain environments.
+///This trait simulates staking behaviors, including delegation, validator operations, and reward mechanisms.
 pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = StakingSudo> {
     /// This is called from the end blocker (`update_block` / `set_block`) to process the
     /// staking queue.
@@ -132,7 +134,7 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
 }
 
 pub trait Distribution: Module<ExecT = DistributionMsg, QueryT = Empty, SudoT = Empty> {}
-
+///
 pub struct StakeKeeper {
     module_addr: Addr,
 }
@@ -865,6 +867,9 @@ impl Module for StakeKeeper {
     }
 }
 
+/// This module likely manages the distribution of rewards and fees within the blockchain network. 
+/// It could handle tasks like distributing block rewards to validators and delegators,
+/// and managing community funding mechanisms.
 #[derive(Default)]
 pub struct DistributionKeeper {}
 

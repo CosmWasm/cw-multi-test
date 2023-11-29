@@ -19,13 +19,15 @@ use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
-
+/// Advances the blockchain environment to the next block in tests, enabling developers to simulate 
+/// time-dependent contract behaviors and block-related triggers efficiently.
 pub fn next_block(block: &mut BlockInfo) {
     block.time = block.time.plus_seconds(5);
     block.height += 1;
 }
 
-/// Type alias for default build `App` to make its storing simpler in typical scenario
+/// A type alias for the default-built App. It simplifies storage and handling in typical scenarios, 
+/// streamlining the use of the App structure in standard test setups.
 pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     BankKeeper,
     MockApi,
@@ -437,7 +439,8 @@ where
         })
     }
 }
-
+/// The Router plays a critical role in managing and directing 
+/// transactions within the Cosmos blockchain.
 #[derive(Clone)]
 pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov> {
     // this can remain crate-only as all special functions are wired up to app currently
@@ -506,7 +509,9 @@ impl From<StakingSudo> for SudoMsg {
         SudoMsg::Staking(staking)
     }
 }
-
+///This trait is designed for routing messages within the Cosmos ecosystem. 
+/// It's key to ensuring that transactions and contract calls are directed to the 
+/// correct destinations during testing, simulating real-world blockchain operations.
 pub trait CosmosRouter {
     type ExecC;
     type QueryC: CustomQuery;

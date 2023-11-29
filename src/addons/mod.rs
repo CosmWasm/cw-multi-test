@@ -1,6 +1,5 @@
 
 
-//! # MultiTest add-ons
 //! 
 //!  MultiTest addons provide additional tools for testing smart contracts, 
 //! simulating complex blockchain scenarios that developers might encounter. 

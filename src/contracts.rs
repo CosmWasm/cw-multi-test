@@ -9,7 +9,9 @@ use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
-/// Interface to call into a `Contract`.
+/// Serves as the primary interface for interacting with contracts.
+/// It includes methods for executing, querying, and managing contract states, 
+/// making it a fundamental trait for testing contract functionalities.
 pub trait Contract<T, Q = Empty>
 where
     T: Clone + Debug + PartialEq + JsonSchema,
@@ -52,8 +54,9 @@ type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<
 type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
 type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
 
-/// Wraps the exported functions from a contract and provides the normalized format
-/// Place T4 and E4 at the end, as we just want default placeholders for most contracts that don't have sudo
+/// Standardizes interactions with contracts in CosmWasm tests, especially useful for contracts that
+/// do not possess extensive privileges. It simplifies and unifies the way developers interact with 
+/// different contracts.
 pub struct ContractWrapper<
     T1,
     T2,
