@@ -1,4 +1,3 @@
-use crate::app::no_init;
 use crate::custom_handler::CachingCustomHandler;
 use crate::error::{bail, AnyResult};
 use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
@@ -7,8 +6,8 @@ use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
 use crate::AppBuilder;
 use crate::{
-    custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
-    Router, Staking, Wasm, WasmSudo,
+    custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
+    Module, Router, Staking, Wasm, WasmSudo,
 };
 use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
@@ -1705,7 +1704,7 @@ mod protobuf_wrapped_data {
     #[test]
     fn instantiate_with_data_works() {
         let owner = Addr::unchecked("owner");
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         // set up echo contract
         let code_id = app.store_code(echo::contract());
@@ -1734,7 +1733,7 @@ mod protobuf_wrapped_data {
     #[test]
     fn instantiate_with_reply_works() {
         let owner = Addr::unchecked("owner");
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         // set up echo contract
         let code_id = app.store_code(echo::contract());
@@ -1786,7 +1785,7 @@ mod protobuf_wrapped_data {
     #[test]
     fn execute_wrapped_properly() {
         let owner = Addr::unchecked("owner");
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         // set up reflect contract
         let code_id = app.store_code(echo::contract());

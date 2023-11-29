@@ -16,14 +16,14 @@ use std::fmt::Debug;
 ///
 /// ```
 /// # use cosmwasm_std::Empty;
-/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module};
+/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module, no_init};
 /// # type MyHandler = FailingModule<Empty, Empty, Empty>;
 /// # type MyExecC = Empty;
 /// # type MyQueryC = Empty;
 ///
 /// let mut app = BasicAppBuilder::<MyExecC, MyQueryC>::new_custom()
 ///                   .with_custom(MyHandler::default())
-///                   .build(|_, _, _| {});
+///                   .build(no_init);
 /// ```
 pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     BankKeeper,

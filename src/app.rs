@@ -59,11 +59,13 @@ pub struct App<
     pub(crate) block: BlockInfo,
 }
 
+/// No-op application initialization function.
 pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>(
-    _: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
-    _: &dyn Api,
-    _: &mut dyn Storage,
+    router: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+    api: &dyn Api,
+    storage: &mut dyn Storage,
 ) {
+    let _ = (router, api, storage);
 }
 
 impl Default for BasicApp {
