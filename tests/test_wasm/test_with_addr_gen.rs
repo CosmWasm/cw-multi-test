@@ -1,7 +1,7 @@
 use crate::test_contracts;
 use cosmwasm_std::{Addr, Empty};
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
-use cw_multi_test::{AppBuilder, Executor, WasmKeeper};
+use cw_multi_test::{no_init, AppBuilder, Executor, WasmKeeper};
 
 #[test]
 fn contract_address_should_work() {
@@ -13,7 +13,7 @@ fn contract_address_should_work() {
     let mut app = AppBuilder::default()
         .with_api(MockApiBech32::new("purple"))
         .with_wasm(wasm_keeper)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     // store contract's code
     let code_id = app.store_code_with_creator(
@@ -56,7 +56,7 @@ fn predictable_contract_address_should_work() {
     let mut app = AppBuilder::default()
         .with_api(MockApiBech32::new("juno"))
         .with_wasm(wasm_keeper)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     let creator = app.api().addr_make("creator");
 
@@ -114,7 +114,7 @@ fn creating_contract_with_the_same_predictable_address_should_fail() {
     let mut app = AppBuilder::default()
         .with_api(MockApiBech32::new("juno"))
         .with_wasm(wasm_keeper)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     let creator = app.api().addr_make("creator");
 

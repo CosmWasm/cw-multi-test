@@ -1,43 +1,37 @@
-use crate::test_helpers::{stargate, stargate::ExecMsg};
-use crate::{App, AppBuilder, Executor, IbcAcceptingModule};
-use cosmwasm_std::{Addr, Empty};
+use crate::test_helpers::ibc;
+use crate::{no_init, App, AppBuilder, Executor, IbcAcceptingModule};
+use cosmwasm_std::Empty;
 
 #[test]
 fn default_ibc() {
     let mut app = App::default();
-    let code = app.store_code(stargate::contract());
+
+    let creator_addr = app.api().addr_make("creator");
+    let code = app.store_code_with_creator(creator_addr, ibc::contract());
+
+    let owner_addr = app.api().addr_make("owner");
     let contract = app
-        .instantiate_contract(
-            code,
-            Addr::unchecked("owner"),
-            &Empty {},
-            &[],
-            "contract",
-            None,
-        )
+        .instantiate_contract(code, owner_addr.clone(), &Empty {}, &[], "ibanera", None)
         .unwrap();
 
-    app.execute_contract(Addr::unchecked("owner"), contract, &ExecMsg::Ibc {}, &[])
+    app.execute_contract(owner_addr, contract, &Empty {}, &[])
         .unwrap_err();
 }
 
 #[test]
-fn substituting_ibc() {
+fn accepting_ibc() {
     let mut app = AppBuilder::new()
         .with_ibc(IbcAcceptingModule::new())
-        .build(|_, _, _| ());
-    let code = app.store_code(stargate::contract());
+        .build(no_init);
+
+    let creator_addr = app.api().addr_make("creator");
+    let code = app.store_code_with_creator(creator_addr, ibc::contract());
+
+    let owner_addr = app.api().addr_make("owner");
     let contract = app
-        .instantiate_contract(
-            code,
-            Addr::unchecked("owner"),
-            &Empty {},
-            &[],
-            "contract",
-            None,
-        )
+        .instantiate_contract(code, owner_addr.clone(), &Empty {}, &[], "ibanera", None)
         .unwrap();
 
-    app.execute_contract(Addr::unchecked("owner"), contract, &ExecMsg::Ibc {}, &[])
+    app.execute_contract(owner_addr, contract, &Empty {}, &[])
         .unwrap();
 }
