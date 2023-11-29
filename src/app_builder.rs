@@ -1,9 +1,9 @@
 //! Implementation of the builder for [App].
 
-use crate::stargate::{Stargate, StargateFailing};
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
-    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Wasm, WasmKeeper,
+    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Stargate, StargateFailing, Wasm,
+    WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, Storage};
