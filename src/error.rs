@@ -1,7 +1,9 @@
 pub use anyhow::{anyhow, bail, Context as AnyContext, Error as AnyError, Result as AnyResult};
 use cosmwasm_std::{WasmMsg, WasmQuery};
 use thiserror::Error;
-
+///The error module deals with identifying and reporting problems that occur during testing. 
+///It's like a diagnostic tool that helps you understand what went wrong and where, so you can fix issues
+/// more effectively. 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
     #[error("Empty attribute key. Value: {value}")]

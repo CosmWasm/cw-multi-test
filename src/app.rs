@@ -38,9 +38,14 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     GovFailingModule,
 >;
 
-/// Router is a persisted state. You can query this.
-/// Execution generally happens on the RouterCache, which then can be atomically committed or rolled back.
-/// We offer .execute() as a wrapper around cache, execute, commit/rollback process.
+
+/// The App struct in cw-multi-test serves as a router with persisted state 
+/// for querying the blockchain's current status. It primarily uses RouterCache for 
+/// executing transactions, which allows for preliminary testing of operations before 
+/// they are permanently applied. The provided .execute() method streamlines this process, 
+/// handling the execution, review, and finalization (commit or rollback) of these operations, 
+/// simplifying state management and transaction testing in the CosmWasm framework.
+
 #[derive(Clone)]
 pub struct App<
     Bank = BankKeeper,

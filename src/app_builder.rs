@@ -1,4 +1,5 @@
 //! Implementation of the builder for [App].
+//!AppBuilder helps you set up your test blockchain environment step by step.
 
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
