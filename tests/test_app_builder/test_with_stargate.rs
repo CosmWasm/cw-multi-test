@@ -5,7 +5,8 @@ use cosmwasm_std::{
 };
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::{
-    AppBuilder, AppResponse, CosmosRouter, Executor, Stargate, StargateAccepting, StargateFailing,
+    no_init, AppBuilder, AppResponse, CosmosRouter, Executor, Stargate, StargateAccepting,
+    StargateFailing,
 };
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -60,9 +61,7 @@ fn building_app_with_custom_stargate_should_work() {
 
     // build the application with custom stargate keeper
     let app_builder = AppBuilder::default();
-    let mut app = app_builder
-        .with_stargate(stargate_keeper)
-        .build(|_, _, _| {});
+    let mut app = app_builder.with_stargate(stargate_keeper).build(no_init);
 
     // executing stargate message should return
     // an error defined in custom stargate keeper
@@ -97,9 +96,7 @@ fn building_app_with_custom_stargate_should_work() {
 #[test]
 fn building_app_with_accepting_stargate_should_work() {
     let app_builder = AppBuilder::default();
-    let mut app = app_builder
-        .with_stargate(StargateAccepting)
-        .build(|_, _, _| {});
+    let mut app = app_builder.with_stargate(StargateAccepting).build(no_init);
 
     app.execute(
         Addr::unchecked("sender"),
@@ -122,9 +119,7 @@ fn building_app_with_accepting_stargate_should_work() {
 #[test]
 fn building_app_with_failing_stargate_should_work() {
     let app_builder = AppBuilder::default();
-    let mut app = app_builder
-        .with_stargate(StargateFailing)
-        .build(|_, _, _| {});
+    let mut app = app_builder.with_stargate(StargateFailing).build(no_init);
 
     app.execute(
         Addr::unchecked("sender"),
