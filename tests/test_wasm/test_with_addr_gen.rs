@@ -1,7 +1,10 @@
-use crate::test_contracts;
-use cosmwasm_std::{Addr, Empty, Storage};
+use cosmwasm_std::{Addr, Api, Empty, Storage};
+
 use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
+use cw_multi_test::error::AnyResult;
 use cw_multi_test::{no_init, AddressGenerator, AppBuilder, Executor, WasmKeeper};
+
+use crate::test_contracts;
 
 #[test]
 fn contract_address_should_work() {
@@ -50,8 +53,21 @@ fn custom_address_generator_should_work() {
     struct CustomAddressGenerator;
 
     impl AddressGenerator for CustomAddressGenerator {
+        // deprecated from version 0.18.0
         fn next_address(&self, _storage: &mut dyn Storage) -> Addr {
-            Addr::unchecked("test_address")
+            // Panic in case of calling this function
+            unreachable!("this function should not be called")
+        }
+
+        // use this function instead of next_address
+        fn contract_address(
+            &self,
+            _api: &dyn Api,
+            _storage: &mut dyn Storage,
+            _code_id: u64,
+            _instance_id: u64,
+        ) -> AnyResult<Addr> {
+            Ok(Addr::unchecked("test_address"))
         }
     }
 
