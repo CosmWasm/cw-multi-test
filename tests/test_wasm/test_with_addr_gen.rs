@@ -51,13 +51,6 @@ fn custom_address_generator_should_work() {
     struct CustomAddressGenerator;
 
     impl AddressGenerator for CustomAddressGenerator {
-        // deprecated from version 0.18.0
-        fn next_address(&self, _storage: &mut dyn Storage) -> Addr {
-            // Panic in case of calling this function
-            unreachable!("this function should not be called")
-        }
-
-        // use this function instead of next_address
         fn contract_address(
             &self,
             _api: &dyn Api,
@@ -75,7 +68,8 @@ fn custom_address_generator_should_work() {
     let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
 
     // store contract's code
-    let code_id = app.store_code(test_contracts::counter::contract());
+    let creator_addr = app.api().addr_make("creator");
+    let code_id = app.store_code(creator_addr, test_contracts::counter::contract());
 
     let contract_addr = app
         .instantiate_contract(

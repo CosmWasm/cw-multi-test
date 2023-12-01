@@ -7,7 +7,7 @@ fn default_gov() {
     let mut app = App::default();
 
     let creator_addr = app.api().addr_make("creator");
-    let code = app.store_code_with_creator(creator_addr, gov::contract());
+    let code = app.store_code(creator_addr, gov::contract());
 
     let owner_addr = app.api().addr_make("owner");
     let contract = app
@@ -25,7 +25,7 @@ fn accepting_gov() {
         .build(no_init);
 
     let creator_addr = app.api().addr_make("creator");
-    let code = app.store_code_with_creator(creator_addr, gov::contract());
+    let code = app.store_code(creator_addr, gov::contract());
 
     let owner_addr = app.api().addr_make("owner");
     let contract = app
