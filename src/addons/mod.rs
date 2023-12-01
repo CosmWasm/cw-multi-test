@@ -1,6 +1,4 @@
 
-
-//! 
 //!  MultiTest addons provide additional tools for testing smart contracts, 
 //! simulating complex blockchain scenarios that developers might encounter. 
 //! They enhance the CosmWasm environment, enabling more advanced and nuanced testing.

@@ -39,7 +39,6 @@ impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC> {
 /// 
 /// Manages the internal state of a custom handler, recording execution and query messages. 
 /// Useful for tracking contract interactions during tests.
-/// 
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "", new = "true"))]
 pub struct CachingCustomHandler<ExecC, QueryC> {
