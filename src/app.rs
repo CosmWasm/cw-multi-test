@@ -274,7 +274,7 @@ where
     /// #  use serde::{Deserialize, Serialize};
     /// #  use  abstract_cw_multi_test::{Contract, ContractWrapper};
     /// #
-    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {  
+    /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {
     /// #    todo!()
     /// #  }
     /// #
@@ -285,7 +285,7 @@ where
     /// #  fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
     /// #    todo!()
     /// #  }
-    /// #  
+    /// #
     ///   pub fn contract() -> Box<dyn Contract<Empty>> {
     ///     // should return the contract
     /// #   Box::new(ContractWrapper::new(execute, instantiate, query))
@@ -337,11 +337,19 @@ where
     GovT: Gov,
 {
     pub fn set_block(&mut self, block: BlockInfo) {
+        self.router
+            .staking
+            .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
+            .unwrap();
         self.block = block;
     }
 
     // this let's use use "next block" steps that add eg. one height and 5 seconds
     pub fn update_block<F: Fn(&mut BlockInfo)>(&mut self, action: F) {
+        self.router
+            .staking
+            .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
+            .unwrap();
         action(&mut self.block);
     }
 
