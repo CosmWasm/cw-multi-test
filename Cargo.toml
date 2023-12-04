@@ -9,7 +9,7 @@ repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
 
 [features]
-default = []
+default = ["cosmwasm_1_3"]
 backtrace = ["anyhow/backtrace"]
 cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1", "cosmwasm-std/ibc3"]
 cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
@@ -48,3 +48,4 @@ polytone-note = { version = "1.0.0" }
 polytone-voice = { version = "1.0.0" }
 polytone-proxy = { version = "1.0.0" }
 polytone = { version = "1.0.0" }
+once_cell = "1.18.0"
