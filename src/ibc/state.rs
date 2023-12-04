@@ -28,7 +28,7 @@ pub fn ibc_connections<'a>() -> IndexedMap<'a, &'a str, Connection, ConnectionIn
             "connections_chain_id",
         ),
     };
-    IndexedMap::new("tokens", indexes)
+    IndexedMap::new("connections", indexes)
 }
 
 pub const PORT_INFO: Map<String, PortInfo> = Map::new("port_info");
