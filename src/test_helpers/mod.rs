@@ -12,6 +12,7 @@ pub mod hackatom;
 pub mod ibc;
 pub mod payout;
 pub mod reflect;
+pub mod stargate;
 
 /// Custom message for testing purposes.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
