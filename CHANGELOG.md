@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.20.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.20.0) (2023-12-06)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.19.0...v0.20.0)
+
+**Closed issues:**
+
+- Unit testing IBC with mock module fails: Cannot execute Stargate [\#37](https://github.com/CosmWasm/cw-multi-test/issues/37)
+- Allow mocking Stargate messages [\#40](https://github.com/CosmWasm/cw-multi-test/issues/40)
+- MultiTest does not support CosmosMsg::Stargate [\#88](https://github.com/CosmWasm/cw-multi-test/issues/88)
+
+**Merged pull requests:**
+
+- Stargate mock support [\#106](https://github.com/CosmWasm/cw-multi-test/pull/106) ([DariuszDepta](https://github.com/DariuszDepta))
+- Made `no_init` function public [\#107](https://github.com/CosmWasm/cw-multi-test/pull/107) ([DariuszDepta](https://github.com/DariuszDepta))
+- Separated test helper contracts for Gov and IBC [\#108](https://github.com/CosmWasm/cw-multi-test/pull/108) ([DariuszDepta](https://github.com/DariuszDepta))
+- Add test to check custom `AddressGenerator` implementation [\#110](https://github.com/CosmWasm/cw-multi-test/pull/110) ([epanchee](https://github.com/epanchee))
+
 ## [v0.19.0](https://github.com/CosmWasm/cw-multi-test/tree/v0.19.0) (2023-11-28)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.18.1...v0.19.0)
