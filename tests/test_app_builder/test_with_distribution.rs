@@ -8,7 +8,7 @@ impl Distribution for MyDistributionKeeper {}
 
 const EXECUTE_MSG: &str = "distribution execute called";
 /// Manages the distribution aspects within tests, simulating scenarios ]
-/// like reward distribution or token allocation. This trait is important 
+/// like reward distribution or token allocation. This trait is important
 /// for contracts that involve distributing assets in a certain way.
 #[test]
 fn building_app_with_custom_distribution_should_work() {

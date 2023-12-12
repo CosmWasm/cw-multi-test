@@ -7,10 +7,9 @@ use std::cell::{Ref, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
 
-
 /// This struct serves as the internal state of CachingCustomHandler, carefully managing
-/// internal mutability to keep it hidden from users. It's essential for maintaining a shared 
-/// internal state, especially since accessing mock internals becomes impossible once the 
+/// internal mutability to keep it hidden from users. It's essential for maintaining a shared
+/// internal state, especially since accessing mock internals becomes impossible once the
 /// mock is passed to the app and not exposed by the API.
 #[derive(Derivative)]
 #[derivative(Default(bound = "", new = "true"), Clone(bound = ""))]
@@ -36,8 +35,8 @@ impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC> {
 
 /// Custom handler storing all the messages it received, so they can be later verified.
 /// State is thin shared state, so it can be hold after mock is passed to App to read state.
-/// 
-/// Manages the internal state of a custom handler, recording execution and query messages. 
+///
+/// Manages the internal state of a custom handler, recording execution and query messages.
 /// Useful for tracking contract interactions during tests.
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "", new = "true"))]

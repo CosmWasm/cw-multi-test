@@ -867,7 +867,7 @@ impl Module for StakeKeeper {
     }
 }
 
-/// This module likely manages the distribution of rewards and fees within the blockchain network. 
+/// This module likely manages the distribution of rewards and fees within the blockchain network.
 /// It could handle tasks like distributing block rewards to validators and delegators,
 /// and managing community funding mechanisms.
 #[derive(Default)]

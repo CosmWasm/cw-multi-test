@@ -1,4 +1,3 @@
-
 //!AppBuilder helps you set up your test blockchain environment step by step [App].
 
 use crate::{
@@ -28,7 +27,7 @@ use std::fmt::Debug;
 ///                   .build(no_init);
 /// ```
 /// This type alias is crucial for constructing a custom app with specific modules.
-/// It provides a streamlined approach to building and configuring an App tailored to 
+/// It provides a streamlined approach to building and configuring an App tailored to
 /// particular testing needs or scenarios.
 pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     BankKeeper,

@@ -10,7 +10,7 @@ use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
 /// Serves as the primary interface for interacting with contracts.
-/// It includes methods for executing, querying, and managing contract states, 
+/// It includes methods for executing, querying, and managing contract states,
 /// making it a fundamental trait for testing contract functionalities.
 pub trait Contract<T, Q = Empty>
 where
@@ -55,7 +55,7 @@ type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Respon
 type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
 
 /// Standardizes interactions with contracts in CosmWasm tests, especially useful for contracts that
-/// do not possess extensive privileges. It simplifies and unifies the way developers interact with 
+/// do not possess extensive privileges. It simplifies and unifies the way developers interact with
 /// different contracts.
 pub struct ContractWrapper<
     T1,

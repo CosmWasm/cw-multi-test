@@ -25,15 +25,14 @@ pub enum BankSudo {
         amount: Vec<Coin>,
     },
 }
-/// This trait defines the interface for simulating banking operations in the test 
+/// This trait defines the interface for simulating banking operations in the test
 /// environment. It's essential for testing financial transactions, like transfers
 /// and balance checks, within your smart contracts.
 pub trait Bank: Module<ExecT = BankMsg, QueryT = BankQuery, SudoT = BankSudo> {}
 
-
 #[derive(Default)]
-/// Manages financial interactions in CosmWasm tests, such as simulating token transactions 
-/// and account balances. This is particularly important for contracts that deal with financial 
+/// Manages financial interactions in CosmWasm tests, such as simulating token transactions
+/// and account balances. This is particularly important for contracts that deal with financial
 /// operations in the Cosmos ecosystem.
 pub struct BankKeeper {}
 
@@ -143,7 +142,7 @@ fn coins_to_string(coins: &[Coin]) -> String {
         .map(|c| format!("{}{}", c.amount, c.denom))
         .join(",")
 }
-///This trait defines the interface for simulating banking operations within the testing environment, 
+///This trait defines the interface for simulating banking operations within the testing environment,
 /// essential for creating and testing scenarios involving financial transactions and account management in smart contracts.
 impl Bank for BankKeeper {}
 

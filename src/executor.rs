@@ -7,7 +7,7 @@ use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use schemars::JsonSchema;
 use serde::Serialize;
 use std::fmt::Debug;
-/// AppResponse likely refers to a standardized response format from the App. 
+/// AppResponse likely refers to a standardized response format from the App.
 /// It's mentioned in the cw-multi-test-main package, which suggests it's used for returning
 /// information about the processing of transactions or queries.
 #[derive(Default, Clone, Debug)]
@@ -60,8 +60,8 @@ impl From<SubMsgResponse> for AppResponse {
         }
     }
 }
-///Defines the interface for executing transactions and contract interactions. 
-/// It's a central component in the testing framework, managing the operational flow and 
+///Defines the interface for executing transactions and contract interactions.
+/// It's a central component in the testing framework, managing the operational flow and
 /// ensuring that contract calls are processed correctly.
 pub trait Executor<C>
 where
