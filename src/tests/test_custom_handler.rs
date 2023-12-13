@@ -4,6 +4,9 @@ use crate::{App, Module};
 use cosmwasm_std::testing::MockStorage;
 use cosmwasm_std::{Addr, Empty};
 
+///Custom handlers in CosmWasm allow developers to incorporate their own unique logic into tests.
+///This feature is valuable for tailoring the testing environment to reflect specific
+/// use-cases or behaviors in a CosmWasm-based smart contract.
 #[test]
 fn custom_handler_works() {
     // prepare needed tools

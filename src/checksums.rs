@@ -3,8 +3,10 @@
 use cosmwasm_std::{Addr, HexBinary};
 use sha2::{Digest, Sha256};
 
-/// An interface to call custom checksum generator for contract's code.
-///
+/// Provides a custom interface for generating checksums for contract code.
+/// This is crucial for ensuring code integrity and is particularly useful
+/// in environments where code verification is a key part of the contract
+/// deployment process.
 /// This trait defines a method to calculate checksum based on
 /// the creator's address and a unique code identifier.
 pub trait ChecksumGenerator {

@@ -20,13 +20,15 @@ use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
-
+/// Advances the blockchain environment to the next block in tests, enabling developers to simulate
+/// time-dependent contract behaviors and block-related triggers efficiently.
 pub fn next_block(block: &mut BlockInfo) {
     block.time = block.time.plus_seconds(5);
     block.height += 1;
 }
 
-/// Type alias for default build `App` to make its storing simpler in typical scenario
+/// A type alias for the default-built App. It simplifies storage and handling in typical scenarios,
+/// streamlining the use of the App structure in standard test setups.
 pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     BankKeeper,
     MockApi,
@@ -40,9 +42,13 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     StargateFailing,
 >;
 
-/// Router is a persisted state. You can query this.
-/// Execution generally happens on the RouterCache, which then can be atomically committed or rolled back.
-/// We offer .execute() as a wrapper around cache, execute, commit/rollback process.
+/// The App struct in cw-multi-test serves as a router with persisted state
+/// for querying the blockchain's current status. It primarily uses RouterCache for
+/// executing transactions, which allows for preliminary testing of operations before
+/// they are permanently applied. The provided .execute() method streamlines this process,
+/// handling the execution, review, and finalization (commit or rollback) of these operations,
+/// simplifying state management and transaction testing in the CosmWasm framework.
+
 #[derive(Clone)]
 pub struct App<
     Bank = BankKeeper,
@@ -445,7 +451,8 @@ where
         })
     }
 }
-
+/// The Router plays a critical role in managing and directing
+/// transactions within the Cosmos blockchain.
 #[derive(Clone)]
 pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate> {
     // this can remain crate-only as all special functions are wired up to app currently
@@ -516,7 +523,9 @@ impl From<StakingSudo> for SudoMsg {
         SudoMsg::Staking(staking)
     }
 }
-
+///This trait is designed for routing messages within the Cosmos ecosystem.
+/// It's key to ensuring that transactions and contract calls are directed to the
+/// correct destinations during testing, simulating real-world blockchain operations.
 pub trait CosmosRouter {
     type ExecC;
     type QueryC: CustomQuery;

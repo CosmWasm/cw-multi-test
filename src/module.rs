@@ -7,7 +7,9 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
-/// Module interface.
+/// Provides a generic interface for modules within the test environment.
+/// It's essential for creating modular and extensible testing setups, allowing developers
+/// to integrate custom functionalities or test specific scenarios.
 pub trait Module {
     type ExecT;
     type QueryT;
@@ -56,7 +58,9 @@ pub trait Module {
         ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
 }
-
+/// This could be a diagnostic or testing tool within the Cosmos ecosystem, designed to
+/// intentionally fail under certain conditions to test the robustness and error-handling
+/// capabilities of the network.
 pub struct FailingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
 
 impl<ExecT, QueryT, SudoT> FailingModule<ExecT, QueryT, SudoT> {
@@ -118,7 +122,8 @@ where
         bail!("Unexpected sudo msg {:?}", msg)
     }
 }
-
+///This struct might represent a module in the Cosmos ecosystem designed to accept certain types of transactions
+/// or interactions. The specific functionality would depend on the context of its use.
 pub struct AcceptingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
 
 impl<ExecT, QueryT, SudoT> AcceptingModule<ExecT, QueryT, SudoT> {

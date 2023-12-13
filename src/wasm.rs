@@ -71,7 +71,9 @@ struct CodeData {
     code_base_id: usize,
 }
 
-/// Interface to call into a `Wasm` module.
+/// Acts as the interface for interacting with WebAssembly (Wasm) modules.
+/// This trait is crucial for testing smart contracts written in languages that compile to WebAssembly,
+/// which is common in the Cosmos and CosmWasm ecosystems.
 pub trait Wasm<ExecC, QueryC> {
     /// Handles all `WasmQuery` requests.
     fn query(
