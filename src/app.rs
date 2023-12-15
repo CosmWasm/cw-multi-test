@@ -20,6 +20,7 @@ use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
 use std::marker::PhantomData;
+
 /// Advances the blockchain environment to the next block in tests, enabling developers to simulate
 /// time-dependent contract behaviors and block-related triggers efficiently.
 pub fn next_block(block: &mut BlockInfo) {
@@ -361,7 +362,7 @@ where
         self.block = block;
     }
 
-    /// Advances the current block to "next block" steps and adds one height and 5 seconds.
+    /// Updates the current block applying the specified closure, usually [next_block].
     pub fn update_block<F: Fn(&mut BlockInfo)>(&mut self, action: F) {
         self.router
             .staking
@@ -486,7 +487,7 @@ where
     GovT: Gov,
     StargateT: Stargate,
 {
-    /// Returns a querier populated with the instance if this [Router].
+    /// Returns a querier populated with the instance of this [Router].
     pub fn querier<'a>(
         &'a self,
         api: &'a dyn Api,

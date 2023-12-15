@@ -122,7 +122,7 @@ pub enum StakingSudo {
     ProcessQueue {},
 }
 
-/// A trait defining a behaviour of the stake keeper.
+/// A trait defining a behavior of the stake keeper.
 ///
 /// Manages staking operations, vital for testing contracts in proof-of-stake (PoS) blockchain environments.
 /// This trait simulates staking behaviors, including delegation, validator operations, and reward mechanisms.
@@ -139,7 +139,7 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
     ) -> AnyResult<AppResponse>;
 }
 
-/// A trait defining a behaviour of the distribution keeper.
+/// A trait defining a behavior of the distribution keeper.
 pub trait Distribution: Module<ExecT = DistributionMsg, QueryT = Empty, SudoT = Empty> {}
 
 /// A structure representing a default stake keeper.

@@ -64,7 +64,7 @@ impl From<SubMsgResponse> for AppResponse {
         }
     }
 }
-/// A trait defining a default behaviour of the message executor.
+/// A trait defining a default behavior of the message executor.
 ///
 /// Defines the interface for executing transactions and contract interactions.
 /// It is a central component in the testing framework, managing the operational
