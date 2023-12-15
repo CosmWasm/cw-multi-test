@@ -30,13 +30,17 @@ pub(crate) const NAMESPACE_WASM: &[u8] = b"wasm";
 /// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
 const CONTRACT_ATTR: &str = "_contract_address";
 
+/// A structure representing a privileged message.
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
+    /// Address of a contract the privileged action will be sent to.
     pub contract_addr: Addr,
+    /// Message representing privileged action to be executed by contract `sudo` entry-point.
     pub msg: Binary,
 }
 
 impl WasmSudo {
+    /// Creates a new privileged message for specified contract address and action to be executed.
     pub fn new<T: Serialize>(contract_addr: &Addr, msg: &T) -> StdResult<WasmSudo> {
         Ok(WasmSudo {
             contract_addr: contract_addr.clone(),
@@ -121,6 +125,7 @@ pub trait Wasm<ExecC, QueryC> {
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record>;
 }
 
+/// A structure representing a default wasm keeper.
 pub struct WasmKeeper<ExecC, QueryC> {
     /// Contract codes that stand for wasm code in real-life blockchain.
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
@@ -357,6 +362,19 @@ where
     ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
+    /// Creates a wasm keeper with default settings.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cw_multi_test::{AppBuilder, no_init, WasmKeeper};
+    ///
+    /// // create wasm keeper
+    /// let wasm_keeper = WasmKeeper::new();
+    ///
+    /// // create and use the application with newly created wasm keeper
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
@@ -365,6 +383,9 @@ where
         since = "0.18.0",
         note = "use `WasmKeeper::new().with_address_generator` instead; will be removed in version 1.0.0"
     )]
+    /// Populates an existing [WasmKeeper] with custom contract address generator.
+    ///
+    /// See description of [with_address_generator](Self::with_address_generator) function for details.
     pub fn new_with_custom_address_generator(
         address_generator: impl AddressGenerator + 'static,
     ) -> Self {
@@ -374,6 +395,36 @@ where
         }
     }
 
+    /// Populates an existing [WasmKeeper] with custom contract address generator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cosmwasm_std::{Addr, Api, Storage};
+    /// use cw_multi_test::{AddressGenerator, AppBuilder, no_init, WasmKeeper};
+    /// use cw_multi_test::error::AnyResult;
+    ///
+    /// struct CustomAddressGenerator;
+    ///
+    /// impl AddressGenerator for CustomAddressGenerator {
+    ///     fn contract_address(
+    ///         &self,
+    ///         api: &dyn Api,
+    ///         storage: &mut dyn Storage,
+    ///         code_id: u64,
+    ///         instance_id: u64,
+    ///     ) -> AnyResult<Addr> {
+    ///         // here implement your address generation logic
+    /// #       Ok(Addr::unchecked("test_address"))
+    ///     }
+    /// }
+    ///
+    /// // populate wasm with your custom address generator
+    /// let wasm_keeper = WasmKeeper::new().with_address_generator(CustomAddressGenerator);
+    ///
+    /// // create and use the application with customized wasm keeper
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    /// ```
     pub fn with_address_generator(
         mut self,
         address_generator: impl AddressGenerator + 'static,
@@ -382,6 +433,29 @@ where
         self
     }
 
+    /// Populates an existing [WasmKeeper] with custom checksum generator for the contract code.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cosmwasm_std::{Addr, HexBinary};
+    /// use cw_multi_test::{AppBuilder, ChecksumGenerator, no_init, WasmKeeper};
+    ///
+    /// struct MyChecksumGenerator;
+    ///
+    /// impl ChecksumGenerator for MyChecksumGenerator {
+    ///     fn checksum(&self, creator: &Addr, code_id: u64) -> HexBinary {
+    ///         // here implement your custom checksum generator
+    /// #       HexBinary::default()
+    ///     }
+    /// }
+    ///
+    /// // populate wasm keeper with your custom checksum generator
+    /// let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
+    ///
+    /// // create and use the application with customized wasm keeper
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    /// ```
     pub fn with_checksum_generator(
         mut self,
         checksum_generator: impl ChecksumGenerator + 'static,
@@ -390,6 +464,7 @@ where
         self
     }
 
+    /// Executes contract's `query` entry-point.
     pub fn query_smart(
         &self,
         address: Addr,
@@ -409,6 +484,7 @@ where
         )
     }
 
+    /// Returns the value stored under specified key in contracts storage.
     pub fn query_raw(&self, address: Addr, storage: &dyn Storage, key: &[u8]) -> Binary {
         let storage = self.contract_storage_readonly(storage, &address);
         let data = storage.get(key).unwrap_or_default();
@@ -882,6 +958,7 @@ where
         Ok(addr)
     }
 
+    /// Executes contract's `execute` entry-point.
     pub fn call_execute(
         &self,
         api: &dyn Api,
@@ -902,6 +979,7 @@ where
         )?)
     }
 
+    /// Executes contract's `instantiate` entry-point.
     pub fn call_instantiate(
         &self,
         address: Addr,
@@ -922,6 +1000,7 @@ where
         )?)
     }
 
+    /// Executes contract's `reply` entry-point.
     pub fn call_reply(
         &self,
         address: Addr,
@@ -941,6 +1020,7 @@ where
         )?)
     }
 
+    /// Executes contract's `sudo` entry-point.
     pub fn call_sudo(
         &self,
         address: Addr,
@@ -960,6 +1040,7 @@ where
         )?)
     }
 
+    /// Executes contract's `migrate` entry-point.
     pub fn call_migrate(
         &self,
         address: Addr,
@@ -1048,6 +1129,7 @@ where
         })
     }
 
+    /// Saves contract data in a storage under specified address.
     pub fn save_contract(
         &self,
         storage: &mut dyn Storage,

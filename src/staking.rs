@@ -14,7 +14,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, VecDeque};
 
-// Contains some general staking parameters
+/// A structure containing some general staking parameters.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct StakingInfo {
     /// The denominator of the staking token
@@ -26,6 +26,7 @@ pub struct StakingInfo {
 }
 
 impl Default for StakingInfo {
+    /// Creates staking info with default settings.
     fn default() -> Self {
         StakingInfo {
             bonded_denom: "TOKEN".to_string(),
@@ -101,13 +102,17 @@ pub const NAMESPACE_STAKING: &[u8] = b"staking";
 // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/types/keys.go#L16
 pub const NAMESPACE_DISTRIBUTION: &[u8] = b"distribution";
 
-// We need to expand on this, but we will need this to properly test out staking
-#[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
+/// Staking privileged action definition.
+///
+/// We need to expand on this, but we will need this to properly test out staking
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum StakingSudo {
     /// Slashes the given percentage of the validator's stake.
     /// For now, you cannot slash retrospectively in tests.
     Slash {
+        /// Validator's address.
         validator: String,
+        /// Percentage of the validator's stake.
         percentage: Decimal,
     },
     /// Causes the unbonding queue to be processed.
@@ -117,12 +122,13 @@ pub enum StakingSudo {
     ProcessQueue {},
 }
 
-///Manages staking operations, vital for testing contracts in proof-of-stake (PoS) blockchain environments.
-///This trait simulates staking behaviors, including delegation, validator operations, and reward mechanisms.
+/// A trait defining a behavior of the stake keeper.
+///
+/// Manages staking operations, vital for testing contracts in proof-of-stake (PoS) blockchain environments.
+/// This trait simulates staking behaviors, including delegation, validator operations, and reward mechanisms.
 pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = StakingSudo> {
     /// This is called from the end blocker (`update_block` / `set_block`) to process the
-    /// staking queue.
-    /// Needed because unbonding has a waiting time.
+    /// staking queue. Needed because unbonding has a waiting time.
     /// If you're implementing a dummy staking module, this can be a no-op.
     fn process_queue<ExecC, QueryC: CustomQuery>(
         &self,
@@ -133,19 +139,24 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
     ) -> AnyResult<AppResponse>;
 }
 
+/// A trait defining a behavior of the distribution keeper.
 pub trait Distribution: Module<ExecT = DistributionMsg, QueryT = Empty, SudoT = Empty> {}
-///
+
+/// A structure representing a default stake keeper.
 pub struct StakeKeeper {
+    /// Module address of a default stake keeper.
     module_addr: Addr,
 }
 
 impl Default for StakeKeeper {
+    /// Creates a new stake keeper with default settings.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl StakeKeeper {
+    /// Creates a new stake keeper with default module address.
     pub fn new() -> Self {
         StakeKeeper {
             // The address of the staking module. This holds all staked tokens.
@@ -156,7 +167,6 @@ impl StakeKeeper {
     /// Provides some general parameters to the stake keeper
     pub fn setup(&self, storage: &mut dyn Storage, staking_info: StakingInfo) -> AnyResult<()> {
         let mut storage = prefixed(storage, NAMESPACE_STAKING);
-
         STAKING_INFO.save(&mut storage, &staking_info)?;
         Ok(())
     }
@@ -867,6 +877,8 @@ impl Module for StakeKeeper {
     }
 }
 
+/// A structure representing a default distribution keeper.
+///
 /// This module likely manages the distribution of rewards and fees within the blockchain network.
 /// It could handle tasks like distributing block rewards to validators and delegators,
 /// and managing community funding mechanisms.
@@ -874,8 +886,9 @@ impl Module for StakeKeeper {
 pub struct DistributionKeeper {}
 
 impl DistributionKeeper {
+    /// Creates a new distribution keeper with default settings.
     pub fn new() -> Self {
-        DistributionKeeper {}
+        Self::default()
     }
 
     /// Removes all rewards from the given (delegator, validator) pair and returns the amount
@@ -902,6 +915,7 @@ impl DistributionKeeper {
         Ok(rewards)
     }
 
+    /// Returns the withdraw address for specified delegator.
     pub fn get_withdraw_address(storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
         Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator)? {
             Some(a) => a,
@@ -909,7 +923,9 @@ impl DistributionKeeper {
         })
     }
 
-    // https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
+    /// Sets (changes) the [withdraw address] of the delegator.
+    ///
+    /// [withdraw address]: https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
     pub fn set_withdraw_address(
         storage: &mut dyn Storage,
         delegator: &Addr,

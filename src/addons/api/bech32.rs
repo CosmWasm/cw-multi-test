@@ -5,10 +5,10 @@ use cosmwasm_std::{
 };
 use sha2::{Digest, Sha256};
 
-/// Implementation of the `Api` trait that uses [`Bech32`] format
+/// Implementation of the [Api](cosmwasm_std::Api) trait that uses [Bech32] format
 /// for humanizing canonical addresses.
 ///
-/// [`Bech32`]:https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+/// [Bech32]: https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
 pub struct MockApiBech32 {
     api: MockApi,
     prefix: &'static str,

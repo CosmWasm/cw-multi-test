@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 /// Stargate interface.
 ///
-/// This trait provides the default behaviour for all functions
+/// This trait provides the default behavior for all functions
 /// that is equal to [StargateFailing] implementation.
 pub trait Stargate {
     /// Processes stargate messages.
