@@ -42,13 +42,9 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     StargateFailing,
 >;
 
-/// The App struct in cw-multi-test serves as a router with persisted state
-/// for querying the blockchain's current status. It primarily uses RouterCache for
-/// executing transactions, which allows for preliminary testing of operations before
-/// they are permanently applied. The provided .execute() method streamlines this process,
-/// handling the execution, review, and finalization (commit or rollback) of these operations,
-/// simplifying state management and transaction testing in the CosmWasm framework.
-
+/// # Blockchain application simulator
+///
+/// This structure is the main component of the real-life blockchain simulator.
 #[derive(Clone)]
 pub struct App<
     Bank = BankKeeper,
@@ -198,7 +194,7 @@ where
         &self.router
     }
 
-    /// Returns a shared reference to application's api.
+    /// Returns a shared reference to application's API.
     pub fn api(&self) -> &ApiT {
         &self.api
     }
@@ -213,6 +209,7 @@ where
         &mut self.storage
     }
 
+    /// Initializes modules.
     pub fn init_modules<F, T>(&mut self, init_fn: F) -> T
     where
         F: FnOnce(
@@ -224,6 +221,7 @@ where
         init_fn(&mut self.router, &self.api, &mut self.storage)
     }
 
+    /// Queries a module.
     pub fn read_module<F, T>(&self, query_fn: F) -> T
     where
         F: FnOnce(
@@ -354,6 +352,7 @@ where
     GovT: Gov,
     StargateT: Stargate,
 {
+    /// Sets the initial block properties.
     pub fn set_block(&mut self, block: BlockInfo) {
         self.router
             .staking
@@ -362,7 +361,7 @@ where
         self.block = block;
     }
 
-    // this let's use use "next block" steps that add eg. one height and 5 seconds
+    /// Advances the current block to "next block" steps and adds one height and 5 seconds.
     pub fn update_block<F: Fn(&mut BlockInfo)>(&mut self, action: F) {
         self.router
             .staking
@@ -455,16 +454,21 @@ where
 /// transactions within the Cosmos blockchain.
 #[derive(Clone)]
 pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate> {
-    // this can remain crate-only as all special functions are wired up to app currently
-    // we need to figure out another format for wasm, as some like sudo need to be called after init
+    /// Wasm module instance to be used in this [Router].
     pub(crate) wasm: Wasm,
-    // these must be pub so we can initialize them (super user) on build
+    /// Bank module instance to be used in this [Router].
     pub bank: Bank,
+    /// Custom module instance to be used in this [Router].
     pub custom: Custom,
+    /// Staking module instance to be used in this [Router].
     pub staking: Staking,
+    /// Distribution module instance to be used in this [Router].
     pub distribution: Distr,
+    /// IBC module instance to be used in this [Router].
     pub ibc: Ibc,
+    /// Governance module instance to be used in this [Router].
     pub gov: Gov,
+    /// Stargate module instance to be used in this [Router].
     pub stargate: Stargate,
 }
 
@@ -482,6 +486,7 @@ where
     GovT: Gov,
     StargateT: Stargate,
 {
+    /// Returns a querier populated with the instance if this [Router].
     pub fn querier<'a>(
         &'a self,
         api: &'a dyn Api,
@@ -500,9 +505,13 @@ where
 /// We use it to allow calling into modules from another module in sudo mode.
 /// Things like gov proposals belong here.
 pub enum SudoMsg {
+    /// Bank privileged actions.
     Bank(BankSudo),
+    /// Custom privileged actions.
     Custom(Empty),
+    /// Staking privileged actions.
     Staking(StakingSudo),
+    /// Wasm privileged actions.
     Wasm(WasmSudo),
 }
 
@@ -523,13 +532,18 @@ impl From<StakingSudo> for SudoMsg {
         SudoMsg::Staking(staking)
     }
 }
-///This trait is designed for routing messages within the Cosmos ecosystem.
-/// It's key to ensuring that transactions and contract calls are directed to the
+/// A trait representing the Cosmos based chain's router.
+///
+/// This trait is designed for routing messages within the Cosmos ecosystem.
+/// It is key to ensuring that transactions and contract calls are directed to the
 /// correct destinations during testing, simulating real-world blockchain operations.
 pub trait CosmosRouter {
+    /// Type of the executed custom message.
     type ExecC;
+    /// Type of the query custom message.
     type QueryC: CustomQuery;
 
+    /// Executes messages.
     fn execute(
         &self,
         api: &dyn Api,
@@ -539,6 +553,7 @@ pub trait CosmosRouter {
         msg: CosmosMsg<Self::ExecC>,
     ) -> AnyResult<AppResponse>;
 
+    /// Evaluates queries.
     fn query(
         &self,
         api: &dyn Api,
@@ -547,6 +562,7 @@ pub trait CosmosRouter {
         request: QueryRequest<Self::QueryC>,
     ) -> AnyResult<Binary>;
 
+    /// Evaluates privileged actions.
     fn sudo(
         &self,
         api: &dyn Api,

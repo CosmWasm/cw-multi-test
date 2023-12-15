@@ -4,7 +4,7 @@ use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, Storage};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
-/// Address generator that mimics the original `wasmd` behavior.
+/// Address generator that mimics the [wasmd](https://github.com/CosmWasm/wasmd) behaviour.
 ///
 /// [MockAddressGenerator] implements [AddressGenerator] trait in terms of
 /// [`contract_address`](AddressGenerator::contract_address) and

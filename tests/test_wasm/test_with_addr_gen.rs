@@ -53,7 +53,7 @@ fn custom_address_generator_should_work() {
     struct CustomAddressGenerator;
 
     impl AddressGenerator for CustomAddressGenerator {
-        // deprecated from version 0.18.0
+        // deprecated since version 0.18.0
         fn next_address(&self, _storage: &mut dyn Storage) -> Addr {
             // Panic in case of calling this function
             unreachable!("this function should not be called")

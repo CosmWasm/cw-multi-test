@@ -14,34 +14,46 @@ use cw_utils::NativeBalance;
 use itertools::Itertools;
 use schemars::JsonSchema;
 
+/// Collection of bank balances.
 const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
 
+/// Default namespace for bank module.
 pub const NAMESPACE_BANK: &[u8] = b"bank";
 
-#[derive(Clone, std::fmt::Debug, PartialEq, Eq, JsonSchema)]
+/// A message representing privileged actions in bank module.
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum BankSudo {
+    /// Minting privileged action.
     Mint {
+        /// Destination address the tokens will be minted for.
         to_address: String,
+        /// Amount of the minted tokens.
         amount: Vec<Coin>,
     },
 }
-/// This trait defines the interface for simulating banking operations in the test
-/// environment. It's essential for testing financial transactions, like transfers
-/// and balance checks, within your smart contracts.
+
+/// This trait defines the interface for simulating banking operations.
+///
+/// In the test environment, it is essential for testing financial transactions,
+/// like transfers and balance checks, within your smart contracts.
+/// This trait implements all of these functionalities.
 pub trait Bank: Module<ExecT = BankMsg, QueryT = BankQuery, SudoT = BankSudo> {}
 
-#[derive(Default)]
+/// A structure representing a default bank keeper.
+///
 /// Manages financial interactions in CosmWasm tests, such as simulating token transactions
 /// and account balances. This is particularly important for contracts that deal with financial
 /// operations in the Cosmos ecosystem.
+#[derive(Default)]
 pub struct BankKeeper {}
 
 impl BankKeeper {
+    /// Creates a new instance of a bank keeper with default settings.
     pub fn new() -> Self {
-        BankKeeper {}
+        Self::default()
     }
 
-    // this is an "admin" function to let us adjust bank accounts in genesis
+    /// _Admin_ function for adjusting bank accounts in genesis.
     pub fn init_balance(
         &self,
         storage: &mut dyn Storage,
@@ -52,7 +64,7 @@ impl BankKeeper {
         self.set_balance(&mut bank_storage, account, amount)
     }
 
-    // this is an "admin" function to let us adjust bank accounts
+    /// _Admin_ function for adjusting bank accounts.
     fn set_balance(
         &self,
         bank_storage: &mut dyn Storage,
@@ -125,7 +137,7 @@ impl BankKeeper {
         self.set_balance(bank_storage, &from_address, a.into_vec())
     }
 
-    /// Filters out all 0 value coins and returns an error if the resulting Vec is empty
+    /// Filters out all `0` value coins and returns an error if the resulting vector is empty.
     fn normalize_amount(&self, amount: Vec<Coin>) -> AnyResult<Vec<Coin>> {
         let res: Vec<_> = amount.into_iter().filter(|x| !x.amount.is_zero()).collect();
         if res.is_empty() {

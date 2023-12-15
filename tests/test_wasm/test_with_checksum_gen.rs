@@ -1,7 +1,7 @@
 #![cfg(feature = "cosmwasm_1_2")]
 
 use crate::test_contracts;
-use cosmwasm_std::{Addr, Empty, HexBinary};
+use cosmwasm_std::{Addr, HexBinary};
 use cw_multi_test::{no_init, App, AppBuilder, ChecksumGenerator, WasmKeeper};
 
 #[test]
@@ -37,8 +37,7 @@ impl ChecksumGenerator for MyChecksumGenerator {
 #[test]
 fn custom_checksum_generator_should_work() {
     // prepare wasm keeper with custom checksum generator
-    let wasm_keeper: WasmKeeper<Empty, Empty> =
-        WasmKeeper::default().with_checksum_generator(MyChecksumGenerator);
+    let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
 
     // prepare application with custom wasm keeper
     let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);

@@ -7,25 +7,29 @@ use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use schemars::JsonSchema;
 use serde::Serialize;
 use std::fmt::Debug;
-/// AppResponse likely refers to a standardized response format from the App.
-/// It's mentioned in the cw-multi-test-main package, which suggests it's used for returning
-/// information about the processing of transactions or queries.
+
+/// A subset of data returned as a response of a contract entry point,
+/// such as `instantiate`, `execute` or `migrate`.
 #[derive(Default, Clone, Debug)]
 pub struct AppResponse {
+    /// Response events.
     pub events: Vec<Event>,
+    /// Response data.
     pub data: Option<Binary>,
 }
 
 impl AppResponse {
-    // Return all custom attributes returned by the contract in the `idx` event.
-    // We assert the type is wasm, and skip the contract_address attribute.
+    /// Returns all custom attributes returned by the contract in the `idx` event.
+    ///
+    /// We assert the type is wasm, and skip the contract_address attribute.
     #[track_caller]
     pub fn custom_attrs(&self, idx: usize) -> &[Attribute] {
         assert_eq!(self.events[idx].ty.as_str(), "wasm");
         &self.events[idx].attributes[1..]
     }
 
-    /// Check if there is an Event that is a super-set of this.
+    /// Checks if there is an Event that is a super-set of this.
+    ///
     /// It has the same type, and all compare.attributes are included in it as well.
     /// You don't need to specify them all.
     pub fn has_event(&self, expected: &Event) -> bool {
@@ -38,7 +42,7 @@ impl AppResponse {
         })
     }
 
-    /// Like has_event but panics if no match
+    /// Like [has_event](Self::has_event) but panics if there is no match.
     #[track_caller]
     pub fn assert_event(&self, expected: &Event) {
         assert!(
@@ -60,16 +64,19 @@ impl From<SubMsgResponse> for AppResponse {
         }
     }
 }
-///Defines the interface for executing transactions and contract interactions.
-/// It's a central component in the testing framework, managing the operational flow and
-/// ensuring that contract calls are processed correctly.
+/// A trait defining a default behaviour of the message executor.
+///
+/// Defines the interface for executing transactions and contract interactions.
+/// It is a central component in the testing framework, managing the operational
+/// flow and ensuring that contract _calls_ are processed correctly.
 pub trait Executor<C>
 where
     C: Clone + Debug + PartialEq + JsonSchema + 'static,
 {
-    /// Runs arbitrary CosmosMsg.
-    /// This will create a cache before the execution, so no state changes are persisted if this
-    /// returns an error, but all are persisted on success.
+    /// Processes (executes) an arbitrary `CosmosMsg`.
+    /// This will create a cache before the execution,
+    /// so no state changes are persisted if this returns an error,
+    /// but all are persisted on success.
     fn execute(&mut self, sender: Addr, msg: CosmosMsg<C>) -> AnyResult<AppResponse>;
 
     /// Create a contract and get the new address.
@@ -132,8 +139,9 @@ where
     }
 
     /// Execute a contract and process all returned messages.
-    /// This is just a helper around execute(),
-    /// but we parse out the data field to that what is returned by the contract (not the protobuf wrapper)
+    /// This is just a helper function around [execute()](Self::execute)
+    /// with `WasmMsg::Execute` message, but in this case we parse out the data field
+    /// to that what is returned by the contract (not the protobuf wrapper).
     fn execute_contract<T: Serialize + Debug>(
         &mut self,
         sender: Addr,
@@ -154,8 +162,10 @@ where
         Ok(res)
     }
 
-    /// Migrate a contract. Sender must be registered admin.
-    /// This is just a helper around execute()
+    /// Migrates a contract.
+    /// Sender must be registered admin.
+    /// This is just a helper function around [execute()](Self::execute)
+    /// with `WasmMsg::Migrate` message.
     fn migrate_contract<T: Serialize>(
         &mut self,
         sender: Addr,
@@ -172,6 +182,9 @@ where
         self.execute(sender, msg.into())
     }
 
+    /// Sends tokens to specified recipient.
+    /// This is just a helper function around [execute()](Self::execute)
+    /// with `BankMsg::Send` message.
     fn send_tokens(
         &mut self,
         sender: Addr,

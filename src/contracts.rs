@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
     from_json, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
@@ -10,13 +12,15 @@ use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
 /// Serves as the primary interface for interacting with contracts.
+///
 /// It includes methods for executing, querying, and managing contract states,
-/// making it a fundamental trait for testing contract functionalities.
+/// making it a fundamental trait for testing contracts.
 pub trait Contract<T, Q = Empty>
 where
     T: Clone + Debug + PartialEq + JsonSchema,
     Q: CustomQuery,
 {
+    /// Evaluates contract's `execute` entry-point.
     fn execute(
         &self,
         deps: DepsMut<Q>,
@@ -25,6 +29,7 @@ where
         msg: Vec<u8>,
     ) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `instantiate` entry-point.
     fn instantiate(
         &self,
         deps: DepsMut<Q>,
@@ -33,12 +38,16 @@ where
         msg: Vec<u8>,
     ) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
 
+    /// Evaluates contract's `sudo` entry-point.
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `reply` entry-point.
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>>;
 }
 
@@ -105,6 +114,7 @@ where
     C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
+    /// Creates a new contract wrapper with default settings.
     pub fn new(
         execute_fn: ContractFn<T1, C, E1, Q>,
         instantiate_fn: ContractFn<T2, C, E2, Q>,
@@ -155,6 +165,7 @@ where
     C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
+    /// Populates [ContractWrapper] with contract's `sudo` entry-point and custom message type.
     pub fn with_sudo<T4A, E4A>(
         self,
         sudo_fn: PermissionedFn<T4A, C, E4A, Q>,
@@ -173,6 +184,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `sudo` entry-point and `Empty` as a custom message.
     pub fn with_sudo_empty<T4A, E4A>(
         self,
         sudo_fn: PermissionedFn<T4A, Empty, E4A, Q>,
@@ -191,6 +203,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `reply` entry-point and custom message type.
     pub fn with_reply<E5A>(
         self,
         reply_fn: ReplyFn<C, E5A, Q>,
@@ -208,7 +221,7 @@ where
         }
     }
 
-    /// A correlate of new_with_empty
+    /// Populates [ContractWrapper] with contract's `reply` entry-point and `Empty` as a custom message.
     pub fn with_reply_empty<E5A>(
         self,
         reply_fn: ReplyFn<Empty, E5A, Q>,
@@ -226,6 +239,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `migrate` entry-point and custom message type.
     pub fn with_migrate<T6A, E6A>(
         self,
         migrate_fn: PermissionedFn<T6A, C, E6A, Q>,
@@ -244,6 +258,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `migrate` entry-point and `Empty` as a custom message.
     pub fn with_migrate_empty<T6A, E6A>(
         self,
         migrate_fn: PermissionedFn<T6A, Empty, E6A, Q>,
