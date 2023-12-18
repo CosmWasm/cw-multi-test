@@ -192,7 +192,7 @@ where
                 res.checksum = code_data.checksum.clone();
                 to_json_binary(&res).map_err(Into::into)
             }
-            other => bail!(Error::unsupported_wasm_query(other)),
+            _ => unimplemented!("{}", Error::unsupported_wasm_query(request)),
         }
     }
 
@@ -553,9 +553,9 @@ where
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
         sender: Addr,
-        wasm_msg: WasmMsg,
+        msg: WasmMsg,
     ) -> AnyResult<AppResponse> {
-        match wasm_msg {
+        match msg {
             WasmMsg::Execute {
                 contract_addr,
                 msg,
@@ -668,7 +668,7 @@ where
             WasmMsg::ClearAdmin { contract_addr } => {
                 self.update_admin(api, storage, sender, &contract_addr, None)
             }
-            msg => bail!(Error::unsupported_wasm_message(msg)),
+            _ => unimplemented!("{}", Error::unsupported_wasm_message(msg)),
         }
     }
 
