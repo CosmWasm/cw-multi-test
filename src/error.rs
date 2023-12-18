@@ -65,6 +65,26 @@ impl Error {
         Self::EventTypeTooShort(ty.into())
     }
 
+    /// Creates an instance of the [Error](Self) for unsupported wasm queries.
+    pub fn unsupported_wasm_query(query: WasmQuery) -> Self {
+        Self::UnsupportedWasmQuery(query)
+    }
+
+    /// Creates an instance of the [Error](Self) for unsupported wasm messages.
+    pub fn unsupported_wasm_message(msg: WasmMsg) -> Self {
+        Self::UnsupportedWasmMsg(msg)
+    }
+
+    /// Creates an instance of the [Error](Self) for invalid contract code identifier.
+    pub fn invalid_contract_code_id() -> Self {
+        Self::InvalidCodeId
+    }
+
+    /// Creates an instance of the [Error](Self) for unregistered contract code identifier.
+    pub fn unregistered_code_id(code_id: u64) -> Self {
+        Self::UnregisteredCodeId(code_id)
+    }
+
     /// Creates an instance of the [Error](Self) for duplicated contract addresses.
     pub fn duplicated_contract_address(address: impl Into<String>) -> Self {
         Self::DuplicatedContractAddress(address.into())

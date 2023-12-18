@@ -135,6 +135,35 @@ mod tests {
     }
 
     #[test]
+    fn prefixed_storage_range() {
+        // prepare prefixed storage
+        let mut storage = MockStorage::new();
+        let mut ps1 = PrefixedStorage::new(&mut storage, b"foo");
+        ps1.set(b"a", b"A");
+        ps1.set(b"l", b"L");
+        ps1.set(b"p", b"P");
+        ps1.set(b"z", b"Z");
+        assert_eq!(storage.get(b"\x00\x03fooa").unwrap(), b"A".to_vec());
+        assert_eq!(storage.get(b"\x00\x03fool").unwrap(), b"L".to_vec());
+        assert_eq!(storage.get(b"\x00\x03foop").unwrap(), b"P".to_vec());
+        assert_eq!(storage.get(b"\x00\x03fooz").unwrap(), b"Z".to_vec());
+        // query prefixed storage using range function
+        let ps2 = PrefixedStorage::new(&mut storage, b"foo");
+        assert_eq!(
+            vec![b"A".to_vec(), b"L".to_vec(), b"P".to_vec()],
+            ps2.range(Some(b"a"), Some(b"z"), Order::Ascending)
+                .map(|(_, value)| value)
+                .collect::<Vec<Vec<u8>>>()
+        );
+        assert_eq!(
+            vec![b"Z".to_vec(), b"P".to_vec(), b"L".to_vec(), b"A".to_vec()],
+            ps2.range(Some(b"a"), None, Order::Descending)
+                .map(|(_, value)| value)
+                .collect::<Vec<Vec<u8>>>()
+        );
+    }
+
+    #[test]
     fn prefixed_storage_multilevel_set_and_get() {
         let mut storage = MockStorage::new();
 
@@ -165,6 +194,24 @@ mod tests {
         // no collisions with other prefixes
         let s2 = ReadonlyPrefixedStorage::new(&storage, b"fo");
         assert_eq!(s2.get(b"obar"), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    #[allow(clippy::unnecessary_mut_passed)]
+    fn readonly_prefixed_storage_set() {
+        let mut storage = MockStorage::new();
+        let mut rps = ReadonlyPrefixedStorage::new(&mut storage, b"foo");
+        rps.set(b"bar", b"gotcha");
+    }
+
+    #[test]
+    #[should_panic(expected = "not implemented")]
+    #[allow(clippy::unnecessary_mut_passed)]
+    fn readonly_prefixed_storage_remove() {
+        let mut storage = MockStorage::new();
+        let mut rps = ReadonlyPrefixedStorage::new(&mut storage, b"foo");
+        rps.remove(b"gotcha");
     }
 
     #[test]
