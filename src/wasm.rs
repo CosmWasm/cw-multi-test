@@ -192,7 +192,7 @@ where
                 res.checksum = code_data.checksum.clone();
                 to_json_binary(&res).map_err(Into::into)
             }
-            other => bail!(Error::UnsupportedWasmQuery(other)),
+            other => bail!(Error::unsupported_wasm_query(other)),
         }
     }
 
@@ -279,12 +279,12 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Returns code data of the contract with specified code id.
     fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
         if code_id < 1 {
-            bail!(Error::InvalidCodeId);
+            bail!(Error::invalid_contract_code_id());
         }
         Ok(self
             .code_data
             .get((code_id - 1) as usize)
-            .ok_or(Error::UnregisteredCodeId(code_id))?)
+            .ok_or(Error::unregistered_code_id(code_id))?)
     }
 
     fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
@@ -668,7 +668,7 @@ where
             WasmMsg::ClearAdmin { contract_addr } => {
                 self.update_admin(api, storage, sender, &contract_addr, None)
             }
-            msg => bail!(Error::UnsupportedWasmMsg(msg)),
+            msg => bail!(Error::unsupported_wasm_message(msg)),
         }
     }
 
