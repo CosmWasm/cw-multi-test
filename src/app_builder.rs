@@ -6,8 +6,7 @@ use crate::{
     WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use cosmwasm_std::{Api, BlockInfo, CustomQuery, Empty, Storage};
-use schemars::JsonSchema;
+use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
@@ -123,7 +122,7 @@ impl<ExecC, QueryC>
         StargateFailing,
     >
 where
-    ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: CustomMsg + DeserializeOwned + 'static,
     QueryC: Debug + CustomQuery + DeserializeOwned + 'static,
 {
     /// Creates builder with default components designed to work with custom exec and query

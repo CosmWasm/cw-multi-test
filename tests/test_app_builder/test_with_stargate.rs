@@ -1,6 +1,6 @@
 use anyhow::bail;
 use cosmwasm_std::{
-    to_json_vec, Addr, Api, Binary, BlockInfo, CosmosMsg, CustomQuery, Empty, Querier,
+    to_json_vec, Addr, Api, Binary, BlockInfo, CosmosMsg, CustomMsg, CustomQuery, Empty, Querier,
     QueryRequest, Storage,
 };
 use cw_multi_test::error::AnyResult;
@@ -8,9 +8,7 @@ use cw_multi_test::{
     no_init, AppBuilder, AppResponse, CosmosRouter, Executor, Stargate, StargateAccepting,
     StargateFailing,
 };
-use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use std::fmt::Debug;
 
 const EXECUTE_MSG: &str = "stargate execute called";
 const QUERY_MSG: &str = "stargate query called";
@@ -30,7 +28,7 @@ impl Stargate for MyStargateKeeper {
         value: Binary,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         assert_eq!("test", type_url);
