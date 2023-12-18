@@ -5,8 +5,8 @@
 
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_json_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply,
-    Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
+    to_json_binary, Attribute, Binary, CustomMsg, Deps, DepsMut, Empty, Env, Event, MessageInfo,
+    Reply, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use derivative::Derivative;
@@ -130,7 +130,7 @@ pub fn contract() -> Box<dyn Contract<Empty>> {
 
 pub fn custom_contract<C>() -> Box<dyn Contract<C>>
 where
-    C: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    C: CustomMsg + DeserializeOwned + 'static,
 {
     let contract =
         ContractWrapper::new(execute::<C>, instantiate::<C>, query).with_reply(reply::<C>);

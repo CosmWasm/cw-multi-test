@@ -341,7 +341,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
     fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
     where
-        T: Clone + Debug + PartialEq + JsonSchema,
+        T: CustomMsg,
     {
         Self::verify_attributes(&response.attributes)?;
 
