@@ -198,6 +198,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "not implemented")]
+    #[allow(clippy::unnecessary_mut_passed)]
     fn readonly_prefixed_storage_set() {
         let mut storage = MockStorage::new();
         let mut rps = ReadonlyPrefixedStorage::new(&mut storage, b"foo");
@@ -206,6 +207,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "not implemented")]
+    #[allow(clippy::unnecessary_mut_passed)]
     fn readonly_prefixed_storage_remove() {
         let mut storage = MockStorage::new();
         let mut rps = ReadonlyPrefixedStorage::new(&mut storage, b"foo");

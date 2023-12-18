@@ -193,7 +193,7 @@ impl Module for BankKeeper {
                 self.burn(&mut bank_storage, sender, amount)?;
                 Ok(AppResponse::default())
             }
-            m => bail!("Unsupported bank message: {:?}", m),
+            _ => unimplemented!("bank message: {msg:?}"),
         }
     }
 
@@ -248,7 +248,7 @@ impl Module for BankKeeper {
                 res.amount = amount;
                 Ok(to_json_binary(&res)?)
             }
-            q => bail!("Unsupported bank query: {:?}", q),
+            _ => unimplemented!("bank query: {request:?}",),
         }
     }
 }
