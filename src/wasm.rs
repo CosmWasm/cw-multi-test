@@ -284,7 +284,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         Ok(self
             .code_data
             .get((code_id - 1) as usize)
-            .ok_or(Error::unregistered_code_id(code_id))?)
+            .ok_or_else(|| Error::unregistered_code_id(code_id))?)
     }
 
     fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
