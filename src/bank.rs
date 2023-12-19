@@ -7,6 +7,8 @@ use cosmwasm_std::{
     coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
     Binary, BlockInfo, Coin, Event, Querier, Storage,
 };
+#[cfg(feature = "cosmwasm_1_3")]
+use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
 #[cfg(feature = "cosmwasm_1_1")]
 use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint128};
 use cw_storage_plus::Map;
@@ -193,25 +195,7 @@ impl Module for BankKeeper {
                 self.burn(&mut bank_storage, sender, amount)?;
                 Ok(AppResponse::default())
             }
-            _ => unimplemented!("bank message: {msg:?}"),
-        }
-    }
-
-    fn sudo<ExecC, QueryC>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        msg: BankSudo,
-    ) -> AnyResult<AppResponse> {
-        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
-        match msg {
-            BankSudo::Mint { to_address, amount } => {
-                let to_address = api.addr_validate(&to_address)?;
-                self.mint(&mut bank_storage, to_address, amount)?;
-                Ok(AppResponse::default())
-            }
+            other => unimplemented!("bank message: {other:?}"),
         }
     }
 
@@ -244,11 +228,38 @@ impl Module for BankKeeper {
             #[cfg(feature = "cosmwasm_1_1")]
             BankQuery::Supply { denom } => {
                 let amount = self.get_supply(&bank_storage, denom)?;
-                let mut res = SupplyResponse::default();
-                res.amount = amount;
+                let res = SupplyResponse::new(amount);
                 Ok(to_json_binary(&res)?)
             }
-            _ => unimplemented!("bank query: {request:?}",),
+            #[cfg(feature = "cosmwasm_1_3")]
+            BankQuery::DenomMetadata { denom: _ } => {
+                let res = DenomMetadataResponse::new(Default::default());
+                Ok(to_json_binary(&res)?)
+            }
+            #[cfg(feature = "cosmwasm_1_3")]
+            BankQuery::AllDenomMetadata { pagination: _ } => {
+                let res = AllDenomMetadataResponse::new(Default::default(), None);
+                Ok(to_json_binary(&res)?)
+            }
+            other => bail!("bank query: {other:?}"),
+        }
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        msg: BankSudo,
+    ) -> AnyResult<AppResponse> {
+        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
+        match msg {
+            BankSudo::Mint { to_address, amount } => {
+                let to_address = api.addr_validate(&to_address)?;
+                self.mint(&mut bank_storage, to_address, amount)?;
+                Ok(AppResponse::default())
+            }
         }
     }
 }
