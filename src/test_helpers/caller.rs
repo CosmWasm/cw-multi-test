@@ -1,9 +1,7 @@
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg,
+    Binary, CustomMsg, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg,
 };
-use schemars::JsonSchema;
-use std::fmt::Debug;
 
 fn instantiate(
     _deps: DepsMut,
@@ -33,7 +31,7 @@ fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
 
 pub fn contract<C>() -> Box<dyn Contract<C>>
 where
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
 {
     let contract = ContractWrapper::new_with_empty(execute, instantiate, query);
     Box::new(contract)

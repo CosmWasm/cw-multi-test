@@ -1,10 +1,9 @@
 use crate::error::AnyResult;
 use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, Event, SubMsgResponse,
-    WasmMsg,
+    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
+    SubMsgResponse, WasmMsg,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
-use schemars::JsonSchema;
 use serde::Serialize;
 use std::fmt::Debug;
 
@@ -71,7 +70,7 @@ impl From<SubMsgResponse> for AppResponse {
 /// flow and ensuring that contract _calls_ are processed correctly.
 pub trait Executor<C>
 where
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
 {
     /// Processes (executes) an arbitrary `CosmosMsg`.
     /// This will create a cache before the execution,
