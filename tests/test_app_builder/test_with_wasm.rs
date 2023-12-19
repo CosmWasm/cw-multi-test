@@ -60,8 +60,13 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         bail!(self.3);
     }
 
-    fn store_code(&mut self, _creator: Addr, _code: Box<dyn Contract<ExecT, QueryT>>) -> u64 {
-        CODE_ID
+    fn store_code(
+        &mut self,
+        _creator: Addr,
+        _code_id: Option<u64>,
+        _code: Box<dyn Contract<ExecT, QueryT>>,
+    ) -> AnyResult<u64> {
+        Ok(CODE_ID)
     }
 
     fn duplicate_code(&mut self, _code_id: u64) -> AnyResult<u64> {
