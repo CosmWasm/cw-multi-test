@@ -17,7 +17,7 @@ cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
 cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.79"
 bech32 = "0.9.1"
 cosmwasm-std = { version = "1.5.0", features = ["iterator", "staking", "stargate"] }
 cw-storage-plus = "1.2.0"
@@ -26,9 +26,9 @@ derivative = "2.2.0"
 itertools = "0.12.0"
 prost = "0.12.3"
 schemars = "0.8.16"
-serde = "1.0.193"
+serde = "1.0.195"
 sha2 = "0.10.8"
-thiserror = "1.0.50"
+thiserror = "1.0.56"
 
 [dev-dependencies]
 hex = "0.4.3"
