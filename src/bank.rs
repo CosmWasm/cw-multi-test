@@ -230,7 +230,7 @@ impl Module for BankKeeper {
                 let address = api.addr_validate(&address)?;
                 let amount = self.get_balance(&bank_storage, &address)?;
                 let res = AllBalanceResponse { amount };
-                Ok(to_json_binary(&res)?)
+                to_json_binary(&res).map_err(Into::into)
             }
             BankQuery::Balance { address, denom } => {
                 let address = api.addr_validate(&address)?;
@@ -240,19 +240,19 @@ impl Module for BankKeeper {
                     .find(|c| c.denom == denom)
                     .unwrap_or_else(|| coin(0, denom));
                 let res = BalanceResponse { amount };
-                Ok(to_json_binary(&res)?)
+                to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_1")]
             BankQuery::Supply { denom } => {
                 let amount = self.get_supply(&bank_storage, denom)?;
                 let res = SupplyResponse::new(amount);
-                Ok(to_json_binary(&res)?)
+                to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::DenomMetadata { denom } => {
                 let meta = DENOM_METADATA.may_load(storage, denom)?.unwrap_or_default();
                 let res = DenomMetadataResponse::new(meta);
-                Ok(to_json_binary(&res)?)
+                to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::AllDenomMetadata { pagination: _ } => {
@@ -261,9 +261,9 @@ impl Module for BankKeeper {
                     metadata.push(DENOM_METADATA.may_load(storage, key?)?.unwrap_or_default());
                 }
                 let res = AllDenomMetadataResponse::new(metadata, None);
-                Ok(to_json_binary(&res)?)
+                to_json_binary(&res).map_err(Into::into)
             }
-            other => bail!("bank query: {other:?}"),
+            other => unimplemented!("bank query: {other:?}"),
         }
     }
 
