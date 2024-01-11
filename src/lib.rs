@@ -130,7 +130,7 @@ mod app;
 mod app_builder;
 mod bank;
 mod checksums;
-mod contracts;
+pub use cw_multi_test_contract as contracts;
 pub mod custom_handler;
 pub mod error;
 mod executor;

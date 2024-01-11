@@ -253,6 +253,7 @@ dependencies = [
  "anyhow",
  "bech32",
  "cosmwasm-std",
+ "cw-multi-test-contract",
  "cw-storage-plus",
  "cw-utils",
  "cw1-whitelist",
@@ -266,6 +267,16 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "thiserror",
+]
+
+[[package]]
+name = "cw-multi-test-contract"
+version = "0.20.0"
+source = "git+https://github.com/AbstractSDK/cw-plus?branch=move/cw-multi-test-contract#7f2080156c041f0ae5ea74d3b5e5f1aab5fcd767"
+dependencies = [
+ "anyhow",
+ "cosmwasm-std",
+ "serde",
 ]
 
 [[package]]
