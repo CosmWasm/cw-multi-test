@@ -3,12 +3,12 @@
 use cosmwasm_std::{Addr, ContractInfoResponse, Empty, Never, QueryRequest, WasmQuery};
 
 use crate::{
+    addons::{MockAddressGenerator, MockApiBech32},
     ibc::{
-        addresses::MockAddressGenerator,
         relayer::{create_channel, create_connection, get_event_attr_value, relay_packets_in_tx},
         simple_ibc::IbcSimpleModule,
     },
-    AppBuilder, ContractWrapper, Executor, FailingModule, WasmKeeper, addons::MockApiBech32,
+    AppBuilder, ContractWrapper, Executor, FailingModule, WasmKeeper,
 };
 
 use anyhow::Result as AnyResult;
