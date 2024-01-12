@@ -1,7 +1,6 @@
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
+use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, Storage};
 use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{AppResponse, CosmosRouter, Module};
-use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -13,6 +12,7 @@ mod test_with_distribution;
 mod test_with_gov;
 mod test_with_ibc;
 mod test_with_staking;
+mod test_with_stargate;
 mod test_with_storage;
 mod test_with_wasm;
 
@@ -51,7 +51,7 @@ where
         _msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         bail!(self.1);
@@ -66,7 +66,7 @@ where
         _msg: Self::SudoT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         bail!(self.3);

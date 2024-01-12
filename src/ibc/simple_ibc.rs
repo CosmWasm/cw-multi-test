@@ -219,7 +219,7 @@ impl IbcSimpleModule {
 
         // Then, we store the acknowledgement and collect events
         match res {
-            IbcResponse::OpenResponse(r) => {
+            IbcResponse::Open(r) => {
                 // The channel version may be changed here
                 let version = r.map(|r| r.version).unwrap_or(version);
                 handshake_object.version = version.clone();
@@ -359,8 +359,8 @@ impl IbcSimpleModule {
 
         // Then, we store the acknowledgement and collect events
         let mut events = match res {
-            IbcResponse::BasicResponse(r) => r.events,
-            _ => panic!("Only an open response was expected when receiving a packet"),
+            IbcResponse::Basic(r) => r.events,
+            _ => panic!("Only an Basic response was expected when receiving a packet"),
         };
 
         events.push(ibc_event);
@@ -519,7 +519,7 @@ impl IbcSimpleModule {
         let acknowledgement;
         // Then, we store the acknowledgement and collect events
         let mut events = match res {
-            IbcResponse::ReceiveResponse(r) => {
+            IbcResponse::Receive(r) => {
                 // We save the acknowledgment in the structure
                 acknowledgement = r.acknowledgement.clone();
                 ACK_PACKET_MAP.save(
@@ -683,7 +683,7 @@ impl IbcSimpleModule {
 
         let mut events = match res {
             // Only type allowed as an ack response
-            IbcResponse::BasicResponse(r) => r.events,
+            IbcResponse::Basic(r) => r.events,
             _ => panic!("Only a basic response was expected when ack a packet"),
         };
 
@@ -822,7 +822,7 @@ impl IbcSimpleModule {
         // Then we collect events
         let mut events = match res {
             // Only type allowed as an timeout response
-            IbcResponse::BasicResponse(r) => r.events,
+            IbcResponse::Basic(r) => r.events,
             _ => panic!("Only a basic response was expected when timeout a packet"),
         };
 

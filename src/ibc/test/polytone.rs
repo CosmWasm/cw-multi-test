@@ -5,11 +5,10 @@ use cosmwasm_std::{Addr, ContractInfoResponse, Empty, Never, QueryRequest, WasmQ
 use crate::{
     ibc::{
         addresses::MockAddressGenerator,
-        api::MockApiBech32,
         relayer::{create_channel, create_connection, get_event_attr_value, relay_packets_in_tx},
         simple_ibc::IbcSimpleModule,
     },
-    AppBuilder, ContractWrapper, Executor, FailingModule, WasmKeeper,
+    AppBuilder, ContractWrapper, Executor, FailingModule, WasmKeeper, addons::MockApiBech32,
 };
 
 use anyhow::Result as AnyResult;

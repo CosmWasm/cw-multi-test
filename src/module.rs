@@ -1,8 +1,7 @@
 use crate::app::CosmosRouter;
 use crate::error::{bail, AnyResult};
 use crate::AppResponse;
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Querier, Storage};
-use schemars::JsonSchema;
+use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, Storage};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -13,10 +12,18 @@ use cosmwasm_std::{
     IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
 };
 
-/// Module interface.
+/// # General module
+///
+/// Provides a generic interface for modules within the test environment.
+/// It is essential for creating modular and extensible testing setups,
+/// allowing developers to integrate custom functionalities
+/// or test specific scenarios.
 pub trait Module {
+    /// Type of messages processed by the module instance.
     type ExecT;
+    /// Type of queries processed by the module instance.
     type QueryT;
+    /// Type of privileged messages used by the module instance.
     type SudoT;
 
     /// Runs any [ExecT](Self::ExecT) message,
@@ -31,7 +38,7 @@ pub trait Module {
         msg: Self::ExecT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
 
     /// Runs any [QueryT](Self::QueryT) message,
@@ -59,11 +66,10 @@ pub trait Module {
         msg: Self::SudoT,
     ) -> AnyResult<AppResponse>
     where
-        ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+        ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
 
-    // The following ibc endpoints can only be used by the ibc module.
-    // For channels
+    /// Executes the contract ibc_channel_open endpoint
     fn ibc_channel_open<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -75,6 +81,7 @@ pub trait Module {
         Ok(IbcChannelOpenResponse::None)
     }
 
+    /// Executes the contract ibc_channel_connect endpoint
     fn ibc_channel_connect<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -86,6 +93,7 @@ pub trait Module {
         Ok(AppIbcBasicResponse::default())
     }
 
+    /// Executes the contract ibc_channel_close endpoints
     fn ibc_channel_close<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -97,7 +105,7 @@ pub trait Module {
         Ok(AppIbcBasicResponse::default())
     }
 
-    // For packet operations
+    /// Executes the contract ibc_packet_receive endpoint
     fn ibc_packet_receive<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -109,6 +117,7 @@ pub trait Module {
         panic!("No ibc packet receive implemented");
     }
 
+    /// Executes the contract ibc_packet_acknowledge endpoint
     fn ibc_packet_acknowledge<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -120,6 +129,7 @@ pub trait Module {
         panic!("No ibc packet acknowledgement implemented");
     }
 
+    /// Executes the contract ibc_packet_timeout endpoint
     fn ibc_packet_timeout<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -131,16 +141,21 @@ pub trait Module {
         panic!("No ibc packet timeout implemented");
     }
 }
-
+/// # Always failing module
+///
+/// This could be a diagnostic or testing tool within the Cosmos ecosystem,
+/// designed to intentionally fail during processing any message, query or privileged action.
 pub struct FailingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
 
 impl<ExecT, QueryT, SudoT> FailingModule<ExecT, QueryT, SudoT> {
+    /// Creates an instance of a failing module.
     pub fn new() -> Self {
         Self(PhantomData)
     }
 }
 
 impl<ExecT, QueryT, SudoT> Default for FailingModule<ExecT, QueryT, SudoT> {
+    /// Creates a default instance of a failing module.
     fn default() -> Self {
         Self::new()
     }
@@ -193,16 +208,21 @@ where
         bail!("Unexpected sudo msg {:?}", msg)
     }
 }
-
+/// # Always accepting module
+///
+/// This struct represents a module in the Cosmos ecosystem designed to
+/// always accept all processed messages, queries and privileged actions.
 pub struct AcceptingModule<ExecT, QueryT, SudoT>(PhantomData<(ExecT, QueryT, SudoT)>);
 
 impl<ExecT, QueryT, SudoT> AcceptingModule<ExecT, QueryT, SudoT> {
+    /// Creates an instance of an accepting module.
     pub fn new() -> Self {
         Self(PhantomData)
     }
 }
 
 impl<ExecT, QueryT, SudoT> Default for AcceptingModule<ExecT, QueryT, SudoT> {
+    /// Creates an instance of an accepting module with default settings.
     fn default() -> Self {
         Self::new()
     }
@@ -231,7 +251,7 @@ where
         Ok(AppResponse::default())
     }
 
-    /// Runs any [QueryT](Self::QueryT) message, always returns an empty binary.
+    /// Runs any [QueryT](Self::QueryT) message, always returns a default (empty) binary.
     fn query(
         &self,
         _api: &dyn Api,

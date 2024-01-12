@@ -10,9 +10,9 @@ use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
-    ContractInfoResponse, CustomQuery, Deps, DepsMut, Env, Event, HexBinary, MessageInfo, Order,
-    Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg,
-    SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    ContractInfoResponse, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event, HexBinary,
+    MessageInfo, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult,
+    Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
 use cosmwasm_std::{
     IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
@@ -36,13 +36,17 @@ pub(crate) const NAMESPACE_WASM: &[u8] = b"wasm";
 /// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
 const CONTRACT_ATTR: &str = "_contract_address";
 
+/// A structure representing a privileged message.
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct WasmSudo {
+    /// Address of a contract the privileged action will be sent to.
     pub contract_addr: Addr,
+    /// Message representing privileged action to be executed by contract `sudo` entry-point.
     pub msg: Binary,
 }
 
 impl WasmSudo {
+    /// Creates a new privileged message for specified contract address and action to be executed.
     pub fn new<T: Serialize>(contract_addr: &Addr, msg: &T) -> StdResult<WasmSudo> {
         Ok(WasmSudo {
             contract_addr: contract_addr.clone(),
@@ -77,7 +81,9 @@ struct CodeData {
     code_base_id: usize,
 }
 
-/// Interface to call into a `Wasm` module.
+/// Acts as the interface for interacting with WebAssembly (Wasm) modules.
+/// This trait is crucial for testing smart contracts written in languages that compile to WebAssembly,
+/// which is common in the Cosmos and CosmWasm ecosystems.
 pub trait Wasm<ExecC, QueryC> {
     /// Handles all `WasmQuery` requests.
     fn query(
@@ -124,8 +130,7 @@ pub trait Wasm<ExecC, QueryC> {
     /// Returns a raw state dump of all key-values held by a contract with specified address.
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record>;
 
-    // The following ibc endpoints can only be used by the ibc module.
-    // For channels
+    /// Executes the contract ibc_channel_open endpoint
     fn ibc_channel_open(
         &self,
         _api: &dyn Api,
@@ -137,7 +142,7 @@ pub trait Wasm<ExecC, QueryC> {
     ) -> AnyResult<IbcChannelOpenResponse> {
         panic!("No ibc channel open implemented");
     }
-
+    /// Executes the contract ibc_channel_connect endpoint
     fn ibc_channel_connect(
         &self,
         _api: &dyn Api,
@@ -150,6 +155,7 @@ pub trait Wasm<ExecC, QueryC> {
         panic!("No ibc channel connect implemented");
     }
 
+    /// Executes the contract ibc_channel_close endpoint
     fn ibc_channel_close(
         &self,
         _api: &dyn Api,
@@ -162,7 +168,7 @@ pub trait Wasm<ExecC, QueryC> {
         panic!("No ibc channel close implemented");
     }
 
-    // For packet operations
+    /// Executes the contract ibc_packet_receive endpoint
     fn ibc_packet_receive(
         &self,
         _api: &dyn Api,
@@ -175,6 +181,7 @@ pub trait Wasm<ExecC, QueryC> {
         panic!("No ibc packet receive implemented");
     }
 
+    /// Executes the contract ibc_packet_acknowledge endpoint
     fn ibc_packet_acknowledge(
         &self,
         _api: &dyn Api,
@@ -187,6 +194,7 @@ pub trait Wasm<ExecC, QueryC> {
         panic!("No ibc packet acknowledgement implemented");
     }
 
+    /// Executes the contract ibc_packet_timeout endpoint
     fn ibc_packet_timeout(
         &self,
         _api: &dyn Api,
@@ -200,6 +208,7 @@ pub trait Wasm<ExecC, QueryC> {
     }
 }
 
+/// A structure representing a default wasm keeper.
 pub struct WasmKeeper<ExecC, QueryC> {
     /// Contract codes that stand for wasm code in real-life blockchain.
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
@@ -228,7 +237,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> Wasm<ExecC, QueryC> for WasmKeeper<ExecC, QueryC>
 where
-    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: CustomMsg + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn query(
@@ -266,7 +275,7 @@ where
                 res.checksum = code_data.checksum.clone();
                 to_json_binary(&res).map_err(Into::into)
             }
-            other => bail!(Error::UnsupportedWasmQuery(other)),
+            _ => unimplemented!("{}", Error::unsupported_wasm_query(request)),
         }
     }
 
@@ -481,12 +490,12 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Returns code data of the contract with specified code id.
     fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
         if code_id < 1 {
-            bail!(Error::InvalidCodeId);
+            bail!(Error::invalid_contract_code_id());
         }
         Ok(self
             .code_data
             .get((code_id - 1) as usize)
-            .ok_or(Error::UnregisteredCodeId(code_id))?)
+            .ok_or_else(|| Error::unregistered_code_id(code_id))?)
     }
 
     fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
@@ -543,7 +552,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
     fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
     where
-        T: Clone + Debug + PartialEq + JsonSchema,
+        T: CustomMsg,
     {
         Self::verify_attributes(&response.attributes)?;
 
@@ -597,9 +606,22 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
 
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC>
 where
-    ExecC: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    ExecC: CustomMsg + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
+    /// Creates a wasm keeper with default settings.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cw_multi_test::{AppBuilder, no_init, WasmKeeper};
+    ///
+    /// // create wasm keeper
+    /// let wasm_keeper = WasmKeeper::new();
+    ///
+    /// // create and use the application with newly created wasm keeper
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
@@ -608,6 +630,9 @@ where
         since = "0.18.0",
         note = "use `WasmKeeper::new().with_address_generator` instead; will be removed in version 1.0.0"
     )]
+    /// Populates an existing [WasmKeeper] with custom contract address generator.
+    ///
+    /// See description of [with_address_generator](Self::with_address_generator) function for details.
     pub fn new_with_custom_address_generator(
         address_generator: impl AddressGenerator + 'static,
     ) -> Self {
@@ -617,6 +642,36 @@ where
         }
     }
 
+    /// Populates an existing [WasmKeeper] with custom contract address generator.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cosmwasm_std::{Addr, Api, Storage};
+    /// use cw_multi_test::{AddressGenerator, AppBuilder, no_init, WasmKeeper};
+    /// use cw_multi_test::error::AnyResult;
+    ///
+    /// struct CustomAddressGenerator;
+    ///
+    /// impl AddressGenerator for CustomAddressGenerator {
+    ///     fn contract_address(
+    ///         &self,
+    ///         api: &dyn Api,
+    ///         storage: &mut dyn Storage,
+    ///         code_id: u64,
+    ///         instance_id: u64,
+    ///     ) -> AnyResult<Addr> {
+    ///         // here implement your address generation logic
+    /// #       Ok(Addr::unchecked("test_address"))
+    ///     }
+    /// }
+    ///
+    /// // populate wasm with your custom address generator
+    /// let wasm_keeper = WasmKeeper::new().with_address_generator(CustomAddressGenerator);
+    ///
+    /// // create and use the application with customized wasm keeper
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    /// ```
     pub fn with_address_generator(
         mut self,
         address_generator: impl AddressGenerator + 'static,
@@ -625,6 +680,29 @@ where
         self
     }
 
+    /// Populates an existing [WasmKeeper] with custom checksum generator for the contract code.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cosmwasm_std::{Addr, HexBinary};
+    /// use cw_multi_test::{AppBuilder, ChecksumGenerator, no_init, WasmKeeper};
+    ///
+    /// struct MyChecksumGenerator;
+    ///
+    /// impl ChecksumGenerator for MyChecksumGenerator {
+    ///     fn checksum(&self, creator: &Addr, code_id: u64) -> HexBinary {
+    ///         // here implement your custom checksum generator
+    /// #       HexBinary::default()
+    ///     }
+    /// }
+    ///
+    /// // populate wasm keeper with your custom checksum generator
+    /// let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
+    ///
+    /// // create and use the application with customized wasm keeper
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    /// ```
     pub fn with_checksum_generator(
         mut self,
         checksum_generator: impl ChecksumGenerator + 'static,
@@ -633,6 +711,7 @@ where
         self
     }
 
+    /// Executes contract's `query` entry-point.
     pub fn query_smart(
         &self,
         address: Addr,
@@ -652,6 +731,7 @@ where
         )
     }
 
+    /// Returns the value stored under specified key in contracts storage.
     pub fn query_raw(&self, address: Addr, storage: &dyn Storage, key: &[u8]) -> Binary {
         let storage = self.contract_storage_readonly(storage, &address);
         let data = storage.get(key).unwrap_or_default();
@@ -720,9 +800,9 @@ where
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
         sender: Addr,
-        wasm_msg: WasmMsg,
+        msg: WasmMsg,
     ) -> AnyResult<AppResponse> {
-        match wasm_msg {
+        match msg {
             WasmMsg::Execute {
                 contract_addr,
                 msg,
@@ -835,7 +915,7 @@ where
             WasmMsg::ClearAdmin { contract_addr } => {
                 self.update_admin(api, storage, sender, &contract_addr, None)
             }
-            msg => bail!(Error::UnsupportedWasmMsg(msg)),
+            _ => unimplemented!("{}", Error::unsupported_wasm_message(msg)),
         }
     }
 
@@ -1183,6 +1263,7 @@ where
         Ok(addr)
     }
 
+    /// Executes contract's `execute` entry-point.
     pub fn call_execute(
         &self,
         api: &dyn Api,
@@ -1203,6 +1284,7 @@ where
         )?)
     }
 
+    /// Executes contract's `instantiate` entry-point.
     pub fn call_instantiate(
         &self,
         address: Addr,
@@ -1223,6 +1305,7 @@ where
         )?)
     }
 
+    /// Executes contract's `reply` entry-point.
     pub fn call_reply(
         &self,
         address: Addr,
@@ -1242,6 +1325,7 @@ where
         )?)
     }
 
+    /// Executes contract's `sudo` entry-point.
     pub fn call_sudo(
         &self,
         address: Addr,
@@ -1261,6 +1345,7 @@ where
         )?)
     }
 
+    /// Executes contract's `migrate` entry-point.
     pub fn call_migrate(
         &self,
         address: Addr,
@@ -1349,6 +1434,7 @@ where
         })
     }
 
+    /// Saves contract data in a storage under specified address.
     pub fn save_contract(
         &self,
         storage: &mut dyn Storage,
@@ -1420,6 +1506,7 @@ mod test {
     use crate::bank::BankKeeper;
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
+    use crate::stargate::StargateFailing;
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule};
@@ -1438,6 +1525,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
+        StargateFailing,
     >;
 
     fn wasm_keeper() -> WasmKeeper<Empty, Empty> {
@@ -1453,6 +1541,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
+            stargate: StargateFailing,
         }
     }
 

@@ -1,20 +1,20 @@
-use crate::app::no_init;
 use crate::custom_handler::CachingCustomHandler;
 use crate::error::{bail, AnyResult};
 use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
-use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomMsg};
+use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomHelperMsg};
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
 use crate::AppBuilder;
 use crate::{
-    custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
-    Router, Staking, Wasm, WasmSudo,
+    custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
+    Module, Router, Staking, Wasm, WasmSudo,
 };
 use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_json, to_json_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
-    BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomQuery, Empty, Event, OverflowError,
-    OverflowOperation, Querier, Reply, StdError, StdResult, Storage, SubMsg, WasmMsg,
+    BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomMsg, CustomQuery, Empty, Event,
+    OverflowError, OverflowOperation, Querier, Reply, StdError, StdResult, Storage, SubMsg,
+    WasmMsg,
 };
 use cw_storage_plus::Item;
 use cw_utils::parse_instantiate_response_data;
@@ -29,7 +29,7 @@ fn get_balance<BankT, ApiT, StorageT, CustomT, WasmT>(
     addr: &Addr,
 ) -> Vec<Coin>
 where
-    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -40,14 +40,14 @@ where
     app.wrap().query_all_balances(addr).unwrap()
 }
 
-fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>(
-    router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT>,
+fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
+    router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
     api: &dyn Api,
     storage: &dyn Storage,
     rcpt: &Addr,
 ) -> Vec<Coin>
 where
-    CustomT::ExecT: Clone + Debug + PartialEq + JsonSchema,
+    CustomT::ExecT: CustomMsg,
     CustomT::QueryT: CustomQuery + DeserializeOwned,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -73,7 +73,7 @@ fn query_app<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT>(
     rcpt: &Addr,
 ) -> Vec<Coin>
 where
-    CustomT::ExecT: Debug + PartialEq + Clone + JsonSchema + DeserializeOwned + 'static,
+    CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -325,7 +325,7 @@ fn reflect_success() {
     let owner = Addr::unchecked("owner");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
-    let mut app = custom_app::<CustomMsg, Empty, _>(|router, _, storage| {
+    let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
             .init_balance(storage, &owner, init_funds)
@@ -431,7 +431,7 @@ fn reflect_error() {
     let owner = Addr::unchecked("owner");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
-    let mut app = custom_app::<CustomMsg, Empty, _>(|router, _, storage| {
+    let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
             .init_balance(storage, &owner, init_funds)
@@ -582,7 +582,7 @@ fn reflect_sub_message_reply_works() {
     let random = Addr::unchecked("random");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
-    let mut app = custom_app::<CustomMsg, Empty, _>(|router, _, storage| {
+    let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
             .init_balance(storage, &owner, init_funds)
@@ -856,17 +856,19 @@ mod custom_handler {
     const PITY: Item<Coin> = Item::new("pity");
 
     #[derive(Clone, Debug, PartialEq, JsonSchema, Serialize, Deserialize)]
-    struct CustomMsg {
+    struct CustomLotteryMsg {
         // we mint LOTTERY tokens to this one
         lucky_winner: String,
         // we transfer PITY from lucky_winner to runner_up
         runner_up: String,
     }
 
+    impl CustomMsg for CustomLotteryMsg {}
+
     struct CustomHandler {}
 
     impl Module for CustomHandler {
-        type ExecT = CustomMsg;
+        type ExecT = CustomLotteryMsg;
         type QueryT = Empty;
         type SudoT = Empty;
 
@@ -880,7 +882,7 @@ mod custom_handler {
             msg: Self::ExecT,
         ) -> AnyResult<AppResponse>
         where
-            ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+            ExecC: CustomMsg + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
             let lottery = LOTTERY.load(storage)?;
@@ -913,7 +915,7 @@ mod custom_handler {
             _msg: Self::SudoT,
         ) -> AnyResult<AppResponse>
         where
-            ExecC: Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
+            ExecC: CustomMsg + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
             bail!("sudo not implemented for CustomHandler")
@@ -956,7 +958,7 @@ mod custom_handler {
         let lottery = coin(54321, denom);
         let bonus = coin(12321, denom);
 
-        let mut app = BasicAppBuilder::<CustomMsg, Empty>::new_custom()
+        let mut app = BasicAppBuilder::<CustomLotteryMsg, Empty>::new_custom()
             .with_custom(CustomHandler {})
             .build(|router, _, storage| {
                 router
@@ -970,7 +972,7 @@ mod custom_handler {
         assert_eq!(start, coin(0, denom));
 
         // trigger the custom module
-        let msg = CosmosMsg::Custom(CustomMsg {
+        let msg = CosmosMsg::Custom(CustomLotteryMsg {
             lucky_winner: winner.clone(),
             runner_up: second.clone(),
         });
@@ -1184,7 +1186,7 @@ mod reply_data_overwrite {
         let owner = Addr::unchecked("owner");
         let init_funds = coins(100, "tgd");
 
-        let mut app = custom_app::<CustomMsg, Empty, _>(|router, _, storage| {
+        let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
             router
                 .bank
                 .init_balance(storage, &owner, init_funds)
@@ -1622,7 +1624,7 @@ mod custom_messages {
 
     #[test]
     fn triggering_custom_msg() {
-        let custom_handler = CachingCustomHandler::<CustomMsg, Empty>::new();
+        let custom_handler = CachingCustomHandler::<CustomHelperMsg, Empty>::new();
         let custom_handler_state = custom_handler.state();
 
         let mut app = AppBuilder::new_custom()
@@ -1642,7 +1644,7 @@ mod custom_messages {
             sender,
             contract,
             &echo::Message {
-                sub_msg: vec![SubMsg::new(CosmosMsg::Custom(CustomMsg::SetAge {
+                sub_msg: vec![SubMsg::new(CosmosMsg::Custom(CustomHelperMsg::SetAge {
                     age: 20,
                 }))],
                 ..Default::default()
@@ -1653,7 +1655,7 @@ mod custom_messages {
 
         assert_eq!(
             custom_handler_state.execs().to_owned(),
-            vec![CustomMsg::SetAge { age: 20 }]
+            vec![CustomHelperMsg::SetAge { age: 20 }]
         );
 
         assert!(custom_handler_state.queries().is_empty());
@@ -1670,7 +1672,7 @@ mod protobuf_wrapped_data {
         let owner = Addr::unchecked("owner");
         let init_funds = vec![coin(20, "btc")];
 
-        let mut app = custom_app::<CustomMsg, Empty, _>(|router, _, storage| {
+        let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
             router
                 .bank
                 .init_balance(storage, &owner, init_funds)
@@ -1705,7 +1707,7 @@ mod protobuf_wrapped_data {
     #[test]
     fn instantiate_with_data_works() {
         let owner = Addr::unchecked("owner");
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         // set up echo contract
         let code_id = app.store_code(echo::contract());
@@ -1734,7 +1736,7 @@ mod protobuf_wrapped_data {
     #[test]
     fn instantiate_with_reply_works() {
         let owner = Addr::unchecked("owner");
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         // set up echo contract
         let code_id = app.store_code(echo::contract());
@@ -1786,7 +1788,7 @@ mod protobuf_wrapped_data {
     #[test]
     fn execute_wrapped_properly() {
         let owner = Addr::unchecked("owner");
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         // set up reflect contract
         let code_id = app.store_code(echo::contract());

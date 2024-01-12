@@ -1,6 +1,6 @@
 [package]
 name = "abstract-cw-multi-test"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 edition = "2021"
 description = "Testing tools for multi-contract interactions"
@@ -17,7 +17,8 @@ cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
 cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.79"
+bech32 = "0.9.1"
 cosmwasm-std = { version = "1.5.0", features = [
     "iterator",
     "staking",
@@ -29,23 +30,26 @@ derivative = "2.2.0"
 itertools = "0.12.0"
 prost = "0.12.3"
 schemars = "0.8.16"
-serde = "1.0.193"
+serde = "1.0.195"
 sha2 = "0.10.8"
-thiserror = "1.0.50"
+thiserror = "1.0.56"
 
+
+serde_json = "1.0.40"
 cosmwasm-schema = "1.3.3"
 log = "0.4.20"
 cw20-ics20 = "1.1.0"
 hex = "0.4.3"
-serde_json = "1.0.40"
 
 sha256 = "1.4.0"
-bech32 = "0.9.1"
 
 [dev-dependencies]
+
 
 polytone-note = { version = "1.0.0" }
 polytone-voice = { version = "1.0.0" }
 polytone-proxy = { version = "1.0.0" }
 polytone = { version = "1.0.0" }
-once_cell = "1.18.0"
+hex-literal = "0.4.1"
+once_cell = "1.19.0"
+cw1-whitelist = "1.1.2"

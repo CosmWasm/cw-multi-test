@@ -2,10 +2,10 @@
 
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+    to_json_binary, BankMsg, Binary, CustomMsg, Deps, DepsMut, Empty, Env, MessageInfo, Response,
+    StdError,
 };
 use cw_storage_plus::Item;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -77,7 +77,7 @@ pub fn contract() -> Box<dyn Contract<Empty>> {
 #[allow(dead_code)]
 pub fn custom_contract<C>() -> Box<dyn Contract<C>>
 where
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
 {
     let contract =
         ContractWrapper::new_with_empty(execute, instantiate, query).with_migrate_empty(migrate);

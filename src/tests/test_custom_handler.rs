@@ -1,9 +1,12 @@
 use crate::custom_handler::CachingCustomHandler;
-use crate::test_helpers::CustomMsg;
+use crate::test_helpers::CustomHelperMsg;
 use crate::{App, Module};
 use cosmwasm_std::testing::MockStorage;
 use cosmwasm_std::{Addr, Empty};
 
+///Custom handlers in CosmWasm allow developers to incorporate their own unique logic into tests.
+///This feature is valuable for tailoring the testing environment to reflect specific
+/// use-cases or behaviors in a CosmWasm-based smart contract.
 #[test]
 fn custom_handler_works() {
     // prepare needed tools
@@ -11,7 +14,7 @@ fn custom_handler_works() {
     let mut storage = MockStorage::default();
 
     // create custom handler
-    let custom_handler = CachingCustomHandler::<CustomMsg, CustomMsg>::new();
+    let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::new();
 
     // run execute function
     let _ = custom_handler.execute(
@@ -20,7 +23,7 @@ fn custom_handler_works() {
         app.router(),
         &app.block_info(),
         Addr::unchecked("sender"),
-        CustomMsg::SetAge { age: 32 },
+        CustomHelperMsg::SetAge { age: 32 },
     );
 
     // run query function
@@ -29,7 +32,7 @@ fn custom_handler_works() {
         &storage,
         &(*app.wrap()),
         &app.block_info(),
-        CustomMsg::SetName {
+        CustomHelperMsg::SetName {
             name: "John".to_string(),
         },
     );
@@ -40,13 +43,13 @@ fn custom_handler_works() {
     // there should be one exec message
     assert_eq!(
         custom_handler_state.execs().to_owned(),
-        vec![CustomMsg::SetAge { age: 32 }]
+        vec![CustomHelperMsg::SetAge { age: 32 }]
     );
 
     // there should be one query message
     assert_eq!(
         custom_handler_state.queries().to_owned(),
-        vec![CustomMsg::SetName {
+        vec![CustomHelperMsg::SetName {
             name: "John".to_string()
         }]
     );
@@ -64,11 +67,11 @@ fn custom_handler_has_no_sudo() {
     let mut storage = MockStorage::default();
 
     // create custom handler
-    let custom_handler = CachingCustomHandler::<CustomMsg, CustomMsg>::new();
+    let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::new();
 
     // run sudo function
     assert_eq!(
-        "Unexpected sudo msg Empty",
+        "Unexpected custom sudo message Empty",
         custom_handler
             .sudo(
                 app.api(),

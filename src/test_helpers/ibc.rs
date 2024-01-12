@@ -1,6 +1,6 @@
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
-    Binary, CosmosMsg, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdResult,
+    Binary, CosmosMsg, Deps, DepsMut, Empty, Env, IbcMsg, MessageInfo, Response, StdResult,
 };
 
 fn instantiate(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> StdResult<Response> {
@@ -8,10 +8,12 @@ fn instantiate(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> St
 }
 
 fn execute(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> StdResult<Response> {
-    Ok(Response::new().add_message(CosmosMsg::Stargate {
-        type_url: "/this.is.a.stargate.test.helper".to_string(),
-        value: Default::default(),
-    }))
+    let msg: CosmosMsg = IbcMsg::CloseChannel {
+        channel_id: "channel".to_string(),
+    }
+    .into();
+    let resp = Response::new().add_message(msg);
+    Ok(resp)
 }
 
 fn query(_deps: Deps, _env: Env, _msg: Empty) -> StdResult<Binary> {

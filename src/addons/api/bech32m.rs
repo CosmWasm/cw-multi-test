@@ -2,10 +2,10 @@ use crate::addons::MockApiBech32;
 use bech32::Variant;
 use cosmwasm_std::{Addr, Api, CanonicalAddr, RecoverPubkeyError, StdResult, VerificationError};
 
-/// Implementation of the `Api` trait that uses [`Bech32m`] format
+/// Implementation of the [Api](cosmwasm_std::Api) trait that uses [Bech32m] format
 /// for humanizing canonical addresses.
 ///
-/// [`Bech32m`]:https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
+/// [Bech32m]: https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
 pub struct MockApiBech32m(MockApiBech32);
 
 impl MockApiBech32m {

@@ -1,9 +1,10 @@
+#![allow(clippy::type_complexity)]
+
 use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
-    from_json, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
+    from_json, Binary, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
     QuerierWrapper, Reply, Response, SubMsg,
 };
-use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::error::Error;
 use std::fmt::{Debug, Display};
@@ -15,12 +16,16 @@ use cosmwasm_std::{
     IbcReceiveResponse,
 };
 
-/// Interface to call into a `Contract`.
+/// Serves as the primary interface for interacting with contracts.
+///
+/// It includes methods for executing, querying, and managing contract states,
+/// making it a fundamental trait for testing contracts.
 pub trait Contract<T, Q = Empty>
 where
-    T: Clone + Debug + PartialEq + JsonSchema,
+    T: CustomMsg,
     Q: CustomQuery,
 {
+    /// Evaluates contract's `execute` entry-point.
     fn execute(
         &self,
         deps: DepsMut<Q>,
@@ -29,6 +34,7 @@ where
         msg: Vec<u8>,
     ) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `instantiate` entry-point.
     fn instantiate(
         &self,
         deps: DepsMut<Q>,
@@ -37,14 +43,19 @@ where
         msg: Vec<u8>,
     ) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
 
+    /// Evaluates contract's `sudo` entry-point.
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `reply` entry-point.
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<T>>;
 
+    /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>>;
 
+    /// Executes the contract ibc_channel_open endpoint
     #[allow(unused)]
     fn ibc_channel_open(
         &self,
@@ -55,6 +66,7 @@ where
         bail!("No Ibc capabilities on this contract")
     }
 
+    /// Executes the contract ibc_channel_connect endpoint
     #[allow(unused)]
     fn ibc_channel_connect(
         &self,
@@ -65,6 +77,7 @@ where
         bail!("No Ibc capabilities on this contract")
     }
 
+    /// Executes the contract ibc_channel_close endpoint
     #[allow(unused)]
     fn ibc_channel_close(
         &self,
@@ -75,6 +88,7 @@ where
         bail!("No Ibc capabilities on this contract")
     }
 
+    /// Executes the contract ibc_packet_receive endpoint
     #[allow(unused)]
     fn ibc_packet_receive(
         &self,
@@ -85,6 +99,7 @@ where
         bail!("No Ibc capabilities on this contract")
     }
 
+    /// Executes the contract ibc_packet_acknowledge endpoint
     #[allow(unused)]
     fn ibc_packet_acknowledge(
         &self,
@@ -95,6 +110,7 @@ where
         bail!("No Ibc capabilities on this contract")
     }
 
+    /// Executes the contract ibc_packet_timeout endpoint
     #[allow(unused)]
     fn ibc_packet_timeout(
         &self,
@@ -120,8 +136,9 @@ type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<
 type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
 type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
 
-/// Wraps the exported functions from a contract and provides the normalized format
-/// Place T4 and E4 at the end, as we just want default placeholders for most contracts that don't have sudo
+/// Standardizes interactions with contracts in CosmWasm tests, especially useful for contracts that
+/// do not possess extensive privileges. It simplifies and unifies the way developers interact with
+/// different contracts.
 pub struct ContractWrapper<
     T1,
     T2,
@@ -160,7 +177,7 @@ pub struct ContractWrapper<
     E10: Display + Debug + Send + Sync + 'static,
     E11: Display + Debug + Send + Sync + 'static,
     E12: Display + Debug + Send + Sync + 'static,
-    C: Clone + Debug + PartialEq + JsonSchema,
+    C: CustomMsg,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     execute_fn: ContractClosure<T1, C, E1, Q>,
@@ -187,9 +204,10 @@ where
     E1: Display + Debug + Send + Sync + 'static,
     E2: Display + Debug + Send + Sync + 'static,
     E3: Display + Debug + Send + Sync + 'static,
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
+    /// Creates a new contract wrapper with default settings.
     pub fn new(
         execute_fn: ContractFn<T1, C, E1, Q>,
         instantiate_fn: ContractFn<T2, C, E2, Q>,
@@ -253,9 +271,10 @@ where
     E4: Display + Debug + Send + Sync + 'static,
     E5: Display + Debug + Send + Sync + 'static,
     E6: Display + Debug + Send + Sync + 'static,
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
+    /// Populates [ContractWrapper] with contract's `sudo` entry-point and custom message type.
     pub fn with_sudo<T4A, E4A>(
         self,
         sudo_fn: PermissionedFn<T4A, C, E4A, Q>,
@@ -282,6 +301,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `sudo` entry-point and `Empty` as a custom message.
     pub fn with_sudo_empty<T4A, E4A>(
         self,
         sudo_fn: PermissionedFn<T4A, Empty, E4A, Q>,
@@ -308,6 +328,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `reply` entry-point and custom message type.
     pub fn with_reply<E5A>(
         self,
         reply_fn: ReplyFn<C, E5A, Q>,
@@ -333,7 +354,7 @@ where
         }
     }
 
-    /// A correlate of new_with_empty
+    /// Populates [ContractWrapper] with contract's `reply` entry-point and `Empty` as a custom message.
     pub fn with_reply_empty<E5A>(
         self,
         reply_fn: ReplyFn<Empty, E5A, Q>,
@@ -359,6 +380,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `migrate` entry-point and custom message type.
     pub fn with_migrate<T6A, E6A>(
         self,
         migrate_fn: PermissionedFn<T6A, C, E6A, Q>,
@@ -385,6 +407,7 @@ where
         }
     }
 
+    /// Populates [ContractWrapper] with contract's `migrate` entry-point and `Empty` as a custom message.
     pub fn with_migrate_empty<T6A, E6A>(
         self,
         migrate_fn: PermissionedFn<T6A, Empty, E6A, Q>,
@@ -411,7 +434,7 @@ where
         }
     }
 
-    // Adding IBC endpoint capabilities
+    /// Adding IBC endpoint capabilities
     pub fn with_ibc<E7A, E8A, E9A, E10A, E11A, E12A>(
         self,
         channel_open_fn: IbcFn<IbcChannelOpenMsg, IbcChannelOpenResponse, E7A, Q>,
@@ -473,7 +496,7 @@ fn customize_fn<T, C, E, Q>(raw_fn: ContractFn<T, Empty, E, Empty>) -> ContractC
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     let customized = move |mut deps: DepsMut<Q>,
@@ -528,7 +551,7 @@ fn customize_permissioned_fn<T, C, E, Q>(
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    C: Clone + Debug + PartialEq + JsonSchema + 'static,
+    C: CustomMsg + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
     let customized = move |deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
@@ -539,7 +562,7 @@ where
 
 fn customize_response<C>(resp: Response<Empty>) -> Response<C>
 where
-    C: Clone + Debug + PartialEq + JsonSchema,
+    C: CustomMsg,
 {
     let mut customized_resp = Response::<C>::new()
         .add_submessages(resp.messages.into_iter().map(customize_msg::<C>))
@@ -551,7 +574,7 @@ where
 
 fn customize_msg<C>(msg: SubMsg<Empty>) -> SubMsg<C>
 where
-    C: Clone + Debug + PartialEq + JsonSchema,
+    C: CustomMsg,
 {
     SubMsg {
         msg: match msg.msg {
@@ -590,7 +613,7 @@ where
     E10: Display + Debug + Send + Sync + 'static,
     E11: Display + Debug + Send + Sync + 'static,
     E12: Display + Debug + Send + Sync + 'static,
-    C: Clone + Debug + PartialEq + JsonSchema,
+    C: CustomMsg,
     Q: CustomQuery + DeserializeOwned,
 {
     fn execute(

@@ -1,22 +1,26 @@
-use std::str::FromStr;
-
 use anyhow::bail;
 use cosmwasm_std::{
     Addr, Binary, Event, IbcChannel, IbcChannelOpenResponse, IbcEndpoint, IbcOrder, IbcQuery,
     IbcTimeout,
 };
+use std::str::FromStr;
 
 use crate::app::IbcModule;
 
 #[cosmwasm_schema::cw_serde]
+/// IBC connection
 pub struct Connection {
+    /// Connection id on the counterparty chain
     pub counterparty_connection_id: Option<String>,
+    /// Chain id of the counterparty chain
     pub counterparty_chain_id: String,
 }
 
 #[cosmwasm_schema::cw_serde]
 #[derive(Default)]
+/// IBC Port Info
 pub struct PortInfo {
+    /// Channel id of the next opened channel
     pub next_channel_id: u64,
 }
 
@@ -166,9 +170,9 @@ pub enum IbcPacketRelayingMsg {
 // This type allows to wrap the ibc response to return from the Router
 #[cosmwasm_schema::cw_serde]
 pub enum IbcResponse {
-    OpenResponse(IbcChannelOpenResponse),
-    BasicResponse(AppIbcBasicResponse),
-    ReceiveResponse(AppIbcReceiveResponse),
+    Open(IbcChannelOpenResponse),
+    Basic(AppIbcBasicResponse),
+    Receive(AppIbcReceiveResponse),
 }
 
 #[cosmwasm_schema::cw_serde]
@@ -186,19 +190,19 @@ pub struct AppIbcReceiveResponse {
 
 impl From<IbcChannelOpenResponse> for IbcResponse {
     fn from(c: IbcChannelOpenResponse) -> IbcResponse {
-        IbcResponse::OpenResponse(c)
+        IbcResponse::Open(c)
     }
 }
 
 impl From<AppIbcBasicResponse> for IbcResponse {
     fn from(c: AppIbcBasicResponse) -> IbcResponse {
-        IbcResponse::BasicResponse(c)
+        IbcResponse::Basic(c)
     }
 }
 
 impl From<AppIbcReceiveResponse> for IbcResponse {
     fn from(c: AppIbcReceiveResponse) -> IbcResponse {
-        IbcResponse::ReceiveResponse(c)
+        IbcResponse::Receive(c)
     }
 }
 
