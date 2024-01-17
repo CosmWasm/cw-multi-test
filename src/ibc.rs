@@ -14,6 +14,7 @@ pub mod types;
 
 pub use self::types::IbcPacketRelayingMsg;
 use self::types::MockIbcQuery;
+pub use simple_ibc::IbcSimpleModule;
 
 /// This is added for modules to implement actions upon ibc actions.
 /// This kind of execution flow is copied from the WASM way of doing things and is not 100% completetely compatible with the IBC standard

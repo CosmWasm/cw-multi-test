@@ -3,16 +3,16 @@ use crate::contracts::Contract;
 use crate::error::{bail, AnyResult};
 use crate::executor::{AppResponse, Executor};
 use crate::gov::Gov;
-use crate::ibc::Ibc;
 use crate::ibc::{
     types::IbcResponse, types::MockIbcQuery, IbcModuleMsg, IbcPacketRelayingMsg as IbcSudo,
 };
+use crate::ibc::{Ibc, IbcSimpleModule};
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::stargate::{Stargate, StargateFailing};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
-use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
+use crate::{AppBuilder, GovFailingModule};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
     from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomMsg,
@@ -40,7 +40,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     WasmKeeper<ExecC, QueryC>,
     StakeKeeper,
     DistributionKeeper,
-    IbcFailingModule,
+    IbcSimpleModule,
     GovFailingModule,
     StargateFailing,
 >;
@@ -57,7 +57,7 @@ pub struct App<
     Wasm = WasmKeeper<Empty, Empty>,
     Staking = StakeKeeper,
     Distr = DistributionKeeper,
-    Ibc = IbcFailingModule,
+    Ibc = IbcSimpleModule,
     Gov = GovFailingModule,
     Stargate = StargateFailing,
 > {
@@ -93,7 +93,7 @@ impl BasicApp {
                 WasmKeeper<Empty, Empty>,
                 StakeKeeper,
                 DistributionKeeper,
-                IbcFailingModule,
+                IbcSimpleModule,
                 GovFailingModule,
                 StargateFailing,
             >,
@@ -118,7 +118,7 @@ where
             WasmKeeper<ExecC, QueryC>,
             StakeKeeper,
             DistributionKeeper,
-            IbcFailingModule,
+            IbcSimpleModule,
             GovFailingModule,
             StargateFailing,
         >,
