@@ -1585,7 +1585,7 @@ mod contract_instantiation {
 
         // assert contract's address is exactly the predicted one,
         // in default address generator, this is like `contract` + salt in hex
-        assert_eq!(parsed.contract_address, "contract010203040506");
+        assert_eq!(parsed.contract_address, "contract/sender/010203040506");
     }
 }
 

@@ -112,16 +112,17 @@ pub trait AddressGenerator {
     /// ```
     fn predictable_contract_address(
         &self,
-        _api: &dyn Api,
+        api: &dyn Api,
         _storage: &mut dyn Storage,
         _code_id: u64,
         _instance_id: u64,
         _checksum: &[u8],
-        _creator: &CanonicalAddr,
+        creator: &CanonicalAddr,
         salt: &[u8],
     ) -> AnyResult<Addr> {
         Ok(Addr::unchecked(format!(
-            "contract{}",
+            "contract/{}/{}",
+            api.addr_humanize(creator)?,
             HexBinary::from(salt).to_hex()
         )))
     }

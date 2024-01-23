@@ -2238,7 +2238,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract01c0ffee",
+            contract_addr, "contract/foobar/01c0ffee",
             "default address generator returned incorrect address"
         );
     }
