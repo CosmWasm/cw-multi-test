@@ -1898,6 +1898,7 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        assert_eq!(1, code_id);
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1928,12 +1929,35 @@ mod test {
                 Addr::unchecked("admin"),
                 "label".to_owned(),
                 1000,
-                Binary::from(HexBinary::from_hex("01C0FFEE").unwrap()),
+                Binary::from(HexBinary::from_hex("C0FFEE").unwrap()),
             )
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract01c0ffee",
+            contract_addr, "contract1c0ffee",
+            "default address generator returned incorrect address"
+        );
+
+        // this part
+
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        assert_eq!(2, code_id);
+
+        let contract_addr = wasm_keeper
+            .register_contract(
+                &api,
+                &mut wasm_storage,
+                code_id,
+                Addr::unchecked("foobar"),
+                Addr::unchecked("admin"),
+                "label".to_owned(),
+                1000,
+                Binary::from(HexBinary::from_hex("C0FFEE").unwrap()),
+            )
+            .unwrap();
+
+        assert_eq!(
+            contract_addr, "contract2c0ffee",
             "default address generator returned incorrect address"
         );
     }

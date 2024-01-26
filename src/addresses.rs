@@ -98,30 +98,32 @@ pub trait AddressGenerator {
     ///
     /// let my_address_generator = MyAddressGenerator{};
     ///
-    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 100, 0, &[0], &creator, &[0]).unwrap();
-    /// assert_eq!(addr.to_string(),"contract00");
+    /// let salt = [0xc0,0xff,0xee];
+    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 100, 0, &[0], &creator, &salt).unwrap();
+    /// assert_eq!(addr.to_string(),"contract0c0ffee");
     ///
-    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 100, 1, &[1], &creator, &[0]).unwrap();
-    /// assert_eq!(addr.to_string(),"contract00");
+    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 100, 1, &[1], &creator, &salt).unwrap();
+    /// assert_eq!(addr.to_string(),"contract1c0ffee");
     ///
-    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 200, 0, &[2], &creator, &[1]).unwrap();
-    /// assert_eq!(addr.to_string(),"contract01");
+    /// let salt = [0xbe,0xef];
+    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 200, 0, &[2], &creator, &salt).unwrap();
+    /// assert_eq!(addr.to_string(),"contract0beef");
     ///
-    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 200, 1, &[3], &creator, &[1]).unwrap();
-    /// assert_eq!(addr.to_string(),"contract01");
+    /// let addr = my_address_generator.predictable_contract_address(&api, &mut storage, 200, 1, &[3], &creator, &salt).unwrap();
+    /// assert_eq!(addr.to_string(),"contract1beef");
     /// ```
     fn predictable_contract_address(
         &self,
         _api: &dyn Api,
         _storage: &mut dyn Storage,
         _code_id: u64,
-        _instance_id: u64,
+        instance_id: u64,
         _checksum: &[u8],
         _creator: &CanonicalAddr,
         salt: &[u8],
     ) -> AnyResult<Addr> {
         Ok(Addr::unchecked(format!(
-            "contract{}",
+            "contract{instance_id}{}",
             HexBinary::from(salt).to_hex()
         )))
     }
