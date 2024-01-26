@@ -137,7 +137,7 @@ mod executor;
 mod gov;
 mod ibc;
 mod module;
-mod prefixed_storage;
+pub mod prefixed_storage;
 mod staking;
 mod stargate;
 mod test_helpers;

@@ -1,3 +1,7 @@
+//! # Prefixed storage
+//!
+//! This helps us to have a namespace for our storage keys. This is useful to avoid collisions
+
 use cosmwasm_std::Storage;
 use cosmwasm_std::{Order, Record};
 use length_prefixed::{to_length_prefixed, to_length_prefixed_nested};
@@ -19,12 +23,14 @@ pub fn prefixed_read<'a>(
     ReadonlyPrefixedStorage::new(storage, namespace)
 }
 
+/// Storage helper with a prefix
 pub struct PrefixedStorage<'a> {
     storage: &'a mut dyn Storage,
     prefix: Vec<u8>,
 }
 
 impl<'a> PrefixedStorage<'a> {
+    /// Creates a new PrefixedStorage with the given prefix
     pub fn new(storage: &'a mut dyn Storage, namespace: &[u8]) -> Self {
         PrefixedStorage {
             storage,
@@ -32,8 +38,8 @@ impl<'a> PrefixedStorage<'a> {
         }
     }
 
-    // Nested namespaces as documented in
-    // https://github.com/webmaster128/key-namespacing#nesting
+    /// Nested namespaces as documented in
+    /// https://github.com/webmaster128/key-namespacing#nesting
     pub fn multilevel(storage: &'a mut dyn Storage, namespaces: &[&[u8]]) -> Self {
         PrefixedStorage {
             storage,
@@ -67,12 +73,14 @@ impl<'a> Storage for PrefixedStorage<'a> {
     }
 }
 
+/// Readonly Storage helper with a prefix
 pub struct ReadonlyPrefixedStorage<'a> {
     storage: &'a dyn Storage,
     prefix: Vec<u8>,
 }
 
 impl<'a> ReadonlyPrefixedStorage<'a> {
+    /// Creates a new ReadonlyPrefixedStorage with the given prefix
     pub fn new(storage: &'a dyn Storage, namespace: &[u8]) -> Self {
         ReadonlyPrefixedStorage {
             storage,
@@ -80,8 +88,8 @@ impl<'a> ReadonlyPrefixedStorage<'a> {
         }
     }
 
-    // Nested namespaces as documented in
-    // https://github.com/webmaster128/key-namespacing#nesting
+    /// Nested namespaces as documented in
+    /// https://github.com/webmaster128/key-namespacing#nesting
     pub fn multilevel(storage: &'a dyn Storage, namespaces: &[&[u8]]) -> Self {
         ReadonlyPrefixedStorage {
             storage,
