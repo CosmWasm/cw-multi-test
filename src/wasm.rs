@@ -1201,7 +1201,7 @@ mod test {
     use crate::bank::BankKeeper;
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
-    use crate::stargate::StargateFailing;
+    use crate::stargate::StargateFailingModule;
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule};
@@ -1220,7 +1220,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >;
 
     fn wasm_keeper() -> WasmKeeper<Empty, Empty> {
@@ -1236,7 +1236,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailingModule::new(),
         }
     }
 

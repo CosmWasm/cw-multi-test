@@ -6,7 +6,7 @@ use crate::gov::Gov;
 use crate::ibc::Ibc;
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{Stargate, StargateFailing};
+use crate::stargate::{Stargate, StargateFailingModule, StargateMsg, StargateQuery};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
@@ -39,7 +39,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    StargateFailing,
+    StargateFailingModule,
 >;
 
 /// # Blockchain application simulator
@@ -56,7 +56,7 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = IbcFailingModule,
     Gov = GovFailingModule,
-    Stargate = StargateFailing,
+    Stargate = StargateFailingModule,
 > {
     pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate>,
     pub(crate) api: Api,
@@ -92,7 +92,7 @@ impl BasicApp {
                 DistributionKeeper,
                 IbcFailingModule,
                 GovFailingModule,
-                StargateFailing,
+                StargateFailingModule,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -103,7 +103,7 @@ impl BasicApp {
 }
 
 /// Creates new default `App` implementation working with customized exec and query messages.
-/// Outside of `App` implementation to make type elision better.
+/// Outside the `App` implementation to make type elision better.
 pub fn custom_app<ExecC, QueryC, F>(init_fn: F) -> BasicApp<ExecC, QueryC>
 where
     ExecC: CustomMsg + DeserializeOwned + 'static,
@@ -117,7 +117,7 @@ where
             DistributionKeeper,
             IbcFailingModule,
             GovFailingModule,
-            StargateFailing,
+            StargateFailingModule,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -376,7 +376,7 @@ where
     }
 
     /// Simple helper so we get access to all the QuerierWrapper helpers,
-    /// eg. wrap().query_wasm_smart, query_all_balances, ...
+    /// e.g. wrap().query_wasm_smart, query_all_balances, ...
     pub fn wrap(&self) -> QuerierWrapper<CustomT::QueryT> {
         QuerierWrapper::new(self)
     }
@@ -535,7 +535,7 @@ impl From<StakingSudo> for SudoMsg {
 /// A trait representing the Cosmos based chain's router.
 ///
 /// This trait is designed for routing messages within the Cosmos ecosystem.
-/// It is key to ensuring that transactions and contract calls are directed to the
+/// It is key to ensure that transactions and contract calls are directed to the
 /// correct destinations during testing, simulating real-world blockchain operations.
 pub trait CosmosRouter {
     /// Type of the executed custom message.
@@ -607,14 +607,19 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
-            CosmosMsg::Stargate { type_url, value } => self
-                .stargate
-                .execute(api, storage, self, block, sender, type_url, value),
+            CosmosMsg::Stargate { type_url, value } => self.stargate.execute(
+                api,
+                storage,
+                self,
+                block,
+                sender,
+                StargateMsg { type_url, value },
+            ),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
 
-    /// this is used by `RouterQuerier` to actual implement the `Querier` interface.
+    /// This is used by `RouterQuerier` to actual implement the `Querier` interface.
     /// you most likely want to use `router.querier(storage, block).wrap()` to get a
     /// QuerierWrapper to interact with
     fn query(
@@ -631,9 +636,10 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
-            QueryRequest::Stargate { path, data } => self
-                .stargate
-                .query(api, storage, &querier, block, path, data),
+            QueryRequest::Stargate { path, data } => {
+                self.stargate
+                    .query(api, storage, &querier, block, StargateQuery { path, data })
+            }
             _ => unimplemented!(),
         }
     }
