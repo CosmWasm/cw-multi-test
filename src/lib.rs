@@ -80,7 +80,7 @@
 //! for some examples or how to do so (and useful mocks for some test cases).
 //! Here is an example of wrapping a CosmWasm contract into a [Contract] trait to be added to an [App]:
 //!
-//! ```
+//! ```ignore
 //! use cosmwasm_std::Empty;
 //! use cw1_whitelist::contract::{execute, instantiate, query};
 //! use cw_multi_test::{App, Contract, ContractWrapper};
@@ -99,7 +99,7 @@
 //! There is only one root [Storage](cosmwasm_std::Storage), stored inside [App].
 //! This is wrapped into a transaction, and then passed down to other functions to work with.
 //! The code that modifies the Storage is divided into _modules_ much like the CosmosSDK.
-//! Currently the message processing logic is divided into one _module_ for every [CosmosMsg](cosmwasm_std) variant.
+//! Currently, the message processing logic is divided into one _module_ for every [CosmosMsg](cosmwasm_std) variant.
 //! [Bank] handles [BankMsg](cosmwasm_std::BankMsg) and [BankQuery](cosmwasm_std::BankQuery),
 //! [Wasm] handles [WasmMsg](cosmwasm_std::WasmMsg) and [WasmQuery](cosmwasm_std::WasmQuery), etc.
 //!
