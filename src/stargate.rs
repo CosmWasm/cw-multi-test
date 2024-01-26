@@ -1,104 +1,39 @@
-use crate::error::AnyResult;
-use crate::{AppResponse, CosmosRouter};
-use anyhow::bail;
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, Storage};
-use serde::de::DeserializeOwned;
+use crate::{AcceptingModule, FailingModule, Module};
+use cosmwasm_std::{Binary, Empty};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
-/// Stargate interface.
-///
-/// This trait provides the default behavior for all functions
-/// that is equal to [StargateFailing] implementation.
-pub trait Stargate {
-    /// Processes stargate messages.
-    ///
-    /// The `CosmosMsg::Stargate` message is unwrapped before processing.
-    /// The `type_url` and `value` attributes of `CosmosMsg::Stargate`
-    /// are passed directly to this handler.
-    fn execute<ExecC, QueryC>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        sender: Addr,
-        type_url: String,
-        value: Binary,
-    ) -> AnyResult<AppResponse>
-    where
-        ExecC: CustomMsg + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static,
-    {
-        let _ = (api, storage, router, block);
-        bail!(
-            "Unexpected stargate message: (type_ur = {}, value = {:?}) from {:?}",
-            type_url,
-            value,
-            sender
-        )
-    }
-
-    /// Processes stargate queries.
-    ///
-    /// The `QueryRequest::Stargate` query request is unwrapped before processing.
-    /// The `path` and `data` attributes of `QueryRequest::Stargate` are passed
-    /// directly to this handler.
-    fn query(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        path: String,
-        data: Binary,
-    ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block);
-        bail!(
-            "Unexpected stargate query: path = {:?}, data = {:?}",
-            path,
-            data
-        )
-    }
+/// Placeholder for stargate message attributes.
+#[non_exhaustive]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct StargateMsg {
+    /// Stargate message type.
+    pub type_url: String,
+    /// Stargate message body.
+    pub value: Binary,
 }
 
-/// Always failing stargate mock implementation.
-pub struct StargateFailing;
-
-impl Stargate for StargateFailing {}
-
-/// Always accepting stargate mock implementation.
-pub struct StargateAccepting;
-
-impl Stargate for StargateAccepting {
-    /// Accepts all stargate messages. Returns default `AppResponse`.
-    fn execute<ExecC, QueryC>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        sender: Addr,
-        type_url: String,
-        value: Binary,
-    ) -> AnyResult<AppResponse>
-    where
-        ExecC: CustomMsg + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static,
-    {
-        let _ = (api, storage, router, block, sender, type_url, value);
-        Ok(AppResponse::default())
-    }
-
-    /// Accepts all stargate queries. Returns default `Binary`.
-    fn query(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        path: String,
-        data: Binary,
-    ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block, path, data);
-        Ok(Binary::default())
-    }
+/// Placeholder for stargate query attributes.
+#[non_exhaustive]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct StargateQuery {
+    /// Fully qualified service path used for routing, e.g. custom/cosmos_sdk.x.bank.v1.Query/QueryBalance.
+    pub path: String,
+    /// Expected protobuf message type (not any), binary encoded.
+    pub data: Binary,
 }
+
+/// Interface to module handling stargate messages and queries.
+pub trait Stargate: Module<ExecT = StargateMsg, QueryT = StargateQuery, SudoT = Empty> {}
+
+/// Always accepting stargate module.
+pub type StargateAcceptingModule = AcceptingModule<StargateMsg, StargateQuery, Empty>;
+
+impl Stargate for StargateAcceptingModule {}
+
+/// Always accepting stargate module.
+pub type StargateFailingModule = FailingModule<StargateMsg, StargateQuery, Empty>;
+
+impl Stargate for StargateFailingModule {}

@@ -282,7 +282,7 @@ impl StakeKeeper {
     }
 
     /// Updates the staking reward for the given validator and their stakers
-    /// It saves the validator info and it's stakers, so make sure not to overwrite that.
+    /// It saves the validator info and stakers, so make sure not to overwrite that.
     /// Always call this to update rewards before changing anything that influences future rewards.
     fn update_rewards(
         api: &dyn Api,
@@ -915,7 +915,7 @@ impl DistributionKeeper {
         Ok(rewards)
     }
 
-    /// Returns the withdraw address for specified delegator.
+    /// Returns the withdrawal address for specified delegator.
     pub fn get_withdraw_address(storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
         Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator)? {
             Some(a) => a,
@@ -1036,7 +1036,7 @@ impl Module for DistributionKeeper {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::stargate::StargateFailing;
+    use crate::stargate::StargateFailingModule;
     use crate::{
         app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, Router,
         WasmKeeper,
@@ -1056,7 +1056,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -1068,7 +1068,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailingModule::new(),
         }
     }
 
