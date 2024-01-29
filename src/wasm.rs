@@ -1920,6 +1920,8 @@ mod test {
             "default address generator returned incorrect address"
         );
 
+        let salt = HexBinary::from_hex("c0ffee").unwrap();
+
         let contract_addr = wasm_keeper
             .register_contract(
                 &api,
@@ -1929,16 +1931,19 @@ mod test {
                 Addr::unchecked("admin"),
                 "label".to_owned(),
                 1000,
-                Binary::from(HexBinary::from_hex("C0FFEE").unwrap()),
+                Binary::from(salt.clone()),
             )
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract1c0ffee",
+            contract_addr,
+            format!(
+                "contract{}{}",
+                api.addr_canonicalize("foobar").unwrap(),
+                salt.to_hex()
+            ),
             "default address generator returned incorrect address"
         );
-
-        // this part
 
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
         assert_eq!(2, code_id);
@@ -1948,16 +1953,21 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("foobar"),
+                Addr::unchecked("boobaz"),
                 Addr::unchecked("admin"),
                 "label".to_owned(),
                 1000,
-                Binary::from(HexBinary::from_hex("C0FFEE").unwrap()),
+                Binary::from(salt.clone()),
             )
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract2c0ffee",
+            contract_addr,
+            format!(
+                "contract{}{}",
+                api.addr_canonicalize("boobaz").unwrap(),
+                salt.to_hex()
+            ),
             "default address generator returned incorrect address"
         );
     }

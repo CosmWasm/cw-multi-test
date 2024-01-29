@@ -1555,6 +1555,7 @@ mod response_validation {
 }
 
 mod contract_instantiation {
+
     #[test]
     #[cfg(feature = "cosmwasm_1_2")]
     fn instantiate2_works() {
@@ -1569,13 +1570,14 @@ mod contract_instantiation {
 
         // initialize the contract
         let init_msg = to_json_binary(&Empty {}).unwrap();
+        let salt = cosmwasm_std::HexBinary::from_hex("010203040506").unwrap();
         let msg = WasmMsg::Instantiate2 {
             admin: None,
             code_id,
             msg: init_msg,
             funds: vec![],
             label: "label".into(),
-            salt: [1, 2, 3, 4, 5, 6].as_slice().into(),
+            salt: salt.clone().into(),
         };
         let res = app.execute(sender, msg.into()).unwrap();
 
@@ -1585,7 +1587,14 @@ mod contract_instantiation {
 
         // assert contract's address is exactly the predicted one,
         // in default address generator, this is like `contract` + salt in hex
-        assert_eq!(parsed.contract_address, "contract0010203040506");
+        assert_eq!(
+            parsed.contract_address,
+            format!(
+                "contract{}{}",
+                app.api().addr_canonicalize("sender").unwrap(),
+                salt.to_hex()
+            ),
+        );
     }
 }
 
