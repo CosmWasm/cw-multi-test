@@ -256,7 +256,7 @@ impl StakeKeeper {
 
         Ok(Coin {
             denom: staking_info.bonded_denom,
-            amount: Uint128::new(1) * delegator_rewards, // multiplying by 1 to convert Decimal to Uint128
+            amount: Uint128::new(1).mul_floor(delegator_rewards), // multiplying by 1 to convert Decimal to Uint128
         })
     }
 
@@ -362,7 +362,7 @@ impl StakeKeeper {
         Ok(shares.map(|shares| {
             Coin {
                 denom: staking_info.bonded_denom,
-                amount: Uint128::new(1) * shares.stake, // multiplying by 1 to convert Decimal to Uint128
+                amount: Uint128::new(1).mul_floor(shares.stake), // multiplying by 1 to convert Decimal to Uint128
             }
         }))
     }
@@ -482,7 +482,7 @@ impl StakeKeeper {
             .unwrap();
 
         let remaining_percentage = Decimal::one() - percentage;
-        validator_info.stake = validator_info.stake * remaining_percentage;
+        validator_info.stake = validator_info.stake.mul_floor(remaining_percentage);
 
         // if the stake is completely gone, we clear all stakers and reinitialize the validator
         if validator_info.stake.is_zero() {
@@ -515,7 +515,7 @@ impl StakeKeeper {
             .iter_mut()
             .filter(|ub| &ub.validator == validator)
             .for_each(|ub| {
-                ub.amount = ub.amount * remaining_percentage;
+                ub.amount = ub.amount.mul_floor(remaining_percentage);
             });
         UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
 
@@ -783,36 +783,33 @@ impl Module for StakeKeeper {
     ) -> AnyResult<Binary> {
         let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
         match request {
-            StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse {
-                denom: Self::get_staking_info(&staking_storage)?.bonded_denom,
-            })?),
+            StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse::new(
+                Self::get_staking_info(&staking_storage)?.bonded_denom,
+            ))?),
             StakingQuery::AllDelegations { delegator } => {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
 
-                let res: AnyResult<Vec<Delegation>> = validators
-                    .into_iter()
-                    .filter_map(|validator| {
-                        let delegator = delegator.clone();
-                        let amount = self
-                            .get_stake(
-                                &staking_storage,
-                                &delegator,
-                                &Addr::unchecked(&validator.address),
-                            )
-                            .transpose()?;
+                let res: AnyResult<Vec<Delegation>> =
+                    validators
+                        .into_iter()
+                        .filter_map(|validator| {
+                            let delegator = delegator.clone();
+                            let amount = self
+                                .get_stake(
+                                    &staking_storage,
+                                    &delegator,
+                                    &Addr::unchecked(&validator.address),
+                                )
+                                .transpose()?;
 
-                        Some(amount.map(|amount| Delegation {
-                            delegator,
-                            validator: validator.address,
-                            amount,
-                        }))
-                    })
-                    .collect();
+                            Some(amount.map(|amount| {
+                                Delegation::new(delegator, validator.address, amount)
+                            }))
+                        })
+                        .collect();
 
-                Ok(to_json_binary(&AllDelegationsResponse {
-                    delegations: res?,
-                })?)
+                Ok(to_json_binary(&AllDelegationsResponse::new(res?))?)
             }
             StakingQuery::Delegation {
                 delegator,
@@ -840,38 +837,36 @@ impl Module for StakeKeeper {
                 let staking_info = Self::get_staking_info(&staking_storage)?;
 
                 let amount = coin(
-                    (shares.stake * Uint128::new(1)).u128(),
+                    Uint128::new(1).mul_floor(shares.stake).u128(),
                     staking_info.bonded_denom,
                 );
 
                 let full_delegation_response = if amount.amount.is_zero() {
                     // no delegation
-                    DelegationResponse { delegation: None }
+                    DelegationResponse::new(None)
                 } else {
-                    DelegationResponse {
-                        delegation: Some(FullDelegation {
-                            delegator,
-                            validator,
-                            amount: amount.clone(),
-                            can_redelegate: amount, // TODO: not implemented right now
-                            accumulated_rewards: if reward.amount.is_zero() {
-                                vec![]
-                            } else {
-                                vec![reward]
-                            },
-                        }),
-                    }
+                    DelegationResponse::new(Some(FullDelegation::new(
+                        delegator,
+                        validator,
+                        amount.clone(),
+                        amount, // TODO: not implemented right now
+                        if reward.amount.is_zero() {
+                            vec![]
+                        } else {
+                            vec![reward]
+                        },
+                    )))
                 };
 
                 let res = to_json_binary(&full_delegation_response)?;
                 Ok(res)
             }
-            StakingQuery::AllValidators {} => Ok(to_json_binary(&AllValidatorsResponse {
-                validators: self.get_validators(&staking_storage)?,
-            })?),
-            StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse {
-                validator: self.get_validator(&staking_storage, &Addr::unchecked(address))?,
-            })?),
+            StakingQuery::AllValidators {} => Ok(to_json_binary(&AllValidatorsResponse::new(
+                self.get_validators(&staking_storage)?,
+            ))?),
+            StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(
+                self.get_validator(&staking_storage, &Addr::unchecked(address))?,
+            ))?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
         }
     }
@@ -906,7 +901,7 @@ impl DistributionKeeper {
 
         // load updated rewards for delegator
         let mut shares = STAKES.load(&staking_storage, (delegator, validator))?;
-        let rewards = Uint128::new(1) * shares.rewards; // convert to Uint128
+        let rewards = Uint128::new(1).mul_floor(shares.rewards); // convert to Uint128
 
         // remove rewards from delegator
         shares.rewards = Decimal::zero();

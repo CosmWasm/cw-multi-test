@@ -8,10 +8,10 @@ use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, Readonly
 use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
-    to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
-    ContractInfoResponse, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event, HexBinary,
-    MessageInfo, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult,
-    Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
+    ContractInfoResponse, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order,
+    Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg,
+    SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
 use cw_storage_plus::Map;
 use prost::Message;
@@ -70,7 +70,7 @@ struct CodeData {
     /// Address of an account that initially stored the contract code.
     creator: Addr,
     /// Checksum of the contract's code base.
-    checksum: HexBinary,
+    checksum: Checksum,
     /// Identifier of the code base where the contract code is stored in memory.
     code_base_id: usize,
 }
@@ -177,19 +177,23 @@ where
             WasmQuery::ContractInfo { contract_addr } => {
                 let addr = api.addr_validate(&contract_addr)?;
                 let contract = self.contract_data(storage, &addr)?;
-                let mut res = ContractInfoResponse::default();
-                res.code_id = contract.code_id;
-                res.creator = contract.creator.to_string();
-                res.admin = contract.admin.map(|x| x.into());
+                let res = ContractInfoResponse::new(
+                    contract.code_id,
+                    contract.creator,
+                    contract.admin.map(|x| x.into()),
+                    false,
+                    None,
+                );
                 to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_2")]
             WasmQuery::CodeInfo { code_id } => {
                 let code_data = self.code_data(code_id)?;
-                let mut res = cosmwasm_std::CodeInfoResponse::default();
-                res.code_id = code_id;
-                res.creator = code_data.creator.to_string();
-                res.checksum = code_data.checksum.clone();
+                let res = cosmwasm_std::CodeInfoResponse::new(
+                    code_id,
+                    code_data.creator.clone(),
+                    code_data.checksum.clone(),
+                );
                 to_json_binary(&res).map_err(Into::into)
             }
             _ => unimplemented!("{}", Error::unsupported_wasm_query(request)),
@@ -234,7 +238,7 @@ where
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
         let code_id = (self.code_data.len() + 1) as u64;
-        let checksum = self.checksum_generator.checksum(&creator, code_id);
+        let checksum: Checksum = self.checksum_generator.checksum(&creator, code_id).into();
         self.code_data.push(CodeData {
             creator,
             checksum,
