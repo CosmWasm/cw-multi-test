@@ -9,21 +9,22 @@ repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
 
 [features]
-default = []
+default = ["cosmwasm_2_0"]
 backtrace = ["anyhow/backtrace"]
 cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
 cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
 cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
 cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
+cosmwasm_2_0 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_2_0"]
 
 [dependencies]
 anyhow = "1.0.79"
 bech32 = "0.9.1"
-cosmwasm-std = { version = "1.5.2", features = ["iterator", "staking", "stargate"] }
-cw-storage-plus = "1.2.0"
-cw-utils = "1.0.3"
+cosmwasm-std = { version = "2.0.0-rc.0", features = ["iterator", "staking", "stargate"] }
+cw-storage-plus = "2.0.0-beta.0"
+cw-utils = "2.0.0-beta.0"
 derivative = "2.2.0"
-itertools = "0.12.0"
+itertools = "0.12.1"
 prost = "0.12.3"
 schemars = "0.8.16"
 serde = "1.0.196"
