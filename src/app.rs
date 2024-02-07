@@ -607,13 +607,16 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
-            CosmosMsg::Stargate { type_url, value } => self.stargate.execute(
+            CosmosMsg::Any(msg) => self.stargate.execute(
                 api,
                 storage,
                 self,
                 block,
                 sender,
-                StargateMsg { type_url, value },
+                StargateMsg {
+                    type_url: msg.type_url,
+                    value: msg.value,
+                },
             ),
             _ => bail!("Cannot execute {:?}", msg),
         }
@@ -636,10 +639,16 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
-            QueryRequest::Stargate { path, data } => {
-                self.stargate
-                    .query(api, storage, &querier, block, StargateQuery { path, data })
-            }
+            QueryRequest::Grpc(grpc) => self.stargate.query(
+                api,
+                storage,
+                &querier,
+                block,
+                StargateQuery {
+                    path: grpc.path,
+                    data: grpc.data,
+                },
+            ),
             _ => unimplemented!(),
         }
     }

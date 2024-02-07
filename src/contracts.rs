@@ -369,7 +369,7 @@ where
             CosmosMsg::Distribution(distribution) => CosmosMsg::Distribution(distribution),
             CosmosMsg::Custom(_) => unreachable!(),
             CosmosMsg::Ibc(ibc) => CosmosMsg::Ibc(ibc),
-            CosmosMsg::Stargate { type_url, value } => CosmosMsg::Stargate { type_url, value },
+            CosmosMsg::Any(any) => CosmosMsg::Any(any),
             _ => panic!("unknown message variant {:?}", msg),
         },
         id: msg.id,
