@@ -1091,12 +1091,12 @@ mod test {
             .unwrap();
 
         // add validator
-        let valoper1 = Validator {
-            address: "testvaloper1".to_string(),
-            commission: validator_commission,
-            max_commission: Decimal::percent(100),
-            max_change_rate: Decimal::percent(1),
-        };
+        let valoper1 = Validator::new(
+            "testvaloper1".to_string(),
+            validator_commission,
+            Decimal::percent(100),
+            Decimal::percent(1),
+        );
         router
             .staking
             .add_validator(&api, &mut store, &block, valoper1)
@@ -1113,12 +1113,12 @@ mod test {
         let block = mock_env().block;
 
         // add validator
-        let valoper1 = Validator {
-            address: "testvaloper1".to_string(),
-            commission: Decimal::percent(10),
-            max_commission: Decimal::percent(20),
-            max_change_rate: Decimal::percent(1),
-        };
+        let valoper1 = Validator::new(
+            "testvaloper1".to_string(),
+            Decimal::percent(10),
+            Decimal::percent(20),
+            Decimal::percent(1),
+        );
         stake
             .add_validator(&api, &mut store, &block, valoper1.clone())
             .unwrap();
@@ -1135,12 +1135,12 @@ mod test {
         assert_eq!(val, valoper1);
 
         // try to add with same address
-        let valoper1_fake = Validator {
-            address: "testvaloper1".to_string(),
-            commission: Decimal::percent(1),
-            max_commission: Decimal::percent(10),
-            max_change_rate: Decimal::percent(100),
-        };
+        let valoper1_fake = Validator::new(
+            "testvaloper1".to_string(),
+            Decimal::percent(1),
+            Decimal::percent(10),
+            Decimal::percent(100),
+        );
         stake
             .add_validator(&api, &mut store, &block, valoper1_fake)
             .unwrap_err();
@@ -1169,12 +1169,12 @@ mod test {
         let validator = api.addr_validate("testvaloper1").unwrap();
 
         // add validator
-        let valoper1 = Validator {
-            address: "testvaloper1".to_string(),
-            commission: Decimal::percent(10),
-            max_commission: Decimal::percent(20),
-            max_change_rate: Decimal::percent(1),
-        };
+        let valoper1 = Validator::new(
+            "testvaloper1".to_string(),
+            Decimal::percent(10),
+            Decimal::percent(20),
+            Decimal::percent(1),
+        );
         stake
             .add_validator(&api, &mut store, &block, valoper1)
             .unwrap();
@@ -1575,12 +1575,12 @@ mod test {
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.block,
-                    Validator {
-                        address: validator2.to_string(),
-                        commission: Decimal::zero(),
-                        max_commission: Decimal::percent(20),
-                        max_change_rate: Decimal::percent(1),
-                    },
+                    Validator::new(
+                        validator2.to_string(),
+                        Decimal::zero(),
+                        Decimal::percent(20),
+                        Decimal::percent(1),
+                    ),
                 )
                 .unwrap();
 
@@ -1652,11 +1652,11 @@ mod test {
             .unwrap();
             assert_eq!(
                 delegations.delegations,
-                [Delegation {
-                    delegator: delegator1.clone(),
-                    validator: validator2.to_string(),
-                    amount: coin(100, "TOKEN"),
-                }]
+                [Delegation::new(
+                    delegator1.clone(),
+                    validator2.to_string(),
+                    coin(100, "TOKEN"),
+                )]
             );
 
             // undelegate all tokens
@@ -1816,12 +1816,12 @@ mod test {
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.block,
-                    Validator {
-                        address: validator2.to_string(),
-                        commission: Decimal::zero(),
-                        max_commission: Decimal::percent(20),
-                        max_change_rate: Decimal::percent(1),
-                    },
+                    Validator::new(
+                        validator2.to_string(),
+                        Decimal::zero(),
+                        Decimal::percent(20),
+                        Decimal::percent(1),
+                    ),
                 )
                 .unwrap();
 
@@ -2011,12 +2011,12 @@ mod test {
 
             // add another validator
             let validator2 = test_env.api.addr_validate("testvaloper2").unwrap();
-            let valoper2 = Validator {
-                address: "testvaloper2".to_string(),
-                commission: Decimal::percent(0),
-                max_commission: Decimal::percent(1),
-                max_change_rate: Decimal::percent(1),
-            };
+            let valoper2 = Validator::new(
+                "testvaloper2".to_string(),
+                Decimal::percent(0),
+                Decimal::percent(1),
+                Decimal::percent(1),
+            );
             test_env
                 .router
                 .staking
@@ -2116,16 +2116,16 @@ mod test {
             assert_eq!(
                 response1.delegations,
                 vec![
-                    Delegation {
-                        delegator: delegator1.clone(),
-                        validator: validator1.to_string(),
-                        amount: coin(50, "TOKEN"),
-                    },
-                    Delegation {
-                        delegator: delegator1.clone(),
-                        validator: validator2.to_string(),
-                        amount: coin(160, "TOKEN"),
-                    },
+                    Delegation::new(
+                        delegator1.clone(),
+                        validator1.to_string(),
+                        coin(50, "TOKEN"),
+                    ),
+                    Delegation::new(
+                        delegator1.clone(),
+                        validator2.to_string(),
+                        coin(160, "TOKEN"),
+                    ),
                 ]
             );
             let response2: DelegationResponse = query_stake(
@@ -2138,13 +2138,13 @@ mod test {
             .unwrap();
             assert_eq!(
                 response2.delegation.unwrap(),
-                FullDelegation {
-                    delegator: delegator2.clone(),
-                    validator: validator1.to_string(),
-                    amount: coin(100, "TOKEN"),
-                    accumulated_rewards: vec![],
-                    can_redelegate: coin(100, "TOKEN"),
-                },
+                FullDelegation::new(
+                    delegator2.clone(),
+                    validator1.to_string(),
+                    coin(100, "TOKEN"),
+                    coin(100, "TOKEN"),
+                    vec![],
+                ),
             );
         }
 
@@ -2218,11 +2218,11 @@ mod test {
             .unwrap();
             assert_eq!(
                 response1.delegations,
-                vec![Delegation {
-                    delegator: delegator1.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
-                }]
+                vec![Delegation::new(
+                    delegator1.clone(),
+                    validator.to_string(),
+                    coin(50, "TOKEN"),
+                )]
             );
             let response2: DelegationResponse = query_stake(
                 &test_env,
@@ -2462,11 +2462,7 @@ mod test {
             .unwrap();
             assert_eq!(
                 response1.delegations[0],
-                Delegation {
-                    delegator: delegator.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(111, "TOKEN"),
-                }
+                Delegation::new(delegator.clone(), validator.to_string(), coin(111, "TOKEN"),)
             );
 
             // wait until unbonding is complete and check if amount was slashed

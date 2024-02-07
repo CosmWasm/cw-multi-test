@@ -180,7 +180,7 @@ where
                 let res = ContractInfoResponse::new(
                     contract.code_id,
                     contract.creator,
-                    contract.admin.map(|x| x.into()),
+                    contract.admin,
                     false,
                     None,
                 );
@@ -192,7 +192,7 @@ where
                 let res = cosmwasm_std::CodeInfoResponse::new(
                     code_id,
                     code_data.creator.clone(),
-                    code_data.checksum.clone(),
+                    code_data.checksum,
                 );
                 to_json_binary(&res).map_err(Into::into)
             }
@@ -238,7 +238,7 @@ where
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
         let code_id = (self.code_data.len() + 1) as u64;
-        let checksum: Checksum = self.checksum_generator.checksum(&creator, code_id).into();
+        let checksum: Checksum = self.checksum_generator.checksum(&creator, code_id);
         self.code_data.push(CodeData {
             creator,
             checksum,
@@ -253,7 +253,7 @@ where
         let code_data = self.code_data(code_id)?;
         self.code_data.push(CodeData {
             creator: code_data.creator.clone(),
-            checksum: code_data.checksum.clone(),
+            checksum: code_data.checksum,
             code_base_id: code_data.code_base_id,
         });
         Ok(code_id + 1)
@@ -756,6 +756,7 @@ where
     ///
     /// The `data` on `AppResponse` is data returned from `reply` call, not from execution of
     /// sub-message itself. In case if `reply` is not called, no `data` is set.
+    #[allow(deprecated)]
     fn execute_submsg(
         &self,
         api: &dyn Api,
@@ -779,9 +780,12 @@ where
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Success) {
                 let reply = Reply {
                     id,
+                    payload: Default::default(),
+                    gas_used: 0,
                     result: SubMsgResult::Ok(SubMsgResponse {
                         events: r.events.clone(),
-                        data: r.data,
+                        data: None,
+                        msg_responses: vec![],
                     }),
                 };
                 // do reply and combine it with the original response
@@ -800,6 +804,8 @@ where
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Error) {
                 let reply = Reply {
                     id,
+                    payload: Default::default(),
+                    gas_used: 0,
                     result: SubMsgResult::Err(format!("{:?}", e)),
                 };
                 self.reply(api, router, storage, block, contract, reply)
@@ -1347,16 +1353,16 @@ mod test {
         let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
         assert_eq!(1, code_id);
 
-        let creator = "foobar";
-        let admin = "admin";
+        let creator = Addr::unchecked("foobar");
+        let admin = Addr::unchecked("admin");
 
         let contract_addr = wasm_keeper
             .register_contract(
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked(creator),
-                Addr::unchecked(admin),
+                creator.clone(),
+                admin.clone(),
                 "label".to_owned(),
                 1000,
                 None,
@@ -1373,10 +1379,7 @@ mod test {
             .unwrap();
 
         let actual: ContractInfoResponse = from_json(contract_info).unwrap();
-        let mut expected = ContractInfoResponse::default();
-        expected.code_id = code_id;
-        expected.creator = creator.into();
-        expected.admin = Some(admin.into());
+        let expected = ContractInfoResponse::new(code_id, creator, admin.into(), false, None);
         assert_eq!(expected, actual);
     }
 
@@ -1395,8 +1398,8 @@ mod test {
             .unwrap();
         let actual: cosmwasm_std::CodeInfoResponse = from_json(code_info).unwrap();
         assert_eq!(code_id, actual.code_id);
-        assert_eq!("creator", actual.creator);
-        assert!(!actual.checksum.is_empty());
+        assert_eq!("creator", actual.creator.to_string());
+        assert_eq!(actual.checksum.to_string(), "");
     }
 
     #[test]
@@ -1779,7 +1782,7 @@ mod test {
             )
             .unwrap();
         let res: ContractInfoResponse = from_json(data).unwrap();
-        assert_eq!(res.admin, admin.as_ref().map(Addr::to_string));
+        assert_eq!(res.admin, admin);
     }
 
     #[test]
@@ -1920,7 +1923,8 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract0",
+            contract_addr.to_string(),
+            "contract0",
             "default address generator returned incorrect address"
         );
 
@@ -1940,7 +1944,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr,
+            contract_addr.to_string(),
             format!(
                 "contract{}{}",
                 api.addr_canonicalize("foobar").unwrap(),
@@ -1966,7 +1970,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr,
+            contract_addr.to_string(),
             format!(
                 "contract{}{}",
                 api.addr_canonicalize("boobaz").unwrap(),
@@ -2068,7 +2072,7 @@ mod test {
         };
         let mut storage = MockStorage::default();
         let contract_addr = addr_gen.next_address(&mut storage);
-        assert_eq!(contract_addr, "contract0");
+        assert_eq!(contract_addr.to_string(), "contract0");
 
         let _: WasmKeeper<Empty, Empty> = WasmKeeper::new_with_custom_address_generator(addr_gen);
     }

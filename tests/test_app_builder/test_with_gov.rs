@@ -24,7 +24,7 @@ fn building_app_with_custom_gov_should_work() {
             Addr::unchecked("sender"),
             GovMsg::Vote {
                 proposal_id: 1,
-                vote: VoteOption::Yes,
+                option: VoteOption::Yes,
             }
             .into(),
         )

@@ -1,5 +1,5 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
-use cosmwasm_std::{to_json_vec, Addr, CosmosMsg, Empty, QueryRequest};
+use cosmwasm_std::{to_json_vec, Addr, AnyMsg, CosmosMsg, Empty, GrpcQuery, QueryRequest};
 use cw_multi_test::{
     no_init, AppBuilder, Executor, Stargate, StargateAcceptingModule, StargateFailingModule,
     StargateMsg, StargateQuery,
@@ -26,10 +26,10 @@ fn building_app_with_custom_stargate_should_work() {
     assert_eq!(
         app.execute(
             Addr::unchecked("sender"),
-            CosmosMsg::Stargate {
+            CosmosMsg::Any(AnyMsg {
                 type_url: "test".to_string(),
                 value: Default::default()
-            },
+            }),
         )
         .unwrap_err()
         .to_string(),
@@ -38,10 +38,10 @@ fn building_app_with_custom_stargate_should_work() {
 
     // executing stargate query should return
     // an error defined in custom stargate keeper
-    let query: QueryRequest<Empty> = QueryRequest::Stargate {
+    let query: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
         path: "test".to_string(),
         data: Default::default(),
-    };
+    });
     assert_eq!(
         app.wrap()
             .raw_query(to_json_vec(&query).unwrap().as_slice())
@@ -60,19 +60,19 @@ fn building_app_with_accepting_stargate_should_work() {
 
     app.execute(
         Addr::unchecked("sender"),
-        CosmosMsg::Stargate {
+        CosmosMsg::Any(AnyMsg {
             type_url: "test".to_string(),
             value: Default::default(),
-        },
+        }),
     )
     .unwrap();
 
     let _ = app
         .wrap()
-        .query::<Empty>(&QueryRequest::Stargate {
+        .query::<Empty>(&QueryRequest::Grpc(GrpcQuery {
             path: "test".to_string(),
             data: Default::default(),
-        })
+        }))
         .is_ok();
 }
 
@@ -85,18 +85,18 @@ fn building_app_with_failing_stargate_should_work() {
 
     app.execute(
         Addr::unchecked("sender"),
-        CosmosMsg::Stargate {
+        CosmosMsg::Any(AnyMsg {
             type_url: "test".to_string(),
             value: Default::default(),
-        },
+        }),
     )
     .unwrap_err();
 
     let _ = app
         .wrap()
-        .query::<Empty>(&QueryRequest::Stargate {
+        .query::<Empty>(&QueryRequest::Grpc(GrpcQuery {
             path: "test".to_string(),
             data: Default::default(),
-        })
+        }))
         .unwrap_err();
 }

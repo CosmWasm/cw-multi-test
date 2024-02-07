@@ -43,7 +43,7 @@ fn building_app_with_custom_staking_should_work() {
             Addr::unchecked("sender"),
             StakingMsg::Delegate {
                 validator: validator.clone().into(),
-                amount: Coin::new(1, "eth"),
+                amount: Coin::new(1_u32, "eth"),
             }
             .into(),
         )

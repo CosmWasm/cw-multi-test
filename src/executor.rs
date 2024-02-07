@@ -58,7 +58,7 @@ impl AppResponse {
 impl From<SubMsgResponse> for AppResponse {
     fn from(reply: SubMsgResponse) -> Self {
         AppResponse {
-            data: reply.data,
+            data: None,
             events: reply.events,
         }
     }

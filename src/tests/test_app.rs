@@ -505,7 +505,7 @@ fn reflect_error() {
         .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap_err();
     assert_eq!(
-        StdError::overflow(OverflowError::new(OverflowOperation::Sub, 0, 3)),
+        StdError::overflow(OverflowError::new(OverflowOperation::Sub)),
         err.downcast().unwrap()
     );
 
@@ -772,7 +772,7 @@ fn sent_wasm_migration_works() {
         .wrap()
         .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
         .unwrap();
-    assert_eq!(state.beneficiary, beneficiary);
+    assert_eq!(state.beneficiary, beneficiary.to_string());
 
     // migrate fails if not admin
     let random = Addr::unchecked("random");
@@ -795,7 +795,7 @@ fn sent_wasm_migration_works() {
         .wrap()
         .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
         .unwrap();
-    assert_eq!(state.beneficiary, random);
+    assert_eq!(state.beneficiary, random.to_string());
 }
 
 #[test]
@@ -1608,8 +1608,8 @@ mod wasm_queries {
         let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
         let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
         assert_eq!(code_id, code_info_response.code_id);
-        assert_eq!("creator", code_info_response.creator);
-        assert!(!code_info_response.checksum.is_empty());
+        assert_eq!("creator", code_info_response.creator.to_string());
+        assert_eq!(code_info_response.checksum.to_string(), "");
     }
 
     #[test]
@@ -1836,7 +1836,7 @@ mod errors {
 
         // we should be able to retrieve the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Init failed");
         } else {
             panic!("wrong StdError variant");
@@ -1867,7 +1867,7 @@ mod errors {
 
         // we should be able to retrieve the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Handle failed");
         } else {
             panic!("wrong StdError variant");
@@ -1905,9 +1905,9 @@ mod errors {
             .execute_contract(Addr::unchecked("random"), caller_addr, &msg, &[])
             .unwrap_err();
 
-        // we can downcast to get the original error
+        // we can get the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Handle failed");
         } else {
             panic!("wrong StdError variant");
@@ -1956,9 +1956,9 @@ mod errors {
         // uncomment to have the test fail and see how the error stringifies
         // panic!("{:?}", err);
 
-        // we can downcast to get the original error
+        // we can get the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Handle failed");
         } else {
             panic!("wrong StdError variant");
@@ -1992,6 +1992,9 @@ mod api {
     fn api_addr_humanize_should_work() {
         let app = App::default();
         let canonical = app.api().addr_canonicalize("creator").unwrap();
-        assert_eq!(app.api().addr_humanize(&canonical).unwrap(), "creator");
+        assert_eq!(
+            app.api().addr_humanize(&canonical).unwrap().to_string(),
+            "creator"
+        );
     }
 }

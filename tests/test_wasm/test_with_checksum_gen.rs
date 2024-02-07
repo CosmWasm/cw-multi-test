@@ -1,7 +1,7 @@
 #![cfg(feature = "cosmwasm_1_2")]
 
 use crate::test_contracts;
-use cosmwasm_std::{Addr, HexBinary};
+use cosmwasm_std::{Addr, Checksum};
 use cw_multi_test::{no_init, App, AppBuilder, ChecksumGenerator, WasmKeeper};
 
 #[test]
@@ -28,9 +28,10 @@ fn default_checksum_generator_should_work() {
 struct MyChecksumGenerator;
 
 impl ChecksumGenerator for MyChecksumGenerator {
-    fn checksum(&self, _creator: &Addr, _code_id: u64) -> HexBinary {
-        HexBinary::from_hex("c0ffee01c0ffee02c0ffee03c0ffee04c0ffee05c0ffee06c0ffee07c0ffee08")
-            .unwrap()
+    fn checksum(&self, _creator: &Addr, _code_id: u64) -> Checksum {
+        Checksum::generate(
+            "c0ffee01c0ffee02c0ffee03c0ffee04c0ffee05c0ffee06c0ffee07c0ffee08".as_bytes(),
+        )
     }
 }
 
