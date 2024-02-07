@@ -362,6 +362,8 @@ where
     C: CustomMsg,
 {
     SubMsg {
+        id: msg.id,
+        payload: Binary::default(),
         msg: match msg.msg {
             CosmosMsg::Wasm(wasm) => CosmosMsg::Wasm(wasm),
             CosmosMsg::Bank(bank) => CosmosMsg::Bank(bank),
@@ -372,7 +374,6 @@ where
             CosmosMsg::Any(any) => CosmosMsg::Any(any),
             _ => panic!("unknown message variant {:?}", msg),
         },
-        id: msg.id,
         gas_limit: msg.gas_limit,
         reply_on: msg.reply_on,
     }
