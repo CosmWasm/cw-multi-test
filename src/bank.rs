@@ -19,7 +19,7 @@ const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
 /// Collection of metadata for denomination.
 const DENOM_METADATA: Map<String, DenomMetadata> = Map::new("metadata");
 
-/// Default namespace for bank module.
+/// Default storage namespace for bank module.
 pub const NAMESPACE_BANK: &[u8] = b"bank";
 
 /// A message representing privileged actions in bank module.
