@@ -140,7 +140,6 @@ fn building_app_with_custom_wasm_should_work() {
     );
 
     // executing wasm query should return an error defined in custom keeper
-    #[cfg(feature = "cosmwasm_1_2")]
     assert_eq!(
         format!("Generic error: Querier contract error: {}", QUERY_MSG),
         app.wrap()

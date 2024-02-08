@@ -11,11 +11,7 @@ homepage = "https://cosmwasm.com"
 [features]
 default = ["cosmwasm_2_0"]
 backtrace = ["anyhow/backtrace"]
-cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
-cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
-cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
-cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
-cosmwasm_2_0 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_2_0"]
+cosmwasm_2_0 = ["cosmwasm-std/cosmwasm_2_0"]
 
 [dependencies]
 anyhow = "1.0.79"

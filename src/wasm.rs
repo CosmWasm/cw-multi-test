@@ -186,7 +186,6 @@ where
                 );
                 to_json_binary(&res).map_err(Into::into)
             }
-            #[cfg(feature = "cosmwasm_1_2")]
             WasmQuery::CodeInfo { code_id } => {
                 let code_data = self.code_data(code_id)?;
                 let res = cosmwasm_std::CodeInfoResponse::new(
@@ -591,7 +590,6 @@ where
             } => self.process_wasm_msg_instantiate(
                 api, storage, router, block, sender, admin, code_id, msg, funds, label, None,
             ),
-            #[cfg(feature = "cosmwasm_1_2")]
             WasmMsg::Instantiate2 {
                 admin,
                 code_id,
@@ -1368,7 +1366,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "cosmwasm_1_2")]
     fn query_code_info() {
         let api = MockApi::default();
         let wasm_storage = MockStorage::new();
@@ -1388,7 +1385,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "cosmwasm_1_2")]
     fn different_contracts_must_have_different_checksum() {
         let api = MockApi::default();
         let wasm_storage = MockStorage::new();
@@ -1419,7 +1415,6 @@ mod test {
     }
 
     #[test]
-    #[cfg(feature = "cosmwasm_1_2")]
     fn querying_invalid_code_info_must_fail() {
         let api = MockApi::default();
         let wasm_storage = MockStorage::new();

@@ -1,5 +1,3 @@
-#![cfg(feature = "cosmwasm_1_2")]
-
 use crate::test_contracts;
 use cosmwasm_std::{Addr, Checksum};
 use cw_multi_test::{no_init, App, AppBuilder, ChecksumGenerator, WasmKeeper};
