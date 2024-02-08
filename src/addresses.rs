@@ -33,17 +33,8 @@ pub trait AddressGenerator {
     ///
     /// let my_address_generator = MyAddressGenerator{};
     ///
-    /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 0).unwrap();
-    /// assert_eq!(addr.to_string(),"contract0");
-    ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 1).unwrap();
-    /// assert_eq!(addr.to_string(),"contract1");
-    ///
-    /// let addr = my_address_generator.contract_address(&api, &mut storage, 200, 5).unwrap();
-    /// assert_eq!(addr.to_string(),"contract5");
-    ///
-    /// let addr = my_address_generator.contract_address(&api, &mut storage, 200, 6).unwrap();
-    /// assert_eq!(addr.to_string(),"contract6");
+    /// assert_eq!(addr.to_string(),"cosmwasm1vlc0q60lwcr89hkkkgj9u360fccw4a2jz48r3dgv0ulmlhgvjczsjfr2pk");
     /// ```
     fn contract_address(
         &self,
@@ -67,7 +58,7 @@ pub trait AddressGenerator {
     /// # Example
     ///
     /// ```
-    /// # use cosmwasm_std::Api;
+    /// # use cosmwasm_std::{Api, Checksum};
     /// # use cosmwasm_std::testing::{MockApi, MockStorage};
     /// # use cw_multi_test::{AddressGenerator, SimpleAddressGenerator};
     /// # let api = MockApi::default();
@@ -78,15 +69,16 @@ pub trait AddressGenerator {
     ///
     /// let my_address_generator = MyAddressGenerator{};
     ///
-    /// let creator1 = api.addr_canonicalize("creator1").unwrap();
-    /// let creator2 = api.addr_canonicalize("creator2").unwrap();
+    /// let creator1 = api.addr_canonicalize(&api.addr_make("creator1").to_string()).unwrap();
+    /// let creator2 = api.addr_canonicalize(&api.addr_make("creator2").to_string()).unwrap();
     /// let salt1 = [0xc0,0xff,0xee];
     /// let salt2 = [0xbe,0xef];
+    /// let chs = Checksum::generate(&[1]);
     ///
-    /// let addr11 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator1, &salt1).unwrap();
-    /// let addr12 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator1, &salt2).unwrap();
-    /// let addr21 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator2, &salt1).unwrap();
-    /// let addr22 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator2, &salt2).unwrap();
+    /// let addr11 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator1, &salt1).unwrap();
+    /// let addr12 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator1, &salt2).unwrap();
+    /// let addr21 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator2, &salt1).unwrap();
+    /// let addr22 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator2, &salt2).unwrap();
     ///
     /// assert_ne!(addr11, addr12);
     /// assert_ne!(addr11, addr21);

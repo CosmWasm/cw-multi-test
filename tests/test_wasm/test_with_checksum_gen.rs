@@ -29,9 +29,8 @@ struct MyChecksumGenerator;
 
 impl ChecksumGenerator for MyChecksumGenerator {
     fn checksum(&self, _creator: &Addr, _code_id: u64) -> Checksum {
-        Checksum::generate(
-            "c0ffee01c0ffee02c0ffee03c0ffee04c0ffee05c0ffee06c0ffee07c0ffee08".as_bytes(),
-        )
+        Checksum::from_hex("c0ffee01c0ffee02c0ffee03c0ffee04c0ffee05c0ffee06c0ffee07c0ffee08")
+            .unwrap()
     }
 }
 
@@ -43,11 +42,10 @@ fn custom_checksum_generator_should_work() {
     // prepare application with custom wasm keeper
     let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
 
+    let creator_addr = app.api().addr_make("creator");
+
     // store contract's code
-    let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
-        test_contracts::counter::contract(),
-    );
+    let code_id = app.store_code_with_creator(creator_addr, test_contracts::counter::contract());
 
     // get code info
     let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
