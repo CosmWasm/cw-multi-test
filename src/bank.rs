@@ -319,8 +319,8 @@ mod test {
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("receiver");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("receiver");
         let init_funds = vec![coin(100, "eth"), coin(20, "btc")];
         let norm = vec![coin(20, "btc"), coin(100, "eth")];
 
@@ -419,8 +419,8 @@ mod test {
         let block = mock_env().block;
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("receiver");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("receiver");
         let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
         let rcpt_funds = vec![coin(5, "btc")];
 
@@ -472,8 +472,8 @@ mod test {
         let block = mock_env().block;
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("recipient");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("recipient");
         let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
         // set money
@@ -583,8 +583,8 @@ mod test {
         let block = mock_env().block;
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("recipient");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("recipient");
         let init_funds = vec![coin(5000, "atom"), coin(100, "eth")];
 
         // set money
