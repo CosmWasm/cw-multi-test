@@ -9,7 +9,7 @@ use crate::{
     custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
     Module, Router, Staking, Wasm, WasmSudo,
 };
-use cosmwasm_std::testing::{mock_env, MockQuerier};
+use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_json, to_json_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
     BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomMsg, CustomQuery, Empty, Event,
@@ -105,8 +105,9 @@ fn update_block() {
 #[test]
 fn multi_level_bank_cache() {
     // set personal balance
-    let owner = Addr::unchecked("owner");
-    let rcpt = Addr::unchecked("recipient");
+    let api = MockApi::default();
+    let owner = api.addr_make("owner");
+    let rcpt = api.addr_make("recipient");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
     let mut app = App::new(|router, _, storage| {
@@ -187,8 +188,9 @@ fn duplicate_contract_code() {
 
 #[test]
 fn send_tokens() {
-    let owner = Addr::unchecked("owner");
-    let rcpt = Addr::unchecked("receiver");
+    let api = MockApi::default();
+    let owner = api.addr_make("owner");
+    let rcpt = api.addr_make("receiver");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let rcpt_funds = vec![coin(5, "btc")];
 
@@ -235,7 +237,8 @@ fn send_tokens() {
 #[test]
 fn simple_contract() {
     // set personal balance
-    let owner = Addr::unchecked("owner");
+    let api = MockApi::default();
+    let owner = api.addr_make("owner");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
     let mut app = App::new(|router, _, storage| {
@@ -251,7 +254,7 @@ fn simple_contract() {
     let msg = payout::InstantiateMessage {
         payout: coin(5, "eth"),
     };
-    let contract_addr = app
+    let contract_address = app
         .instantiate_contract(
             code_id,
             owner.clone(),
@@ -262,7 +265,7 @@ fn simple_contract() {
         )
         .unwrap();
 
-    let contract_data = app.contract_data(&contract_addr).unwrap();
+    let contract_data = app.contract_data(&contract_address).unwrap();
     assert_eq!(
         contract_data,
         ContractData {
@@ -278,17 +281,22 @@ fn simple_contract() {
     let sender = get_balance(&app, &owner);
     assert_eq!(sender, vec![coin(20, "btc"), coin(77, "eth")]);
     // get contract address, has funds
-    let funds = get_balance(&app, &contract_addr);
+    let funds = get_balance(&app, &contract_address);
     assert_eq!(funds, coins(23, "eth"));
 
     // create empty account
-    let random = Addr::unchecked("random");
-    let funds = get_balance(&app, &random);
+    let random_address = app.api().addr_make("random");
+    let funds = get_balance(&app, &random_address);
     assert_eq!(funds, vec![]);
 
     // do one payout and see money coming in
     let res = app
-        .execute_contract(random.clone(), contract_addr.clone(), &Empty {}, &[])
+        .execute_contract(
+            random_address.clone(),
+            contract_address.clone(),
+            &Empty {},
+            &[],
+        )
         .unwrap();
     assert_eq!(3, res.events.len());
 
@@ -297,7 +305,7 @@ fn simple_contract() {
     assert_eq!(payout_exec.ty.as_str(), "execute");
     assert_eq!(
         payout_exec.attributes,
-        [("_contract_address", &contract_addr)]
+        [("_contract_address", &contract_address)]
     );
 
     // next is a custom wasm event
@@ -306,16 +314,16 @@ fn simple_contract() {
 
     // then the transfer event
     let expected_transfer = Event::new("transfer")
-        .add_attribute("recipient", "random")
-        .add_attribute("sender", &contract_addr)
+        .add_attribute("recipient", &random_address)
+        .add_attribute("sender", &contract_address)
         .add_attribute("amount", "5eth");
     assert_eq!(&expected_transfer, &res.events[2]);
 
     // random got cash
-    let funds = get_balance(&app, &random);
+    let funds = get_balance(&app, &random_address);
     assert_eq!(funds, coins(5, "eth"));
     // contract lost it
-    let funds = get_balance(&app, &contract_addr);
+    let funds = get_balance(&app, &contract_address);
     assert_eq!(funds, coins(18, "eth"));
 }
 
@@ -428,7 +436,8 @@ fn reflect_success() {
 #[test]
 fn reflect_error() {
     // set personal balance
-    let owner = Addr::unchecked("owner");
+    let api = MockApi::default();
+    let owner = api.addr_make("owner");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
@@ -455,18 +464,18 @@ fn reflect_error() {
     // reflect has 40 eth
     let funds = get_balance(&app, &reflect_addr);
     assert_eq!(funds, coins(40, "eth"));
-    let random = Addr::unchecked("random");
+    let random_address = app.api().addr_make("random");
 
     // sending 7 eth works
     let msg = SubMsg::new(BankMsg::Send {
-        to_address: random.clone().into(),
+        to_address: random_address.clone().into(),
         amount: coins(7, "eth"),
     });
     let msgs = reflect::Message {
         messages: vec![msg],
     };
     let res = app
-        .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_address.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
     // no wasm events as no attributes
     assert_eq!(2, res.events.len());
@@ -479,7 +488,7 @@ fn reflect_error() {
     assert_eq!(transfer.ty.as_str(), "transfer");
 
     // ensure random got paid
-    let funds = get_balance(&app, &random);
+    let funds = get_balance(&app, &random_address);
     assert_eq!(funds, coins(7, "eth"));
 
     // reflect count should be updated to 1
@@ -491,18 +500,18 @@ fn reflect_error() {
 
     // sending 8 eth, then 3 btc should fail both
     let msg = SubMsg::new(BankMsg::Send {
-        to_address: random.clone().into(),
+        to_address: random_address.clone().into(),
         amount: coins(8, "eth"),
     });
     let msg2 = SubMsg::new(BankMsg::Send {
-        to_address: random.clone().into(),
+        to_address: random_address.clone().into(),
         amount: coins(3, "btc"),
     });
     let msgs = reflect::Message {
         messages: vec![msg, msg2],
     };
     let err = app
-        .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_address.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap_err();
     assert_eq!(
         StdError::overflow(OverflowError::new(OverflowOperation::Sub)),
@@ -510,7 +519,7 @@ fn reflect_error() {
     );
 
     // first one should have been rolled-back on error (no second payment)
-    let funds = get_balance(&app, &random);
+    let funds = get_balance(&app, &random_address);
     assert_eq!(funds, coins(7, "eth"));
 
     // failure should not update reflect count
@@ -673,11 +682,11 @@ fn send_update_admin_works() {
     // update admin succeeds if admin
     // update admin fails if not (new) admin
     // check admin set properly
-    let owner = Addr::unchecked("owner");
-    let owner2 = Addr::unchecked("owner2");
-    let beneficiary = Addr::unchecked("beneficiary");
-
     let mut app = App::default();
+
+    let owner = app.api().addr_make("owner");
+    let owner2 = app.api().addr_make("owner2");
+    let beneficiary = app.api().addr_make("beneficiary");
 
     // create a hackatom contract with some funds
     let code_id = app.store_code(hackatom::contract());
@@ -805,8 +814,9 @@ fn sent_funds_properly_visible_on_execution() {
     // additional 20btc. Then beneficiary balance is checked - expected value is 30btc. 10btc
     // would mean that sending tokens with message is not visible for this very message, and
     // 20btc means, that only such just send funds are visible.
-    let owner = Addr::unchecked("owner");
-    let beneficiary = Addr::unchecked("beneficiary");
+    let api = MockApi::default();
+    let owner = api.addr_make("owner");
+    let beneficiary = api.addr_make("beneficiary");
     let init_funds = coins(30, "btc");
 
     let mut app = App::new(|router, _, storage| {
@@ -950,9 +960,6 @@ mod custom_handler {
     // let's call this custom handler
     #[test]
     fn dispatches_messages() {
-        let winner = "winner".to_string();
-        let second = "second".to_string();
-
         // payments. note 54321 - 12321 = 42000
         let denom = "tix";
         let lottery = coin(54321, denom);
@@ -967,16 +974,20 @@ mod custom_handler {
                     .unwrap();
             });
 
+        let winner = app.api().addr_make("winner");
+        let second = app.api().addr_make("second");
+
         // query that balances are empty
         let start = app.wrap().query_balance(&winner, denom).unwrap();
         assert_eq!(start, coin(0, denom));
 
         // trigger the custom module
         let msg = CosmosMsg::Custom(CustomLotteryMsg {
-            lucky_winner: winner.clone(),
-            runner_up: second.clone(),
+            lucky_winner: winner.to_string(),
+            runner_up: second.to_string(),
         });
-        app.execute(Addr::unchecked("anyone"), msg).unwrap();
+        let anyone = app.api().addr_make("anyone");
+        app.execute(anyone, msg).unwrap();
 
         // see if coins were properly added
         let big_win = app.wrap().query_balance(&winner, denom).unwrap();
@@ -1063,7 +1074,7 @@ mod reply_data_overwrite {
     fn single_submsg() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1152,7 +1163,7 @@ mod reply_data_overwrite {
     fn single_no_top_level_data() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1967,34 +1978,5 @@ mod errors {
         // We're expecting exactly 4 nested error types
         // (the original error, 3 WasmMsg contexts)
         assert_eq!(err.chain().count(), 4);
-    }
-}
-
-mod api {
-    use super::*;
-
-    #[test]
-    fn api_addr_validate_should_work() {
-        let app = App::default();
-        let addr = app.api().addr_validate("creator").unwrap();
-        assert_eq!(addr.to_string(), "creator");
-    }
-
-    #[test]
-    #[cfg(not(feature = "cosmwasm_1_5"))]
-    fn api_addr_canonicalize_should_work() {
-        let app = App::default();
-        let canonical = app.api().addr_canonicalize("creator").unwrap();
-        assert_eq!(canonical.to_string(), "0000000000000000000000000000726F0000000000000000000000000000000000000000006572000000000000000000000000000000000000000000610000000000000000000000000000000000000000006374000000000000");
-    }
-
-    #[test]
-    fn api_addr_humanize_should_work() {
-        let app = App::default();
-        let canonical = app.api().addr_canonicalize("creator").unwrap();
-        assert_eq!(
-            app.api().addr_humanize(&canonical).unwrap().to_string(),
-            "creator"
-        );
     }
 }
