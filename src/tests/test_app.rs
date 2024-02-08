@@ -1574,10 +1574,11 @@ mod contract_instantiation {
 
         // prepare application and actors
         let mut app = App::default();
-        let sender = Addr::unchecked("sender");
+        let sender = app.api().addr_make("sender");
+        let creator = app.api().addr_make("creator");
 
         // store contract's code
-        let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+        let code_id = app.store_code_with_creator(creator, echo::contract());
 
         // initialize the contract
         let init_msg = to_json_binary(&Empty {}).unwrap();
@@ -1600,11 +1601,7 @@ mod contract_instantiation {
         // in default address generator, this is like `contract` + salt in hex
         assert_eq!(
             parsed.contract_address,
-            format!(
-                "contract{}{}",
-                app.api().addr_canonicalize("sender").unwrap(),
-                salt.to_hex()
-            ),
+            "cosmwasm167g7x7auj3l00lhdcevusncx565ytz6a6xvmx2f5xuy84re9ddrqczpzkm",
         );
     }
 }
@@ -1616,11 +1613,12 @@ mod wasm_queries {
     fn query_existing_code_info() {
         use super::*;
         let mut app = App::default();
-        let code_id = app.store_code_with_creator(Addr::unchecked("creator"), echo::contract());
+        let creator = app.api().addr_make("creator");
+        let code_id = app.store_code_with_creator(creator.clone(), echo::contract());
         let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
         assert_eq!(code_id, code_info_response.code_id);
-        assert_eq!("creator", code_info_response.creator.to_string());
-        assert_eq!(code_info_response.checksum.to_string(), "");
+        assert_eq!(creator.to_string(), code_info_response.creator.to_string());
+        assert_eq!(32, code_info_response.checksum.as_slice().len());
     }
 
     #[test]
@@ -1651,8 +1649,8 @@ mod custom_messages {
             .with_custom(custom_handler)
             .build(no_init);
 
-        let sender = app.api().addr_validate("sender").unwrap();
-        let owner = app.api().addr_validate("owner").unwrap();
+        let sender = app.api().addr_make("sender");
+        let owner = app.api().addr_make("owner");
 
         let contract_id = app.store_code(echo::custom_contract());
 
