@@ -1,21 +1,23 @@
 use cosmwasm_std::testing::MockStorage;
-use cosmwasm_std::{Addr, Empty};
+use cosmwasm_std::Empty;
 use cw_multi_test::{App, FailingModule, Module};
 
 /// Utility function for asserting outputs returned from failing module.
 fn assert_results(failing_module: FailingModule<Empty, Empty, Empty>) {
     let app = App::default();
+    let sender_addr = app.api().addr_make("sender");
+    let empty_msg = Empty {};
     let mut storage = MockStorage::default();
     assert_eq!(
-        r#"Unexpected exec msg Empty from Addr("sender")"#,
+        format!(r#"Unexpected exec msg Empty from Addr("{}")"#, sender_addr),
         failing_module
             .execute(
                 app.api(),
                 &mut storage,
                 app.router(),
                 &app.block_info(),
-                Addr::unchecked("sender"),
-                Empty {}
+                sender_addr,
+                empty_msg.clone()
             )
             .unwrap_err()
             .to_string()
@@ -28,7 +30,7 @@ fn assert_results(failing_module: FailingModule<Empty, Empty, Empty>) {
                 &storage,
                 &(*app.wrap()),
                 &app.block_info(),
-                Empty {}
+                empty_msg.clone()
             )
             .unwrap_err()
             .to_string()
@@ -41,7 +43,7 @@ fn assert_results(failing_module: FailingModule<Empty, Empty, Empty>) {
                 &mut storage,
                 app.router(),
                 &app.block_info(),
-                Empty {}
+                empty_msg
             )
             .unwrap_err()
             .to_string()

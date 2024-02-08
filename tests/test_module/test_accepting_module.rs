@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::MockStorage;
-use cosmwasm_std::{Addr, Binary, Empty};
+use cosmwasm_std::{Binary, Empty};
 use cw_multi_test::{AcceptingModule, App, AppResponse, Module};
 
 /// Utility function for comparing responses.
@@ -11,6 +11,8 @@ fn eq(actual: AppResponse, expected: AppResponse) {
 /// Utility function for asserting default outputs returned from accepting module.
 fn assert_results(accepting_module: AcceptingModule<Empty, Empty, Empty>) {
     let app = App::default();
+    let sender_addr = app.api().addr_make("sender");
+    let empty_msg = Empty {};
     let mut storage = MockStorage::default();
     eq(
         AppResponse::default(),
@@ -20,8 +22,8 @@ fn assert_results(accepting_module: AcceptingModule<Empty, Empty, Empty>) {
                 &mut storage,
                 app.router(),
                 &app.block_info(),
-                Addr::unchecked("sender"),
-                Empty {},
+                sender_addr,
+                empty_msg.clone(),
             )
             .unwrap(),
     );
@@ -33,7 +35,7 @@ fn assert_results(accepting_module: AcceptingModule<Empty, Empty, Empty>) {
                 &storage,
                 &(*app.wrap()),
                 &app.block_info(),
-                Empty {}
+                empty_msg.clone()
             )
             .unwrap()
     );
@@ -45,7 +47,7 @@ fn assert_results(accepting_module: AcceptingModule<Empty, Empty, Empty>) {
                 &mut storage,
                 app.router(),
                 &app.block_info(),
-                Empty {},
+                empty_msg,
             )
             .unwrap(),
     );
