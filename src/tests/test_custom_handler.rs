@@ -2,7 +2,7 @@ use crate::custom_handler::CachingCustomHandler;
 use crate::test_helpers::CustomHelperMsg;
 use crate::{App, Module};
 use cosmwasm_std::testing::MockStorage;
-use cosmwasm_std::{Addr, Empty};
+use cosmwasm_std::Empty;
 
 ///Custom handlers in CosmWasm allow developers to incorporate their own unique logic into tests.
 ///This feature is valuable for tailoring the testing environment to reflect specific
@@ -16,13 +16,16 @@ fn custom_handler_works() {
     // create custom handler
     let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::new();
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     // run execute function
     let _ = custom_handler.execute(
         app.api(),
         &mut storage,
         app.router(),
         &app.block_info(),
-        Addr::unchecked("sender"),
+        sender_addr,
         CustomHelperMsg::SetAge { age: 32 },
     );
 

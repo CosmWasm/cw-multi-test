@@ -390,6 +390,7 @@ where
     /// use cosmwasm_std::{Addr, Api, Storage};
     /// use cw_multi_test::{AddressGenerator, AppBuilder, no_init, WasmKeeper};
     /// use cw_multi_test::error::AnyResult;
+    /// # use cosmwasm_std::testing::MockApi;
     ///
     /// struct CustomAddressGenerator;
     ///
@@ -402,7 +403,7 @@ where
     ///         instance_id: u64,
     ///     ) -> AnyResult<Addr> {
     ///         // here implement your address generation logic
-    /// #       Ok(Addr::unchecked("test_address"))
+    /// #       Ok(MockApi::default().addr_make("test_address"))
     ///     }
     /// }
     ///
@@ -1235,10 +1236,16 @@ mod test {
     #[test]
     fn register_contract() {
         let api = MockApi::default();
+
+        // prepare user addresses
+        let creator_addr = api.addr_make("creator");
+        let user_addr = api.addr_make("foobar");
+        let admin_addr = api.addr_make("admin");
+
         let mut wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), error::contract(false));
+        let code_id = wasm_keeper.store_code(creator_addr, error::contract(false));
 
         transactional(&mut wasm_storage, |cache, _| {
             // cannot register contract with unregistered codeId
@@ -1246,8 +1253,8 @@ mod test {
                 &api,
                 cache,
                 code_id + 1,
-                Addr::unchecked("foobar"),
-                Addr::unchecked("admin"),
+                user_addr.clone(),
+                admin_addr.clone(),
                 "label".to_owned(),
                 1000,
                 None,
@@ -1261,8 +1268,8 @@ mod test {
                 &api,
                 cache,
                 code_id,
-                Addr::unchecked("foobar"),
-                Addr::unchecked("admin"),
+                user_addr.clone(),
+                admin_addr.clone(),
                 "label".to_owned(),
                 1000,
                 None,
@@ -1279,8 +1286,8 @@ mod test {
             contract_data,
             ContractData {
                 code_id,
-                creator: Addr::unchecked("foobar"),
-                admin: Some(Addr::unchecked("admin")),
+                creator: user_addr,
+                admin: admin_addr.into(),
                 label: "label".to_owned(),
                 created: 1000,
             }
@@ -1329,14 +1336,16 @@ mod test {
     #[test]
     fn query_contract_info() {
         let api = MockApi::default();
+
+        // prepare user addresses
+        let creator = api.addr_make("creator");
+        let admin = api.addr_make("admin");
+
         let mut wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
+        let code_id = wasm_keeper.store_code(creator.clone(), payout::contract());
         assert_eq!(1, code_id);
-
-        let creator = Addr::unchecked("foobar");
-        let admin = Addr::unchecked("admin");
 
         let contract_addr = wasm_keeper
             .register_contract(
@@ -1371,8 +1380,8 @@ mod test {
         let wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let creator = api.addr_make("creator");
-        let code_id = wasm_keeper.store_code(creator.clone(), payout::contract());
+        let creator_addr = api.addr_make("creator");
+        let code_id = wasm_keeper.store_code(creator_addr.clone(), payout::contract());
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query = WasmQuery::CodeInfo { code_id };
         let code_info = wasm_keeper
@@ -1380,18 +1389,19 @@ mod test {
             .unwrap();
         let actual: CodeInfoResponse = from_json(code_info).unwrap();
         assert_eq!(code_id, actual.code_id);
-        assert_eq!(creator.to_string(), actual.creator.to_string());
+        assert_eq!(creator_addr.as_str(), actual.creator.as_str());
         assert_eq!(32, actual.checksum.as_slice().len());
     }
 
     #[test]
     fn different_contracts_must_have_different_checksum() {
         let api = MockApi::default();
+        let creator_addr = api.addr_make("creator");
         let wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id_payout = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
-        let code_id_caller = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
+        let code_id_payout = wasm_keeper.store_code(creator_addr.clone(), payout::contract());
+        let code_id_caller = wasm_keeper.store_code(creator_addr, caller::contract());
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query_payout = WasmQuery::CodeInfo {
             code_id: code_id_payout,

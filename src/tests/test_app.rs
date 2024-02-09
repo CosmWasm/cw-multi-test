@@ -91,6 +91,11 @@ where
     val.amount
 }
 
+/// Utility function for generating user addresses.
+fn addr_make(addr: &str) -> Addr {
+    MockApi::default().addr_make(addr)
+}
+
 #[test]
 fn update_block() {
     let mut app = App::default();
@@ -103,9 +108,8 @@ fn update_block() {
 #[test]
 fn multi_level_bank_cache() {
     // prepare user addresses
-    let api = MockApi::default();
-    let owner_addr = api.addr_make("owner");
-    let recipient_addr = api.addr_make("recipient");
+    let owner_addr = addr_make("owner");
+    let recipient_addr = addr_make("recipient");
 
     // set personal balance
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
@@ -187,9 +191,8 @@ fn duplicate_contract_code() {
 #[test]
 fn send_tokens() {
     // prepare user addresses
-    let api = MockApi::default();
-    let owner_addr = api.addr_make("owner");
-    let recipient_addr = api.addr_make("recipient");
+    let owner_addr = addr_make("owner");
+    let recipient_addr = addr_make("recipient");
 
     // set personal balance
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
@@ -237,8 +240,7 @@ fn send_tokens() {
 #[test]
 fn simple_contract() {
     // prepare user addresses
-    let api = MockApi::default();
-    let owner_addr = api.addr_make("owner");
+    let owner_addr = addr_make("owner");
 
     // set personal balance
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
@@ -331,9 +333,8 @@ fn simple_contract() {
 #[test]
 fn reflect_success() {
     // prepare user addresses
-    let api = MockApi::default();
-    let owner_addr = api.addr_make("owner");
-    let random_addr = api.addr_make("random");
+    let owner_addr = addr_make("owner");
+    let random_addr = addr_make("random");
 
     // set personal balance
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
@@ -439,11 +440,11 @@ fn reflect_success() {
 
 #[test]
 fn reflect_error() {
-    // set personal balance
-    let api = MockApi::default();
-    let owner = api.addr_make("owner");
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner = addr_make("owner");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
@@ -536,13 +537,15 @@ fn reflect_error() {
 
 #[test]
 fn sudo_works() {
-    let owner = Addr::unchecked("owner");
-    let init_funds = vec![coin(100, "eth")];
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
 
+    // set personal balance
+    let init_funds = vec![coin(100, "eth")];
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -552,7 +555,14 @@ fn sudo_works() {
         payout: coin(5, "eth"),
     };
     let payout_addr = app
-        .instantiate_contract(payout_id, owner, &msg, &coins(23, "eth"), "Payout", None)
+        .instantiate_contract(
+            payout_id,
+            owner_addr,
+            &msg,
+            &coins(23, "eth"),
+            "Payout",
+            None,
+        )
         .unwrap();
 
     // count is 1
@@ -590,11 +600,12 @@ fn sudo_works() {
 
 #[test]
 fn reflect_sub_message_reply_works() {
-    // set personal balance
-    let owner = Addr::unchecked("owner");
-    let random = Addr::unchecked("random");
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner = addr_make("owner");
+    let random = addr_make("random");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
@@ -688,9 +699,9 @@ fn send_update_admin_works() {
     // check admin set properly
     let mut app = App::default();
 
-    let owner = app.api().addr_make("owner");
-    let owner2 = app.api().addr_make("owner2");
-    let beneficiary = app.api().addr_make("beneficiary");
+    let owner = addr_make("owner");
+    let owner2 = addr_make("owner2");
+    let beneficiary = addr_make("beneficiary");
 
     // create a hackatom contract with some funds
     let code_id = app.store_code(hackatom::contract());
@@ -750,14 +761,18 @@ fn sent_wasm_migration_works() {
     // migrate fails if not admin
     // migrate succeeds if admin
     // check beneficiary updated
-    let owner = Addr::unchecked("owner");
-    let beneficiary = Addr::unchecked("beneficiary");
-    let init_funds = coins(30, "btc");
 
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let beneficiary_addr = addr_make("beneficiary");
+    let random_addr = addr_make("random");
+
+    // set personal balance
+    let init_funds = coins(30, "btc");
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -767,40 +782,44 @@ fn sent_wasm_migration_works() {
     let contract = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &hackatom::InstantiateMsg {
-                beneficiary: beneficiary.as_str().to_owned(),
+                beneficiary: beneficiary_addr.as_str().to_owned(),
             },
             &coins(20, "btc"),
             "Hackatom",
-            Some(owner.to_string()),
+            Some(owner_addr.to_string()),
         )
         .unwrap();
 
     // check admin set properly
     let info = app.contract_data(&contract).unwrap();
-    assert_eq!(info.admin, Some(owner.clone()));
+    assert_eq!(info.admin, Some(owner_addr.clone()));
     // check beneficiary set properly
     let state: hackatom::InstantiateMsg = app
         .wrap()
         .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
         .unwrap();
-    assert_eq!(state.beneficiary, beneficiary.to_string());
+    assert_eq!(state.beneficiary, beneficiary_addr.to_string());
 
     // migrate fails if not admin
-    let random = Addr::unchecked("random");
     let migrate_msg = hackatom::MigrateMsg {
-        new_guy: random.to_string(),
+        new_guy: random_addr.to_string(),
     };
-    app.migrate_contract(beneficiary, contract.clone(), &migrate_msg, code_id)
+    app.migrate_contract(beneficiary_addr, contract.clone(), &migrate_msg, code_id)
         .unwrap_err();
 
     // migrate fails if unregistered code id
-    app.migrate_contract(owner.clone(), contract.clone(), &migrate_msg, code_id + 7)
-        .unwrap_err();
+    app.migrate_contract(
+        owner_addr.clone(),
+        contract.clone(),
+        &migrate_msg,
+        code_id + 7,
+    )
+    .unwrap_err();
 
     // migrate succeeds when the stars align
-    app.migrate_contract(owner, contract.clone(), &migrate_msg, code_id)
+    app.migrate_contract(owner_addr, contract.clone(), &migrate_msg, code_id)
         .unwrap();
 
     // check beneficiary updated
@@ -808,7 +827,7 @@ fn sent_wasm_migration_works() {
         .wrap()
         .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
         .unwrap();
-    assert_eq!(state.beneficiary, random.to_string());
+    assert_eq!(state.beneficiary, random_addr.to_string());
 }
 
 #[test]
@@ -818,15 +837,17 @@ fn sent_funds_properly_visible_on_execution() {
     // additional 20btc. Then beneficiary balance is checked - expected value is 30btc. 10btc
     // would mean that sending tokens with message is not visible for this very message, and
     // 20btc means, that only such just send funds are visible.
-    let api = MockApi::default();
-    let owner = api.addr_make("owner");
-    let beneficiary = api.addr_make("beneficiary");
-    let init_funds = coins(30, "btc");
 
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let beneficiary_addr = addr_make("beneficiary");
+
+    // set personal balance
+    let init_funds = coins(30, "btc");
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -835,9 +856,9 @@ fn sent_funds_properly_visible_on_execution() {
     let contract = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &hackatom::InstantiateMsg {
-                beneficiary: beneficiary.as_str().to_owned(),
+                beneficiary: beneficiary_addr.as_str().to_owned(),
             },
             &coins(10, "btc"),
             "Hackatom",
@@ -846,7 +867,7 @@ fn sent_funds_properly_visible_on_execution() {
         .unwrap();
 
     app.execute_contract(
-        owner.clone(),
+        owner_addr.clone(),
         contract.clone(),
         &Empty {},
         &coins(20, "btc"),
@@ -855,9 +876,9 @@ fn sent_funds_properly_visible_on_execution() {
 
     // Check balance of all accounts to ensure no tokens where burned or created, and they are
     // in correct places
-    assert_eq!(get_balance(&app, &owner), &[]);
+    assert_eq!(get_balance(&app, &owner_addr), &[]);
     assert_eq!(get_balance(&app, &contract), &[]);
-    assert_eq!(get_balance(&app, &beneficiary), coins(30, "btc"));
+    assert_eq!(get_balance(&app, &beneficiary_addr), coins(30, "btc"));
 }
 
 /// Demonstrates that we can mint tokens and send from other accounts
@@ -1051,7 +1072,7 @@ mod reply_data_overwrite {
     fn no_submsg() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1111,7 +1132,7 @@ mod reply_data_overwrite {
     fn single_submsg_no_reply() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1139,7 +1160,7 @@ mod reply_data_overwrite {
     fn single_no_submsg_data() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1197,10 +1218,11 @@ mod reply_data_overwrite {
 
     #[test]
     fn single_submsg_reply_returns_none() {
-        // set personal balance
-        let owner = Addr::unchecked("owner");
-        let init_funds = coins(100, "tgd");
+        // prepare user addresses
+        let owner = addr_make("owner");
 
+        // set personal balance
+        let init_funds = coins(100, "tgd");
         let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
             router
                 .bank
@@ -1255,7 +1277,7 @@ mod reply_data_overwrite {
     fn multiple_submsg() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1298,7 +1320,7 @@ mod reply_data_overwrite {
     fn multiple_submsg_no_reply() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1331,7 +1353,7 @@ mod reply_data_overwrite {
     fn multiple_submsg_mixed() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1369,7 +1391,7 @@ mod reply_data_overwrite {
     fn nested_submsg() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1422,7 +1444,7 @@ mod response_validation {
     fn empty_attribute_key() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1453,7 +1475,7 @@ mod response_validation {
     fn empty_attribute_value() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1484,7 +1506,7 @@ mod response_validation {
     fn empty_event_attribute_key() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1514,7 +1536,7 @@ mod response_validation {
     fn empty_event_attribute_value() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1544,7 +1566,7 @@ mod response_validation {
     fn too_short_event_type() {
         let mut app = App::default();
 
-        let owner = Addr::unchecked("owner");
+        let owner = app.api().addr_make("owner");
 
         let code_id = app.store_code(echo::contract());
 
@@ -1687,10 +1709,11 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_wrapped_properly() {
-        // set personal balance
-        let owner = Addr::unchecked("owner");
-        let init_funds = vec![coin(20, "btc")];
+        // prepare user addresses
+        let owner = addr_make("owner");
 
+        // set personal balance
+        let init_funds = vec![coin(20, "btc")];
         let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
             router
                 .bank
@@ -1725,8 +1748,9 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_with_data_works() {
-        let owner = Addr::unchecked("owner");
         let mut app = BasicApp::new(no_init);
+
+        let owner = app.api().addr_make("owner");
 
         // set up echo contract
         let code_id = app.store_code(echo::contract());
@@ -1754,8 +1778,9 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_with_reply_works() {
-        let owner = Addr::unchecked("owner");
         let mut app = BasicApp::new(no_init);
+
+        let owner = app.api().addr_make("owner");
 
         // set up echo contract
         let code_id = app.store_code(echo::contract());
@@ -1806,8 +1831,9 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn execute_wrapped_properly() {
-        let owner = Addr::unchecked("owner");
         let mut app = BasicApp::new(no_init);
+
+        let owner = app.api().addr_make("owner");
 
         // set up reflect contract
         let code_id = app.store_code(echo::contract());
@@ -1833,8 +1859,9 @@ mod errors {
 
     #[test]
     fn simple_instantiation() {
-        let owner = Addr::unchecked("owner");
         let mut app = App::default();
+
+        let owner = app.api().addr_make("owner");
 
         // set up contract
         let code_id = app.store_code(error::contract(false));
@@ -1859,8 +1886,10 @@ mod errors {
 
     #[test]
     fn simple_call() {
-        let owner = Addr::unchecked("owner");
         let mut app = App::default();
+
+        let owner = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
 
         // set up contract
         let code_id = app.store_code(error::contract(true));
@@ -1872,7 +1901,7 @@ mod errors {
 
         // execute should error
         let err = app
-            .execute_contract(Addr::unchecked("random"), contract_addr, &msg, &[])
+            .execute_contract(random_addr, contract_addr, &msg, &[])
             .unwrap_err();
 
         // we should be able to retrieve the original error by downcasting
@@ -1890,8 +1919,10 @@ mod errors {
 
     #[test]
     fn nested_call() {
-        let owner = Addr::unchecked("owner");
         let mut app = App::default();
+
+        let owner = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
 
         let error_code_id = app.store_code(error::contract(true));
         let caller_code_id = app.store_code(caller::contract());
@@ -1912,7 +1943,7 @@ mod errors {
             funds: vec![],
         };
         let err = app
-            .execute_contract(Addr::unchecked("random"), caller_addr, &msg, &[])
+            .execute_contract(random_addr, caller_addr, &msg, &[])
             .unwrap_err();
 
         // we can get the original error by downcasting
@@ -1930,8 +1961,10 @@ mod errors {
 
     #[test]
     fn double_nested_call() {
-        let owner = Addr::unchecked("owner");
         let mut app = App::default();
+
+        let owner_addr = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
 
         let error_code_id = app.store_code(error::contract(true));
         let caller_code_id = app.store_code(caller::contract());
@@ -1939,13 +1972,27 @@ mod errors {
         // set up contract_helpers
         let msg = Empty {};
         let caller_addr1 = app
-            .instantiate_contract(caller_code_id, owner.clone(), &msg, &[], "caller", None)
+            .instantiate_contract(
+                caller_code_id,
+                owner_addr.clone(),
+                &msg,
+                &[],
+                "caller",
+                None,
+            )
             .unwrap();
         let caller_addr2 = app
-            .instantiate_contract(caller_code_id, owner.clone(), &msg, &[], "caller", None)
+            .instantiate_contract(
+                caller_code_id,
+                owner_addr.clone(),
+                &msg,
+                &[],
+                "caller",
+                None,
+            )
             .unwrap();
         let error_addr = app
-            .instantiate_contract(error_code_id, owner, &msg, &[], "error", None)
+            .instantiate_contract(error_code_id, owner_addr, &msg, &[], "error", None)
             .unwrap();
 
         // caller1 calls caller2, caller2 calls error
@@ -1960,7 +2007,7 @@ mod errors {
             funds: vec![],
         };
         let err = app
-            .execute_contract(Addr::unchecked("random"), caller_addr1, &msg, &[])
+            .execute_contract(random_addr, caller_addr1, &msg, &[])
             .unwrap_err();
 
         // uncomment to have the test fail and see how the error stringifies
