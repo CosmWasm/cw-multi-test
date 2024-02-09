@@ -186,63 +186,66 @@ fn duplicate_contract_code() {
 
 #[test]
 fn send_tokens() {
+    // prepare user addresses
     let api = MockApi::default();
-    let owner = api.addr_make("owner");
-    let rcpt = api.addr_make("recipient");
+    let owner_addr = api.addr_make("owner");
+    let recipient_addr = api.addr_make("recipient");
+
+    // set personal balance
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let rcpt_funds = vec![coin(5, "btc")];
-
     let mut app = App::new(|router, _, storage| {
         // initialization moved to App construction
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
         router
             .bank
-            .init_balance(storage, &rcpt, rcpt_funds)
+            .init_balance(storage, &recipient_addr, rcpt_funds)
             .unwrap();
     });
 
     // send both tokens
     let to_send = vec![coin(30, "eth"), coin(5, "btc")];
     let msg: CosmosMsg = BankMsg::Send {
-        to_address: rcpt.clone().into(),
+        to_address: recipient_addr.clone().into(),
         amount: to_send,
     }
     .into();
-    app.execute(owner.clone(), msg.clone()).unwrap();
-    let rich = get_balance(&app, &owner);
+    app.execute(owner_addr.clone(), msg.clone()).unwrap();
+    let rich = get_balance(&app, &owner_addr);
     assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
-    let poor = get_balance(&app, &rcpt);
+    let poor = get_balance(&app, &recipient_addr);
     assert_eq!(vec![coin(10, "btc"), coin(30, "eth")], poor);
 
     // can send from other account (but funds will be deducted from sender)
-    app.execute(rcpt.clone(), msg).unwrap();
+    app.execute(recipient_addr.clone(), msg).unwrap();
 
     // cannot send too much
     let msg = BankMsg::Send {
-        to_address: rcpt.into(),
+        to_address: recipient_addr.into(),
         amount: coins(20, "btc"),
     }
     .into();
-    app.execute(owner.clone(), msg).unwrap_err();
+    app.execute(owner_addr.clone(), msg).unwrap_err();
 
-    let rich = get_balance(&app, &owner);
+    let rich = get_balance(&app, &owner_addr);
     assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
 }
 
 #[test]
 fn simple_contract() {
-    // set personal balance
+    // prepare user addresses
     let api = MockApi::default();
-    let owner = api.addr_make("owner");
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    let owner_addr = api.addr_make("owner");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -255,7 +258,7 @@ fn simple_contract() {
     let contract_address = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &msg,
             &coins(23, "eth"),
             "Payout",
@@ -268,7 +271,7 @@ fn simple_contract() {
         contract_data,
         ContractData {
             code_id,
-            creator: owner.clone(),
+            creator: owner_addr.clone(),
             admin: None,
             label: "Payout".to_owned(),
             created: app.block_info().height
@@ -276,7 +279,7 @@ fn simple_contract() {
     );
 
     // sender funds deducted
-    let sender = get_balance(&app, &owner);
+    let sender = get_balance(&app, &owner_addr);
     assert_eq!(sender, vec![coin(20, "btc"), coin(77, "eth")]);
     // get contract address, has funds
     let funds = get_balance(&app, &contract_address);
