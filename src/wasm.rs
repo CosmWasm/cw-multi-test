@@ -237,7 +237,7 @@ where
         let code_base_id = self.code_base.len();
         self.code_base.push(code);
         let code_id = (self.code_data.len() + 1) as u64;
-        let checksum: Checksum = self.checksum_generator.checksum(&creator, code_id);
+        let checksum = self.checksum_generator.checksum(&creator, code_id);
         self.code_data.push(CodeData {
             creator,
             checksum,
