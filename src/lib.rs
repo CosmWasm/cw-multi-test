@@ -160,7 +160,5 @@ pub use crate::module::{AcceptingModule, FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
-pub use crate::stargate::{
-    Stargate, StargateAcceptingModule, StargateFailingModule, StargateMsg, StargateQuery,
-};
+pub use crate::stargate::{Stargate, StargateAcceptingModule, StargateFailingModule};
 pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};

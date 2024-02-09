@@ -2,10 +2,9 @@ use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{to_json_vec, AnyMsg, CosmosMsg, Empty, GrpcQuery, QueryRequest};
 use cw_multi_test::{
     no_init, AppBuilder, Executor, Stargate, StargateAcceptingModule, StargateFailingModule,
-    StargateMsg, StargateQuery,
 };
 
-type MyStargateKeeper = MyKeeper<StargateMsg, StargateQuery, Empty>;
+type MyStargateKeeper = MyKeeper<AnyMsg, GrpcQuery, Empty>;
 
 impl Stargate for MyStargateKeeper {}
 

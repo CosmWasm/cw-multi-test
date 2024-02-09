@@ -6,7 +6,7 @@ use crate::gov::Gov;
 use crate::ibc::Ibc;
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{Stargate, StargateFailingModule, StargateMsg, StargateQuery};
+use crate::stargate::{Stargate, StargateFailingModule};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
@@ -604,17 +604,9 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
-            CosmosMsg::Any(msg) => self.stargate.execute(
-                api,
-                storage,
-                self,
-                block,
-                sender,
-                StargateMsg {
-                    type_url: msg.type_url,
-                    value: msg.value,
-                },
-            ),
+            CosmosMsg::Any(msg) => self
+                .stargate
+                .execute(api, storage, self, block, sender, msg),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
@@ -636,16 +628,7 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
-            QueryRequest::Grpc(grpc) => self.stargate.query(
-                api,
-                storage,
-                &querier,
-                block,
-                StargateQuery {
-                    path: grpc.path,
-                    data: grpc.data,
-                },
-            ),
+            QueryRequest::Grpc(req) => self.stargate.query(api, storage, &querier, block, req),
             _ => unimplemented!(),
         }
     }

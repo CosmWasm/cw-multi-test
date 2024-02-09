@@ -27,7 +27,7 @@ fn default_failing_stargate_module_should_work() {
         .source()
         .unwrap()
         .to_string()
-        .starts_with("Unexpected exec msg StargateMsg"));
+        .starts_with("Unexpected exec msg AnyMsg"));
 }
 
 #[test]
