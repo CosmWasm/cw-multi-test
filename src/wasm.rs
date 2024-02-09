@@ -1974,7 +1974,7 @@ mod test {
                 admin,
                 "label".to_owned(),
                 1000,
-                Binary::from(salt.clone()),
+                Binary::from(salt),
             )
             .unwrap();
 

@@ -1614,7 +1614,7 @@ mod contract_instantiation {
             msg: init_msg,
             funds: vec![],
             label: "label".into(),
-            salt: salt.clone().into(),
+            salt: salt.into(),
         };
         let res = app.execute(sender, msg.into()).unwrap();
 
