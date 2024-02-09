@@ -225,7 +225,6 @@ where
         msg: Binary,
     ) -> AnyResult<AppResponse> {
         let custom_event = Event::new("sudo").add_attribute(CONTRACT_ATTR, &contract);
-
         let res = self.call_sudo(contract.clone(), api, storage, router, block, msg.to_vec())?;
         let (res, msgs) = self.build_app_response(&contract, custom_event, res);
         self.process_response(api, router, storage, block, contract, res, msgs)
