@@ -412,7 +412,10 @@ where
         contract_addr: U,
         msg: &T,
     ) -> AnyResult<AppResponse> {
-        let msg = to_json_binary(msg)?;
+        let msg = WasmSudo {
+            contract_addr: contract_addr.into(),
+            message: to_json_binary(msg)?,
+        };
 
         let Self {
             block,
@@ -422,9 +425,7 @@ where
         } = self;
 
         transactional(&mut *storage, |write_cache, _| {
-            router
-                .wasm
-                .sudo(&*api, contract_addr.into(), write_cache, router, block, msg)
+            router.wasm.sudo(&*api, write_cache, router, block, msg)
         })
     }
 
@@ -641,10 +642,7 @@ where
         msg: SudoMsg,
     ) -> AnyResult<AppResponse> {
         match msg {
-            SudoMsg::Wasm(msg) => {
-                self.wasm
-                    .sudo(api, msg.contract_addr, storage, self, block, msg.msg)
-            }
+            SudoMsg::Wasm(msg) => self.wasm.sudo(api, storage, self, block, msg),
             SudoMsg::Bank(msg) => self.bank.sudo(api, storage, self, block, msg),
             SudoMsg::Staking(msg) => self.staking.sudo(api, storage, self, block, msg),
             SudoMsg::Custom(_) => unimplemented!(),

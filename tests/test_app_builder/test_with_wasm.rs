@@ -51,11 +51,10 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
     fn sudo(
         &self,
         _api: &dyn Api,
-        _contract_addr: Addr,
         _storage: &mut dyn Storage,
         _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
         _block: &BlockInfo,
-        _msg: Binary,
+        _msg: WasmSudo,
     ) -> AnyResult<AppResponse> {
         bail!(self.3);
     }
@@ -132,7 +131,7 @@ fn building_app_with_custom_wasm_should_work() {
         app.sudo(
             WasmSudo {
                 contract_addr,
-                msg: Default::default()
+                message: Default::default()
             }
             .into()
         )

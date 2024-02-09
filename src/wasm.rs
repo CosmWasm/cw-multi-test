@@ -35,8 +35,8 @@ const CONTRACT_ATTR: &str = "_contract_address";
 pub struct WasmSudo {
     /// Address of a contract the privileged action will be sent to.
     pub contract_addr: Addr,
-    /// Message representing privileged action to be executed by contract `sudo` entry-point.
-    pub msg: Binary,
+    /// Message representing privileged action to be executed by contract's `sudo` entry-point.
+    pub message: Binary,
 }
 
 impl WasmSudo {
@@ -44,7 +44,7 @@ impl WasmSudo {
     pub fn new<T: Serialize>(contract_addr: &Addr, msg: &T) -> StdResult<WasmSudo> {
         Ok(WasmSudo {
             contract_addr: contract_addr.clone(),
-            msg: to_json_binary(msg)?,
+            message: to_json_binary(msg)?,
         })
     }
 }
@@ -79,16 +79,6 @@ struct CodeData {
 /// This trait is crucial for testing smart contracts written in languages that compile to WebAssembly,
 /// which is common in the Cosmos and CosmWasm ecosystems.
 pub trait Wasm<ExecC, QueryC> {
-    /// Handles all `WasmQuery` requests.
-    fn query(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        request: WasmQuery,
-    ) -> AnyResult<Binary>;
-
     /// Handles all `WasmMsg` messages.
     fn execute(
         &self,
@@ -100,15 +90,24 @@ pub trait Wasm<ExecC, QueryC> {
         msg: WasmMsg,
     ) -> AnyResult<AppResponse>;
 
+    /// Handles all `WasmQuery` requests.
+    fn query(
+        &self,
+        api: &dyn Api,
+        storage: &dyn Storage,
+        querier: &dyn Querier,
+        block: &BlockInfo,
+        request: WasmQuery,
+    ) -> AnyResult<Binary>;
+
     /// Handles all sudo messages, this is an admin interface and can not be called via `CosmosMsg`.
     fn sudo(
         &self,
         api: &dyn Api,
-        contract_addr: Addr,
         storage: &mut dyn Storage,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
-        msg: Binary,
+        msg: WasmSudo,
     ) -> AnyResult<AppResponse>;
 
     /// Stores the contract's code and returns an identifier of the stored contract's code.
@@ -157,6 +156,22 @@ where
     ExecC: CustomMsg + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
+    fn execute(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        sender: Addr,
+        msg: WasmMsg,
+    ) -> AnyResult<AppResponse> {
+        self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
+            .context(format!(
+                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
+                sender, msg
+            ))
+    }
+
     fn query(
         &self,
         api: &dyn Api,
@@ -199,35 +214,25 @@ where
         }
     }
 
-    fn execute(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        sender: Addr,
-        msg: WasmMsg,
-    ) -> AnyResult<AppResponse> {
-        self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
-            .context(format!(
-                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
-                sender, msg
-            ))
-    }
-
     fn sudo(
         &self,
         api: &dyn Api,
-        contract: Addr,
         storage: &mut dyn Storage,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
-        msg: Binary,
+        msg: WasmSudo,
     ) -> AnyResult<AppResponse> {
-        let custom_event = Event::new("sudo").add_attribute(CONTRACT_ATTR, &contract);
-        let res = self.call_sudo(contract.clone(), api, storage, router, block, msg.to_vec())?;
-        let (res, msgs) = self.build_app_response(&contract, custom_event, res);
-        self.process_response(api, router, storage, block, contract, res, msgs)
+        let custom_event = Event::new("sudo").add_attribute(CONTRACT_ATTR, &msg.contract_addr);
+        let res = self.call_sudo(
+            msg.contract_addr.clone(),
+            api,
+            storage,
+            router,
+            block,
+            msg.message.to_vec(),
+        )?;
+        let (res, msgs) = self.build_app_response(&msg.contract_addr, custom_event, res);
+        self.process_response(api, router, storage, block, msg.contract_addr, res, msgs)
     }
 
     /// Stores the contract's code in the in-memory lookup table.

@@ -587,7 +587,7 @@ fn sudo_works() {
     let msg = payout::SudoMsg { set_count: 49 };
     let sudo_msg = WasmSudo {
         contract_addr: payout_addr.clone(),
-        msg: to_json_binary(&msg).unwrap(),
+        message: to_json_binary(&msg).unwrap(),
     };
     app.sudo(sudo_msg.into()).unwrap();
 
