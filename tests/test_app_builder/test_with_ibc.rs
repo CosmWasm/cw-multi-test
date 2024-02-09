@@ -1,5 +1,5 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
-use cosmwasm_std::{Addr, Empty, IbcMsg, IbcQuery, QueryRequest};
+use cosmwasm_std::{Empty, IbcMsg, IbcQuery, QueryRequest};
 use cw_multi_test::{no_init, AppBuilder, Executor, Ibc};
 
 type MyIbcKeeper = MyKeeper<IbcMsg, IbcQuery, Empty>;
@@ -18,11 +18,14 @@ fn building_app_with_custom_ibc_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_ibc(ibc_keeper).build(no_init);
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     // executing ibc message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            Addr::unchecked("sender"),
+            sender_addr,
             IbcMsg::CloseChannel {
                 channel_id: "my-channel".to_string()
             }

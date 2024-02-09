@@ -94,33 +94,32 @@ where
 #[test]
 fn update_block() {
     let mut app = App::default();
-
     let BlockInfo { time, height, .. } = app.block_info();
     app.update_block(next_block);
-
     assert_eq!(time.plus_seconds(5), app.block_info().time);
     assert_eq!(height + 1, app.block_info().height);
 }
 
 #[test]
 fn multi_level_bank_cache() {
-    // set personal balance
+    // prepare user addresses
     let api = MockApi::default();
-    let owner = api.addr_make("owner");
-    let rcpt = api.addr_make("recipient");
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    let owner_addr = api.addr_make("owner");
+    let recipient_addr = api.addr_make("recipient");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
     // cache 1 - send some tokens
     let mut cache = StorageTransaction::new(app.storage());
     let msg = BankMsg::Send {
-        to_address: rcpt.clone().into(),
+        to_address: recipient_addr.clone().into(),
         amount: coins(25, "eth"),
     };
     app.router()
@@ -128,31 +127,31 @@ fn multi_level_bank_cache() {
             app.api(),
             &mut cache,
             &app.block_info(),
-            owner.clone(),
+            owner_addr.clone(),
             msg.into(),
         )
         .unwrap();
 
     // shows up in cache
-    let cached_rcpt = query_router(app.router(), app.api(), &cache, &rcpt);
+    let cached_rcpt = query_router(app.router(), app.api(), &cache, &recipient_addr);
     assert_eq!(coins(25, "eth"), cached_rcpt);
-    let router_rcpt = query_app(&app, &rcpt);
+    let router_rcpt = query_app(&app, &recipient_addr);
     assert_eq!(router_rcpt, vec![]);
 
     // now, second level cache
     transactional(&mut cache, |cache2, read| {
         let msg = BankMsg::Send {
-            to_address: rcpt.clone().into(),
+            to_address: recipient_addr.clone().into(),
             amount: coins(12, "eth"),
         };
         app.router()
-            .execute(app.api(), cache2, &app.block_info(), owner, msg.into())
+            .execute(app.api(), cache2, &app.block_info(), owner_addr, msg.into())
             .unwrap();
 
         // shows up in 2nd cache
-        let cached_rcpt = query_router(app.router(), app.api(), read, &rcpt);
+        let cached_rcpt = query_router(app.router(), app.api(), read, &recipient_addr);
         assert_eq!(coins(25, "eth"), cached_rcpt);
-        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &rcpt);
+        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &recipient_addr);
         assert_eq!(coins(37, "eth"), cached2_rcpt);
         Ok(())
     })
@@ -161,7 +160,7 @@ fn multi_level_bank_cache() {
     // apply first to router
     cache.prepare().commit(app.storage_mut());
 
-    let committed = query_app(&app, &rcpt);
+    let committed = query_app(&app, &recipient_addr);
     assert_eq!(coins(37, "eth"), committed);
 }
 
@@ -328,14 +327,17 @@ fn simple_contract() {
 
 #[test]
 fn reflect_success() {
-    // set personal balance
-    let owner = Addr::unchecked("owner");
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let api = MockApi::default();
+    let owner_addr = api.addr_make("owner");
+    let random_addr = api.addr_make("random");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -348,7 +350,7 @@ fn reflect_success() {
     let payout_addr = app
         .instantiate_contract(
             payout_id,
-            owner.clone(),
+            owner_addr.clone(),
             &msg,
             &coins(23, "eth"),
             "Payout",
@@ -360,7 +362,7 @@ fn reflect_success() {
     let reflect_id = app.store_code(reflect::contract());
 
     let reflect_addr = app
-        .instantiate_contract(reflect_id, owner, &Empty {}, &[], "Reflect", None)
+        .instantiate_contract(reflect_id, owner_addr, &Empty {}, &[], "Reflect", None)
         .unwrap();
 
     // reflect account is empty
@@ -383,7 +385,7 @@ fn reflect_success() {
         messages: vec![msg],
     };
     let res = app
-        .execute_contract(Addr::unchecked("random"), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_addr, reflect_addr.clone(), &msgs, &[])
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message

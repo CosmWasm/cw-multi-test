@@ -1885,8 +1885,8 @@ mod test {
     fn uses_simple_address_generator_by_default() {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
-        let creator = api.addr_make("creator");
-        let code_id = wasm_keeper.store_code(creator.clone(), payout::contract());
+        let creator_addr = api.addr_make("creator");
+        let code_id = wasm_keeper.store_code(creator_addr.clone(), payout::contract());
         assert_eq!(1, code_id);
 
         let mut wasm_storage = MockStorage::new();
@@ -1897,7 +1897,7 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                creator.clone(),
+                creator_addr.clone(),
                 admin.clone(),
                 "label".to_owned(),
                 1000,
@@ -1906,7 +1906,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr.to_string(),
+            contract_addr.as_str(),
             "cosmwasm1mzdhwvvh22wrt07w59wxyd58822qavwkx5lcej7aqfkpqqlhaqfsgn6fq2",
             "default address generator returned incorrect address"
         );
@@ -1918,7 +1918,7 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                creator,
+                creator_addr.clone(),
                 admin.clone(),
                 "label".to_owned(),
                 1000,
@@ -1927,22 +1927,22 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr.to_string(),
+            contract_addr.as_str(),
             "cosmwasm1drhu6t78wacgm5qjzs4hvkv9fd9awa9henw7fh6vmzrhf7k2nkjsg3flns",
             "default address generator returned incorrect address"
         );
 
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        let code_id = wasm_keeper.store_code(creator_addr, payout::contract());
         assert_eq!(2, code_id);
 
-        let user = api.addr_make("boobaz");
+        let user_addr = api.addr_make("boobaz");
 
         let contract_addr = wasm_keeper
             .register_contract(
                 &api,
                 &mut wasm_storage,
                 code_id,
-                user,
+                user_addr,
                 admin,
                 "label".to_owned(),
                 1000,
@@ -1951,7 +1951,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr.to_string(),
+            contract_addr.as_str(),
             "cosmwasm13cfeertf2gny0rzp5jwqzst8crmfgvcd2lq5su0c9z66yxa45qdsdd0uxc",
             "default address generator returned incorrect address"
         );

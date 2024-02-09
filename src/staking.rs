@@ -1852,24 +1852,28 @@ mod test {
 
         #[test]
         fn denom_validation() {
-            let (mut test_env, validator) =
+            let (mut test_env, validator_addr) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = Addr::unchecked("delegator1");
+            let delegator_addr = test_env.api.addr_make("delegator");
 
             // fund delegator1 account
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "FAKE")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator_addr,
+                    vec![coin(100, "FAKE")],
+                )
                 .unwrap();
 
-            // try to delegate 100 to validator1
+            // try to delegate 100 to validator
             let e = execute_stake(
                 &mut test_env,
-                delegator1.clone(),
+                delegator_addr.clone(),
                 StakingMsg::Delegate {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                     amount: coin(100, "FAKE"),
                 },
             )
@@ -1886,14 +1890,14 @@ mod test {
             let (mut test_env, _) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = test_env.api.addr_make("delegator1");
+            let delegator = test_env.api.addr_make("delegator");
             let non_existing_validator = test_env.api.addr_make("nonexistingvaloper");
 
             // fund delegator1 account
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "FAKE")])
+                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "FAKE")])
                 .unwrap();
 
             // try to delegate 100 to validator1
@@ -1959,12 +1963,12 @@ mod test {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator = Addr::unchecked("delegator1");
+            let delegator_addr = test_env.api.addr_make("delegator");
 
             // delegate 0
             let err = execute_stake(
                 &mut test_env,
-                delegator.clone(),
+                delegator_addr.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
                     amount: coin(0, "TOKEN"),
@@ -1976,7 +1980,7 @@ mod test {
             // undelegate 0
             let err = execute_stake(
                 &mut test_env,
-                delegator,
+                delegator_addr,
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
                     amount: coin(0, "TOKEN"),
