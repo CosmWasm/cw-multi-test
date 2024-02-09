@@ -188,7 +188,7 @@ fn duplicate_contract_code() {
 fn send_tokens() {
     let api = MockApi::default();
     let owner = api.addr_make("owner");
-    let rcpt = api.addr_make("receiver");
+    let rcpt = api.addr_make("recipient");
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let rcpt_funds = vec![coin(5, "btc")];
 
