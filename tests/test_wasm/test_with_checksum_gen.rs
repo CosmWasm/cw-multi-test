@@ -7,16 +7,16 @@ fn default_checksum_generator_should_work() {
     // prepare default application with default wasm keeper
     let mut app = App::default();
 
+    // prepare user addresses
+    let creator_addr = app.api().addr_make("creator");
+
     // store contract's code
-    let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
-        test_contracts::counter::contract(),
-    );
+    let code_id = app.store_code_with_creator(creator_addr, test_contracts::counter::contract());
 
     // get code info
     let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
 
-    // this should be default checksum
+    // this should be a default checksum
     assert_eq!(
         code_info_response.checksum.to_hex(),
         "27095b438f70aed35405149bc5e8dfa1d461f7cd9c25359807ad66dcc1396fc7"
@@ -40,6 +40,7 @@ fn custom_checksum_generator_should_work() {
     // prepare application with custom wasm keeper
     let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
 
+    // prepare user addresses
     let creator_addr = app.api().addr_make("creator");
 
     // store contract's code

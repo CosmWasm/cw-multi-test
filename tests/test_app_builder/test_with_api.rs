@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, CanonicalAddr, HexBinary};
+use cosmwasm_std::{Api, CanonicalAddr, HexBinary};
 use cw_multi_test::addons::MockApiBech32;
 use cw_multi_test::{no_init, AppBuilder};
 
@@ -15,10 +15,7 @@ fn building_app_with_custom_api_should_work() {
         .build(no_init);
 
     // check address validation function
-    assert_eq!(
-        app.api().addr_validate(human).unwrap(),
-        Addr::unchecked(human)
-    );
+    assert_eq!(human, app.api().addr_validate(human).unwrap().as_str());
 
     // check if address can be canonicalized
     assert_eq!(
@@ -28,12 +25,13 @@ fn building_app_with_custom_api_should_work() {
 
     // check if address can be humanized
     assert_eq!(
+        human,
         app.api()
             .addr_humanize(&app.api().addr_canonicalize(human).unwrap())
-            .unwrap(),
-        Addr::unchecked(human)
+            .unwrap()
+            .as_str(),
     );
 
     // check extension function for creating Bech32 encoded addresses
-    assert_eq!(app.api().addr_make("creator"), Addr::unchecked(human));
+    assert_eq!(human, app.api().addr_make("creator").as_str());
 }
