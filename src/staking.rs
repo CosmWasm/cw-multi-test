@@ -115,11 +115,6 @@ pub enum StakingSudo {
         /// Percentage of the validator's stake.
         percentage: Decimal,
     },
-    /// Causes the unbonding queue to be processed.
-    /// This needs to be triggered manually, since there is no good place to do this right now.
-    /// In cosmos-sdk, this is done in `EndBlock`, but we don't have that here.
-    #[deprecated(note = "This is not needed anymore. Just call `update_block`")]
-    ProcessQueue {},
 }
 
 /// A trait defining a behavior of the stake keeper.
@@ -132,11 +127,13 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
     /// If you're implementing a dummy staking module, this can be a no-op.
     fn process_queue<ExecC, QueryC: CustomQuery>(
         &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-    ) -> AnyResult<AppResponse>;
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+    ) -> AnyResult<AppResponse> {
+        Ok(AppResponse::default())
+    }
 }
 
 /// A trait defining a behavior of the distribution keeper.
@@ -747,32 +744,6 @@ impl Module for StakeKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC: CustomQuery>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        msg: StakingSudo,
-    ) -> AnyResult<AppResponse> {
-        match msg {
-            StakingSudo::Slash {
-                validator,
-                percentage,
-            } => {
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                let validator = api.addr_validate(&validator)?;
-                self.validate_percentage(percentage)?;
-
-                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
-
-                Ok(AppResponse::default())
-            }
-            #[allow(deprecated)]
-            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
-        }
-    }
-
     fn query(
         &self,
         api: &dyn Api,
@@ -868,6 +839,28 @@ impl Module for StakeKeeper {
                 self.get_validator(&staking_storage, &Addr::unchecked(address))?,
             ))?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
+        }
+    }
+
+    fn sudo<ExecC, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: StakingSudo,
+    ) -> AnyResult<AppResponse> {
+        match msg {
+            StakingSudo::Slash {
+                validator,
+                percentage,
+            } => {
+                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                let validator = api.addr_validate(&validator)?;
+                self.validate_percentage(percentage)?;
+                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
+                Ok(AppResponse::default())
+            }
         }
     }
 }
