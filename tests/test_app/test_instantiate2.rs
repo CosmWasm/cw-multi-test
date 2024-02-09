@@ -1,15 +1,14 @@
 use crate::test_contracts::counter;
+use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{instantiate2_address, to_json_binary, Api, Empty, WasmMsg};
-use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
-use cw_multi_test::{no_init, AppBuilder, Executor, WasmKeeper};
+use cw_multi_test::{no_init, AppBuilder, Executor};
 use cw_utils::parse_instantiate_response_data;
 
 #[test]
 fn instantiate2_works() {
     // prepare the application with custom Api and custom address generator
     let mut app = AppBuilder::default()
-        .with_api(MockApiBech32::new("juno"))
-        .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
+        .with_api(MockApi::default().with_prefix("juno"))
         .build(no_init);
 
     // prepare addresses for sender and creator
@@ -73,8 +72,7 @@ fn instantiate2_works() {
 fn instantiate2_should_work_for_multiple_salts() {
     // prepare the application with custom Api and custom address generator
     let mut app = AppBuilder::default()
-        .with_api(MockApiBech32::new("juno"))
-        .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
+        .with_api(MockApi::default().with_prefix("juno"))
         .build(no_init);
 
     // prepare addresses for sender and creator
@@ -107,8 +105,7 @@ fn instantiate2_should_work_for_multiple_salts() {
 fn instantiate2_fails_for_duplicated_addresses() {
     // prepare the application with custom Api and custom address generator
     let mut app = AppBuilder::default()
-        .with_api(MockApiBech32::new("osmo"))
-        .with_wasm(WasmKeeper::default().with_address_generator(MockAddressGenerator))
+        .with_api(MockApi::default().with_prefix("osmo"))
         .build(no_init);
 
     // prepare addresses for sender and creator

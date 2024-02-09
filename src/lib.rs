@@ -124,7 +124,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(rustdoc::missing_crate_level_docs)]
 
-pub mod addons;
 mod addresses;
 mod app;
 mod app_builder;

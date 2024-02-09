@@ -1,8 +1,7 @@
 use cosmwasm_std::Api;
 use hex_literal::hex;
 
-mod test_bech32;
-mod test_bech32m;
+mod test_prefixed;
 
 const SECP256K1_MSG_HASH: [u8; 32] =
     hex!("5ae8317d34d1e595e3fa7247db80c0af4320cce1116de187f8f7e2e099c0d8d0");
