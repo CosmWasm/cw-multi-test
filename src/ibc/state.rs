@@ -41,7 +41,7 @@ pub const CHANNEL_INFO: Map<(String, String), ChannelInfo> = Map::new("channel_i
 pub const SEND_PACKET_MAP: Map<(String, String, u64), IbcPacketData> = Map::new("send_packet");
 
 // channel id, packet_id ==> Packet data
-pub const RECEIVE_PACKET_MAP: Map<(String, String, u64), IbcPacketData> =
+pub const RECEIVE_PACKET_MAP: Map<(String, String, u64), IbcPacketReceived> =
     Map::new("receive_packet");
 
 // channel id, packet_id ==> Packet data

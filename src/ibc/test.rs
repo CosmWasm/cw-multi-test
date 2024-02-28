@@ -12,6 +12,7 @@ use super::{relayer::create_channel, simple_ibc::IbcSimpleModule};
 
 mod bank;
 mod polytone;
+mod timeout;
 
 #[test]
 fn channel_creation() -> anyhow::Result<()> {

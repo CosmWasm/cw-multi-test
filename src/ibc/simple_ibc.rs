@@ -1,9 +1,10 @@
 use anyhow::{anyhow, bail};
 use cosmwasm_std::{
     ensure_eq, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, Event,
-    IbcAcknowledgement, IbcChannel, IbcChannelConnectMsg, IbcChannelOpenMsg, IbcEndpoint, IbcMsg,
-    IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcQuery,
-    IbcTimeout, IbcTimeoutBlock, ListChannelsResponse, Order, Storage,
+    IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
+    IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg,
+    IbcPacketTimeoutMsg, IbcQuery, IbcTimeout, IbcTimeoutBlock, ListChannelsResponse, Order,
+    Storage,
 };
 use cw20_ics20::ibc::Ics20Packet;
 
@@ -13,7 +14,7 @@ use crate::{
     ibc::types::Connection,
     prefixed_storage::{prefixed, prefixed_read},
     transactions::transactional,
-    AppResponse, Ibc, Module,
+    AppResponse, Ibc, Module, SudoMsg,
 };
 use anyhow::Result as AnyResult;
 
@@ -21,13 +22,18 @@ use anyhow::Result as AnyResult;
 pub struct IbcSimpleModule;
 
 use super::{
+    events::{
+        ACK_PACKET_EVENT, CHANNEL_CLOSE_CONFIRM_EVENT, CHANNEL_CLOSE_INIT_EVENT,
+        RECEIVE_PACKET_EVENT, SEND_PACKET_EVENT, TIMEOUT_PACKET_EVENT,
+        TIMEOUT_RECEIVE_PACKET_EVENT, WRITE_ACK_EVENT,
+    },
     state::{
         ibc_connections, load_port_info, ACK_PACKET_MAP, CHANNEL_HANDSHAKE_INFO, CHANNEL_INFO,
         NAMESPACE_IBC, PORT_INFO, RECEIVE_PACKET_MAP, SEND_PACKET_MAP, TIMEOUT_PACKET_MAP,
     },
     types::{
         ChannelHandshakeInfo, ChannelHandshakeState, ChannelInfo, IbcPacketAck, IbcPacketData,
-        IbcPacketRelayingMsg, IbcResponse, MockIbcPort, MockIbcQuery,
+        IbcPacketReceived, IbcPacketRelayingMsg, IbcResponse, MockIbcPort, MockIbcQuery,
     },
 };
 
@@ -341,6 +347,7 @@ impl IbcSimpleModule {
                     counterparty_version.unwrap(),
                     channel_handshake.connection_id,
                 ),
+                open: true,
             },
         )?;
 
@@ -361,6 +368,99 @@ impl IbcSimpleModule {
         let mut events = match res {
             IbcResponse::Basic(r) => r.events,
             _ => panic!("Only an Basic response was expected when receiving a packet"),
+        };
+
+        events.push(ibc_event);
+
+        Ok(AppResponse { data: None, events })
+    }
+
+    /// Closes an already fully established channel
+    /// This doesn't handle closing half opened channels
+    fn close_channel<ExecC, QueryC>(
+        &self,
+        api: &dyn cosmwasm_std::Api,
+        storage: &mut dyn Storage,
+        router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &cosmwasm_std::BlockInfo,
+        port_id: String,
+        channel_id: String,
+        init: bool,
+    ) -> AnyResult<crate::AppResponse>
+    where
+        ExecC: std::fmt::Debug
+            + Clone
+            + PartialEq
+            + schemars::JsonSchema
+            + serde::de::DeserializeOwned
+            + 'static,
+        QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
+    {
+        let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
+
+        // We pass the channel status to closed
+        let channel_info = CHANNEL_INFO.update(
+            &mut ibc_storage,
+            (port_id.clone(), channel_id.clone()),
+            |channel| match channel {
+                None => bail!(
+                    "No channel exists with this port and channel id : {}:{}",
+                    port_id,
+                    channel_id
+                ),
+                Some(mut channel) => {
+                    channel.open = false;
+                    Ok(channel)
+                }
+            },
+        )?;
+
+        let (close_request, mut ibc_event) = if init {
+            (
+                IbcChannelCloseMsg::CloseInit {
+                    channel: channel_info.info.clone(),
+                },
+                Event::new(CHANNEL_CLOSE_INIT_EVENT),
+            )
+        } else {
+            (
+                IbcChannelCloseMsg::CloseConfirm {
+                    channel: channel_info.info.clone(),
+                },
+                Event::new(CHANNEL_CLOSE_CONFIRM_EVENT),
+            )
+        };
+
+        ibc_event = ibc_event
+            .add_attribute("port_id", port_id.clone())
+            .add_attribute("channel_id", channel_id.clone())
+            .add_attribute(
+                "counterparty_port_id",
+                channel_info.info.counterparty_endpoint.port_id.clone(),
+            )
+            .add_attribute(
+                "counterparty_channel_id",
+                channel_info.info.counterparty_endpoint.channel_id.clone(),
+            )
+            .add_attribute("connection_id", channel_info.info.connection_id.clone());
+
+        // Then we send an ibc message on the corresponding module in cache
+        let res = transactional(storage, |write_cache, _| {
+            router.ibc(
+                api,
+                write_cache,
+                block,
+                IbcRouterMsg {
+                    module: port_id.parse::<MockIbcPort>()?.into(),
+                    msg: super::IbcModuleMsg::ChannelClose(close_request),
+                },
+            )
+        })?;
+
+        // Then, we store the close events
+        let mut events = match res {
+            IbcResponse::Basic(r) => r.events,
+            _ => panic!("Only an basic response was expected when closing a channel"),
         };
 
         events.push(ibc_event);
@@ -415,7 +515,7 @@ impl IbcSimpleModule {
         });
         let timeout_timestamp = packet.timeout.timestamp().map(|t| t.nanos()).unwrap_or(0);
 
-        let send_event = Event::new("send_packet")
+        let send_event = Event::new(SEND_PACKET_EVENT)
             .add_attribute(
                 "packet_data",
                 String::from_utf8_lossy(packet.data.as_slice()),
@@ -481,6 +581,22 @@ impl IbcSimpleModule {
             bail!("You can't receive the same packet twice on the chain")
         }
 
+        // We take a look at the timeout status of the packet
+        let timeout = packet.timeout.clone();
+        let mut has_timeout = false;
+        if let Some(packet_block) = timeout.block() {
+            // We verify the block indicated is not passed
+            if block.height >= packet_block.height {
+                has_timeout = true;
+            }
+        }
+        if let Some(packet_timestamp) = timeout.timestamp() {
+            // We verify the timestamp indicated is not passed
+            if block.time >= packet_timestamp {
+                has_timeout = true;
+            }
+        }
+
         // We save it into storage (for tracking purposes and making sure we don't broadcast the message twice)
         RECEIVE_PACKET_MAP.save(
             &mut ibc_storage,
@@ -489,8 +605,70 @@ impl IbcSimpleModule {
                 packet.dst_channel_id.clone(),
                 packet.sequence,
             ),
-            &packet,
+            &IbcPacketReceived {
+                data: packet.clone(),
+                timeout: has_timeout,
+            },
         )?;
+
+        // If the packet has timeout on an ordered channel, we need to return an appropriate response AND close the channel
+        if has_timeout {
+            let res = if channel_info.info.order == IbcOrder::Ordered {
+                // We send a close channel response
+                transactional(storage, |write_cache, _| {
+                    router.sudo(
+                        api,
+                        write_cache,
+                        block,
+                        SudoMsg::Ibc(IbcPacketRelayingMsg::CloseChannel {
+                            port_id: packet.dst_port_id.clone(),
+                            channel_id: packet.dst_channel_id.clone(),
+                            init: true,
+                        }),
+                    )
+                })?
+            } else {
+                AppResponse {
+                    events: vec![],
+                    data: None,
+                }
+            };
+
+            // We add timeout events
+            let timeout_height = packet.timeout.block().unwrap_or(IbcTimeoutBlock {
+                revision: 0,
+                height: 0,
+            });
+            let timeout_timestamp = packet.timeout.timestamp().map(|t| t.nanos()).unwrap_or(0);
+            let timeout_event = Event::new(TIMEOUT_RECEIVE_PACKET_EVENT)
+                .add_attribute(
+                    "packet_data",
+                    String::from_utf8_lossy(packet.data.as_slice()),
+                )
+                .add_attribute("packet_data_hex", hex::encode(packet.data.0.clone()))
+                .add_attribute(
+                    "packet_timeout_height",
+                    format!("{}-{}", timeout_height.revision, timeout_height.height),
+                )
+                .add_attribute("packet_timeout_timestamp", timeout_timestamp.to_string())
+                .add_attribute("packet_sequence", packet.sequence.to_string())
+                .add_attribute("packet_src_port", packet.src_port_id.clone())
+                .add_attribute("packet_src_channel", packet.src_channel_id.clone())
+                .add_attribute("packet_dst_port", packet.dst_port_id.clone())
+                .add_attribute("packet_dst_channel", packet.dst_channel_id.clone())
+                .add_attribute(
+                    "packet_channel_ordering",
+                    serde_json::to_value(channel_info.info.order)?.to_string(),
+                )
+                .add_attribute("packet_connection", channel_info.info.connection_id);
+
+            let mut events = res.events;
+            events.push(timeout_event);
+            return Ok(AppResponse {
+                events,
+                data: res.data,
+            });
+        }
 
         let packet_msg = packet_from_data_and_channel(&packet, &channel_info);
 
@@ -499,7 +677,7 @@ impl IbcSimpleModule {
         #[cfg(feature = "cosmwasm_1_1")]
         let receive_msg = IbcPacketReceiveMsg::new(packet_msg, Addr::unchecked(RELAYER_ADDR));
 
-        // First we send an ibc message on the wasm module in cache
+        // First we send an ibc message on the corresponding module
         let port: MockIbcPort = channel_info.info.endpoint.port_id.parse()?;
 
         let res = transactional(storage, |write_cache, _| {
@@ -514,7 +692,6 @@ impl IbcSimpleModule {
             )
         })?;
 
-        // This is repeated to avoid multiple mutable borrows
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
         let acknowledgement;
         // Then, we store the acknowledgement and collect events
@@ -544,7 +721,7 @@ impl IbcSimpleModule {
         });
         let timeout_timestamp = packet.timeout.timestamp().map(|t| t.nanos()).unwrap_or(0);
 
-        let recv_event = Event::new("recv_packet")
+        let recv_event = Event::new(RECEIVE_PACKET_EVENT)
             .add_attribute(
                 "packet_data",
                 String::from_utf8_lossy(packet.data.as_slice()),
@@ -566,7 +743,7 @@ impl IbcSimpleModule {
             )
             .add_attribute("packet_connection", channel_info.info.connection_id);
 
-        let ack_event = Event::new("write_acknowledgement")
+        let ack_event = Event::new(WRITE_ACK_EVENT)
             .add_attribute(
                 "packet_data",
                 serde_json::to_value(&packet.data)?.to_string(),
@@ -694,7 +871,7 @@ impl IbcSimpleModule {
         });
         let timeout_timestamp = packet.timeout.timestamp().map(|t| t.nanos()).unwrap_or(0);
 
-        let ack_event = Event::new("recv_packet")
+        let ack_event = Event::new(ACK_PACKET_EVENT)
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -770,22 +947,7 @@ impl IbcSimpleModule {
             bail!("You can't timeout an packet twice")
         }
 
-        // If there is a block timeout
-        let mut has_timedout = false;
-        if let Some(block_timeout) = packet_data.timeout.block() {
-            if block.height >= block_timeout.height {
-                has_timedout = true;
-            }
-        }
-        if let Some(timeout) = packet_data.timeout.timestamp() {
-            if block.time >= timeout {
-                has_timedout = true;
-            }
-        }
-
-        if !has_timedout {
-            bail!("Packet hasn't timedout");
-        }
+        // We don't check timeout conditions here, because when calling this function, we assume the counterparty chain has received the packet after the timeout
 
         TIMEOUT_PACKET_MAP.save(
             &mut ibc_storage,
@@ -833,7 +995,7 @@ impl IbcSimpleModule {
         });
         let timeout_timestamp = packet.timeout.timestamp().map(|t| t.nanos()).unwrap_or(0);
 
-        let timeout_event = Event::new("timeout_packet")
+        let timeout_event = Event::new(TIMEOUT_PACKET_EVENT)
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -905,14 +1067,6 @@ impl IbcSimpleModule {
             timeout,
         )
     }
-
-    pub fn close_channel(
-        &self,
-        _storage: &mut dyn Storage,
-        _channel_id: String,
-    ) -> AnyResult<crate::AppResponse> {
-        bail!("Close channel not implemented in cw-multi-test");
-    }
 }
 
 impl Module for IbcSimpleModule {
@@ -954,10 +1108,14 @@ impl Module for IbcSimpleModule {
             } => {
                 // This should come from a contract. So the port_id is always the same format
                 // If you want to send a packet form a module use the sudo Send Packet msg
-                let port_id = format!("wasm.{}", sender);
+                let port_id: String = format!("wasm.{}", sender);
                 self.send_packet(storage, port_id, channel_id, data, timeout)
             }
-            IbcMsg::CloseChannel { channel_id } => self.close_channel(storage, channel_id),
+            IbcMsg::CloseChannel { channel_id } => {
+                let port_id: String = format!("wasm.{}", sender);
+                // This message correspond to init closing a channel
+                self.close_channel(api, storage, router, block, port_id, channel_id, true)
+            }
             _ => bail!("Not implemented on the ibc module"),
         }
     }
@@ -1025,9 +1183,11 @@ impl Module for IbcSimpleModule {
                 counterparty_endpoint,
                 counterparty_version,
             ),
-            IbcPacketRelayingMsg::CloseChannel {} => {
-                panic!("Can't close a channel in cw-multi-test")
-            }
+            IbcPacketRelayingMsg::CloseChannel {
+                port_id,
+                channel_id,
+                init,
+            } => self.close_channel(api, storage, router, block, port_id, channel_id, init),
 
             IbcPacketRelayingMsg::Send {
                 port_id,
@@ -1115,6 +1275,14 @@ impl Module for IbcSimpleModule {
                     .collect::<Result<Vec<_>, _>>()?;
 
                 Ok(to_json_binary(&connections)?)
+            }
+            MockIbcQuery::ChannelInfo {
+                port_id,
+                channel_id,
+            } => {
+                let channel_info = CHANNEL_INFO.load(&ibc_storage, (port_id, channel_id))?;
+
+                Ok(to_json_binary(&channel_info)?)
             }
         }
     }

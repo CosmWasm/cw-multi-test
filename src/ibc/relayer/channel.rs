@@ -1,19 +1,16 @@
 use anyhow::Result as AnyResult;
-use cosmwasm_std::{
-    from_json, Api, Binary, CustomMsg, CustomQuery, IbcEndpoint, IbcOrder, StdError, StdResult,
-    Storage,
-};
+use cosmwasm_std::{from_json, Api, CustomMsg, CustomQuery, IbcEndpoint, IbcOrder, Storage};
 use serde::de::DeserializeOwned;
 
 use crate::{
-    ibc::types::Connection, App, AppResponse, Bank, Distribution, Gov, Ibc, Module, Staking,
-    SudoMsg, Wasm,
+    ibc::{
+        types::{Connection, MockIbcQuery},
+        IbcPacketRelayingMsg,
+    },
+    App, AppResponse, Bank, Distribution, Gov, Ibc, Module, Staking, Wasm,
 };
 
-use super::{
-    types::{IbcPacketData, MockIbcQuery},
-    IbcPacketRelayingMsg,
-};
+use super::get_event_attr_value;
 
 #[derive(Debug)]
 pub struct ChannelCreationResult {
@@ -232,192 +229,4 @@ where
         src_channel,
         dst_channel,
     })
-}
-
-pub fn relay_packets_in_tx<
-    BankT1,
-    ApiT1,
-    StorageT1,
-    CustomT1,
-    WasmT1,
-    StakingT1,
-    DistrT1,
-    IbcT1,
-    GovT1,
-    BankT2,
-    ApiT2,
-    StorageT2,
-    CustomT2,
-    WasmT2,
-    StakingT2,
-    DistrT2,
-    IbcT2,
-    GovT2,
->(
-    app1: &mut App<BankT1, ApiT1, StorageT1, CustomT1, WasmT1, StakingT1, DistrT1, IbcT1, GovT1>,
-    app2: &mut App<BankT2, ApiT2, StorageT2, CustomT2, WasmT2, StakingT2, DistrT2, IbcT2, GovT2>,
-    app1_tx_response: AppResponse,
-) -> AnyResult<Vec<(AppResponse, AppResponse, Binary)>>
-where
-    CustomT1::ExecT: CustomMsg + DeserializeOwned + 'static,
-    CustomT1::QueryT: CustomQuery + DeserializeOwned + 'static,
-    WasmT1: Wasm<CustomT1::ExecT, CustomT1::QueryT>,
-    BankT1: Bank,
-    ApiT1: Api,
-    StorageT1: Storage,
-    CustomT1: Module,
-    StakingT1: Staking,
-    DistrT1: Distribution,
-    IbcT1: Ibc,
-    GovT1: Gov,
-
-    CustomT2::ExecT: CustomMsg + DeserializeOwned + 'static,
-    CustomT2::QueryT: CustomQuery + DeserializeOwned + 'static,
-    WasmT2: Wasm<CustomT2::ExecT, CustomT2::QueryT>,
-    BankT2: Bank,
-    ApiT2: Api,
-    StorageT2: Storage,
-    CustomT2: Module,
-    StakingT2: Staking,
-    DistrT2: Distribution,
-    IbcT2: Ibc,
-    GovT2: Gov,
-{
-    // Find all packets and their data
-    let packets = get_all_event_attr_value(&app1_tx_response, "send_packet", "packet_sequence");
-    let channels = get_all_event_attr_value(&app1_tx_response, "send_packet", "packet_src_channel");
-    let ports = get_all_event_attr_value(&app1_tx_response, "send_packet", "packet_src_port");
-
-    // For all packets, query the packetdata and relay them
-
-    let mut packet_forwarding = vec![];
-
-    for i in 0..packets.len() {
-        let (rcv_response, ack_response, ack) = relay_packet(
-            app1,
-            app2,
-            ports[i].clone(),
-            channels[i].clone(),
-            packets[i].parse()?,
-        )?;
-
-        packet_forwarding.push((rcv_response, ack_response, ack));
-    }
-
-    Ok(packet_forwarding)
-}
-
-/// Relays (rcv + ack) any pending packet between 2 chains
-pub fn relay_packet<
-    BankT1,
-    ApiT1,
-    StorageT1,
-    CustomT1,
-    WasmT1,
-    StakingT1,
-    DistrT1,
-    IbcT1,
-    GovT1,
-    BankT2,
-    ApiT2,
-    StorageT2,
-    CustomT2,
-    WasmT2,
-    StakingT2,
-    DistrT2,
-    IbcT2,
-    GovT2,
->(
-    app1: &mut App<BankT1, ApiT1, StorageT1, CustomT1, WasmT1, StakingT1, DistrT1, IbcT1, GovT1>,
-    app2: &mut App<BankT2, ApiT2, StorageT2, CustomT2, WasmT2, StakingT2, DistrT2, IbcT2, GovT2>,
-    src_port_id: String,
-    src_channel_id: String,
-    sequence: u64,
-) -> AnyResult<(AppResponse, AppResponse, Binary)>
-where
-    CustomT1::ExecT: CustomMsg + DeserializeOwned + 'static,
-    CustomT1::QueryT: CustomQuery + DeserializeOwned + 'static,
-    WasmT1: Wasm<CustomT1::ExecT, CustomT1::QueryT>,
-    BankT1: Bank,
-    ApiT1: Api,
-    StorageT1: Storage,
-    CustomT1: Module,
-    StakingT1: Staking,
-    DistrT1: Distribution,
-    IbcT1: Ibc,
-    GovT1: Gov,
-
-    CustomT2::ExecT: CustomMsg + DeserializeOwned + 'static,
-    CustomT2::QueryT: CustomQuery + DeserializeOwned + 'static,
-    WasmT2: Wasm<CustomT2::ExecT, CustomT2::QueryT>,
-    BankT2: Bank,
-    ApiT2: Api,
-    StorageT2: Storage,
-    CustomT2: Module,
-    StakingT2: Staking,
-    DistrT2: Distribution,
-    IbcT2: Ibc,
-    GovT2: Gov,
-{
-    let packet: IbcPacketData = from_json(app1.ibc_query(MockIbcQuery::SendPacket {
-        channel_id: src_channel_id.clone(),
-        port_id: src_port_id.clone(),
-        sequence,
-    })?)?;
-
-    // First we start by sending the packet on chain 2
-    let receive_response = app2.sudo(SudoMsg::Ibc(IbcPacketRelayingMsg::Receive {
-        packet: packet.clone(),
-    }))?;
-
-    let hex_ack =
-        get_event_attr_value(&receive_response, "write_acknowledgement", "packet_ack_hex")?;
-
-    let ack = Binary::from(hex::decode(hex_ack)?);
-
-    // Then we query the packet ack to deliver the response on chain 1
-    let ack_response = app1.sudo(SudoMsg::Ibc(IbcPacketRelayingMsg::Acknowledge {
-        packet,
-        ack: ack.clone(),
-    }))?;
-
-    Ok((receive_response, ack_response, ack))
-}
-
-pub fn get_event_attr_value(
-    response: &AppResponse,
-    event_type: &str,
-    attr_key: &str,
-) -> StdResult<String> {
-    for event in &response.events {
-        if event.ty == event_type {
-            for attr in &event.attributes {
-                if attr.key == attr_key {
-                    return Ok(attr.value.clone());
-                }
-            }
-        }
-    }
-
-    Err(StdError::generic_err(format!(
-        "event of type {event_type} does not have a value at key {attr_key}"
-    )))
-}
-
-pub fn get_all_event_attr_value(
-    response: &AppResponse,
-    event: &str,
-    attribute: &str,
-) -> Vec<String> {
-    response
-        .events
-        .iter()
-        .filter(|e| e.ty.eq(event))
-        .flat_map(|e| {
-            e.attributes
-                .iter()
-                .filter(|a| a.key.eq(attribute))
-                .map(|a| a.value.clone())
-        })
-        .collect()
 }

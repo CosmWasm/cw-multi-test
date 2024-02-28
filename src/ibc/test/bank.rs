@@ -67,7 +67,7 @@ fn simple_transfer() -> anyhow::Result<()> {
             amount: funds.clone(),
             timeout: IbcTimeout::with_block(IbcTimeoutBlock {
                 revision: 1,
-                height: app1.block_info().height,
+                height: app2.block_info().height + 1,
             }),
         }),
     )?;
@@ -163,7 +163,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
             amount: funds.clone(),
             timeout: IbcTimeout::with_block(IbcTimeoutBlock {
                 revision: 1,
-                height: app1.block_info().height,
+                height: app2.block_info().height + 1,
             }),
         }),
     )?;
