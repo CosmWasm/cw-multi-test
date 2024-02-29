@@ -1204,8 +1204,8 @@ mod test {
     use crate::{GovFailingModule, IbcFailingModule};
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
-        coin, from_json, to_json_vec, BankMsg, CanonicalAddr, CodeInfoResponse, Coin, CosmosMsg,
-        Empty, HexBinary, StdError,
+        coin, from_json, to_json_vec, CanonicalAddr, CodeInfoResponse, CosmosMsg, Empty, HexBinary,
+        StdError,
     };
 
     /// Type alias for default build `Router` to make its reference in typical scenario

@@ -1446,9 +1446,7 @@ mod test {
     }
 
     mod msg {
-        use cosmwasm_std::{
-            coins, Addr, BondedDenomResponse, Decimal, QuerierWrapper, StakingQuery,
-        };
+        use cosmwasm_std::{coins, QuerierWrapper};
         use serde::de::DeserializeOwned;
 
         use super::*;

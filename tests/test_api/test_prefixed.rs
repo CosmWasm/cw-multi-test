@@ -1,6 +1,6 @@
 use super::*;
 use cosmwasm_std::testing::MockApi;
-use cosmwasm_std::{Api, CanonicalAddr};
+use cosmwasm_std::CanonicalAddr;
 
 const HUMAN_ADDRESS: &str = "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp";
 
