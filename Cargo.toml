@@ -18,7 +18,7 @@ cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
 
 [dependencies]
 anyhow = "1.0.80"
-bech32 = "0.9.1"
+bech32 = "0.11.0"
 cosmwasm-std = { version = "1.5.3", features = ["iterator", "staking", "stargate"] }
 cw-storage-plus = "1.2.0"
 cw-utils = "1.0.3"

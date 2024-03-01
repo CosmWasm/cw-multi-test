@@ -1,4 +1,5 @@
-use bech32::{decode, encode, FromBase32, ToBase32, Variant};
+use bech32::primitives::decode::CheckedHrpstring;
+use bech32::{encode, Bech32, Hrp};
 use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{
     Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult, VerificationError,
@@ -12,7 +13,6 @@ use sha2::{Digest, Sha256};
 pub struct MockApiBech32 {
     api: MockApi,
     prefix: &'static str,
-    variant: Variant,
 }
 
 impl MockApiBech32 {
@@ -30,16 +30,9 @@ impl MockApiBech32 {
     ///            "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp");
     /// ```
     pub fn new(prefix: &'static str) -> Self {
-        Self::new_with_variant(prefix, Variant::Bech32)
-    }
-
-    /// Creates `Api` implementation that uses specified prefix
-    /// to generate addresses in format defined by provided Bech32 variant.
-    pub(crate) fn new_with_variant(prefix: &'static str, variant: Variant) -> Self {
         Self {
             api: MockApi::default(),
             prefix,
-            variant,
         }
     }
 }
@@ -79,11 +72,9 @@ impl Api for MockApiBech32 {
     ///            "BC6BFD848EBD7819C9A82BF124D65E7F739D08E002601E23BB906AACD40A3D81");
     /// ```
     fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
-        if let Ok((prefix, decoded, variant)) = decode(input) {
-            if prefix == self.prefix && variant == self.variant {
-                if let Ok(bytes) = Vec::<u8>::from_base32(&decoded) {
-                    return Ok(bytes.into());
-                }
+        if let Ok(s) = CheckedHrpstring::new::<Bech32>(input) {
+            if s.hrp().to_string() == self.prefix {
+                return Ok(s.byte_iter().collect::<Vec<u8>>().into());
             }
         }
         Err(StdError::generic_err("Invalid input"))
@@ -108,7 +99,9 @@ impl Api for MockApiBech32 {
     ///            addr.as_str());
     /// ```
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        if let Ok(encoded) = encode(self.prefix, canonical.as_slice().to_base32(), self.variant) {
+        if let Ok(encoded) =
+            encode::<Bech32>(Hrp::parse_unchecked(self.prefix), canonical.as_slice())
+        {
             Ok(Addr::unchecked(encoded))
         } else {
             Err(StdError::generic_err("Invalid canonical address"))
@@ -178,8 +171,10 @@ impl MockApiBech32 {
     /// This function panics when generating a valid address in **Bech32**
     /// format is not possible, especially when prefix is too long or empty.
     pub fn addr_make(&self, input: &str) -> Addr {
-        let digest = Sha256::digest(input).to_vec();
-        match encode(self.prefix, digest.to_base32(), self.variant) {
+        match encode::<Bech32>(
+            Hrp::parse_unchecked(self.prefix),
+            Sha256::digest(input).as_slice(),
+        ) {
             Ok(address) => Addr::unchecked(address),
             Err(reason) => panic!("Generating address failed with reason: {}", reason),
         }

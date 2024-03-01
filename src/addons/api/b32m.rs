@@ -1,12 +1,19 @@
-use crate::addons::MockApiBech32;
-use bech32::Variant;
-use cosmwasm_std::{Addr, Api, CanonicalAddr, RecoverPubkeyError, StdResult, VerificationError};
+use bech32::primitives::decode::CheckedHrpstring;
+use bech32::{encode, Bech32m, Hrp};
+use cosmwasm_std::testing::MockApi;
+use cosmwasm_std::{
+    Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult, VerificationError,
+};
+use sha2::{Digest, Sha256};
 
-/// Implementation of the [Api](cosmwasm_std::Api) trait that uses [Bech32m] format
+/// Implementation of the `cosmwasm_std::Api` trait that uses [Bech32m] format
 /// for humanizing canonical addresses.
 ///
 /// [Bech32m]: https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
-pub struct MockApiBech32m(MockApiBech32);
+pub struct MockApiBech32m {
+    api: MockApi,
+    prefix: &'static str,
+}
 
 impl MockApiBech32m {
     /// Returns `Api` implementation that uses specified prefix
@@ -23,12 +30,15 @@ impl MockApiBech32m {
     ///            "osmosis1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qgv9940");
     /// ```
     pub fn new(prefix: &'static str) -> Self {
-        Self(MockApiBech32::new_with_variant(prefix, Variant::Bech32m))
+        Self {
+            api: MockApi::default(),
+            prefix,
+        }
     }
 }
 
 impl Api for MockApiBech32m {
-    /// Takes a human readable address in **Bech32m** format and checks if it is valid.
+    /// Takes a human-readable address in **Bech32m** format and checks if it is valid.
     ///
     /// If the validation succeeds, an `Addr` containing the same string as the input is returned.
     ///
@@ -44,10 +54,10 @@ impl Api for MockApiBech32m {
     ///            addr.as_str());
     /// ```
     fn addr_validate(&self, input: &str) -> StdResult<Addr> {
-        self.0.addr_validate(input)
+        self.addr_humanize(&self.addr_canonicalize(input)?)
     }
 
-    /// Takes a human readable address in **Bech32m** format and returns
+    /// Takes a human-readable address in **Bech32m** format and returns
     /// a canonical binary representation of it.
     ///
     /// # Example
@@ -62,7 +72,12 @@ impl Api for MockApiBech32m {
     ///            "0A367B92CF0B037DFD89960EE832D56F7FC151681BB41E53690E776F5786998A");
     /// ```
     fn addr_canonicalize(&self, input: &str) -> StdResult<CanonicalAddr> {
-        self.0.addr_canonicalize(input)
+        if let Ok(s) = CheckedHrpstring::new::<Bech32m>(input) {
+            if s.hrp().to_string() == self.prefix {
+                return Ok(s.byte_iter().collect::<Vec<u8>>().into());
+            }
+        }
+        Err(StdError::generic_err("Invalid input"))
     }
 
     /// Takes a canonical address and returns a human readable address in **Bech32m** format.
@@ -84,7 +99,13 @@ impl Api for MockApiBech32m {
     ///            addr.as_str());
     /// ```
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        self.0.addr_humanize(canonical)
+        if let Ok(encoded) =
+            encode::<Bech32m>(Hrp::parse_unchecked(self.prefix), canonical.as_slice())
+        {
+            Ok(Addr::unchecked(encoded))
+        } else {
+            Err(StdError::generic_err("Invalid canonical address"))
+        }
     }
 
     fn secp256k1_verify(
@@ -93,7 +114,8 @@ impl Api for MockApiBech32m {
         signature: &[u8],
         public_key: &[u8],
     ) -> Result<bool, VerificationError> {
-        self.0.secp256k1_verify(message_hash, signature, public_key)
+        self.api
+            .secp256k1_verify(message_hash, signature, public_key)
     }
 
     fn secp256k1_recover_pubkey(
@@ -102,7 +124,7 @@ impl Api for MockApiBech32m {
         signature: &[u8],
         recovery_param: u8,
     ) -> Result<Vec<u8>, RecoverPubkeyError> {
-        self.0
+        self.api
             .secp256k1_recover_pubkey(message_hash, signature, recovery_param)
     }
 
@@ -112,7 +134,7 @@ impl Api for MockApiBech32m {
         signature: &[u8],
         public_key: &[u8],
     ) -> Result<bool, VerificationError> {
-        self.0.ed25519_verify(message, signature, public_key)
+        self.api.ed25519_verify(message, signature, public_key)
     }
 
     fn ed25519_batch_verify(
@@ -121,12 +143,12 @@ impl Api for MockApiBech32m {
         signatures: &[&[u8]],
         public_keys: &[&[u8]],
     ) -> Result<bool, VerificationError> {
-        self.0
+        self.api
             .ed25519_batch_verify(messages, signatures, public_keys)
     }
 
     fn debug(&self, message: &str) {
-        self.0.debug(message)
+        self.api.debug(message)
     }
 }
 
@@ -149,6 +171,12 @@ impl MockApiBech32m {
     /// This function panics when generating a valid address in **Bech32**
     /// format is not possible, especially when prefix is too long or empty.
     pub fn addr_make(&self, input: &str) -> Addr {
-        self.0.addr_make(input)
+        match encode::<Bech32m>(
+            Hrp::parse_unchecked(self.prefix),
+            Sha256::digest(input).as_slice(),
+        ) {
+            Ok(address) => Addr::unchecked(address),
+            Err(reason) => panic!("Generating address failed with reason: {}", reason),
+        }
     }
 }
