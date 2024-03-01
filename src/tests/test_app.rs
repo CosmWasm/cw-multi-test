@@ -850,7 +850,7 @@ fn sent_funds_properly_visible_on_execution() {
 /// via a custom module, as an example of ability to do privileged actions.
 mod custom_handler {
     use super::*;
-    use crate::{BankSudo, BasicAppBuilder, CosmosRouter};
+    use crate::{BankSudo, BasicAppBuilder};
 
     const LOTTERY: Item<Coin> = Item::new("lottery");
     const PITY: Item<Coin> = Item::new("pity");
@@ -988,9 +988,6 @@ mod custom_handler {
 
 mod reply_data_overwrite {
     use super::*;
-    use cosmwasm_std::to_json_binary;
-
-    use echo::EXECUTE_REPLY_BASE_ID;
 
     fn make_echo_submsg(
         contract: Addr,
@@ -1819,7 +1816,6 @@ mod protobuf_wrapped_data {
 
 mod errors {
     use super::*;
-    use cosmwasm_std::to_json_binary;
 
     #[test]
     fn simple_instantiation() {
