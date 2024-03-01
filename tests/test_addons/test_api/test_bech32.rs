@@ -1,5 +1,5 @@
 use super::*;
-use cosmwasm_std::{Api, CanonicalAddr};
+use cosmwasm_std::CanonicalAddr;
 use cw_multi_test::addons::{MockApiBech32, MockApiBech32m};
 
 const HUMAN_ADDRESS: &str = "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp";

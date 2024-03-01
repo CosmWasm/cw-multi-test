@@ -1206,10 +1206,7 @@ mod test {
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule};
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{
-        coin, from_json, to_json_vec, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, HexBinary,
-        StdError,
-    };
+    use cosmwasm_std::{coin, from_json, to_json_vec, CanonicalAddr, CosmosMsg, Empty, StdError};
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
