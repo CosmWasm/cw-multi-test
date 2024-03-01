@@ -1,2 +1,2 @@
-pub mod bech32;
-pub mod bech32m;
+pub mod b32;
+pub mod b32m;
