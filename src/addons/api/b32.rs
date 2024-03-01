@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use sha2::{Digest, Sha256};
 
-/// Implementation of the [Api](cosmwasm_std::Api) trait that uses [Bech32] format
+/// Implementation of the `cosmwasm_std::Api` trait that uses [Bech32] format
 /// for humanizing canonical addresses.
 ///
 /// [Bech32]: https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
@@ -45,7 +45,7 @@ impl MockApiBech32 {
 }
 
 impl Api for MockApiBech32 {
-    /// Takes a human readable address in **Bech32** format and checks if it is valid.
+    /// Takes a human-readable address in **Bech32** format and checks if it is valid.
     ///
     /// If the validation succeeds, an `Addr` containing the same string as the input is returned.
     ///
@@ -64,7 +64,7 @@ impl Api for MockApiBech32 {
         self.addr_humanize(&self.addr_canonicalize(input)?)
     }
 
-    /// Takes a human readable address in **Bech32** format and returns
+    /// Takes a human-readable address in **Bech32** format and returns
     /// a canonical binary representation of it.
     ///
     /// # Example
@@ -89,7 +89,7 @@ impl Api for MockApiBech32 {
         Err(StdError::generic_err("Invalid input"))
     }
 
-    /// Takes a canonical address and returns a human readable address in **Bech32** format.
+    /// Takes a canonical address and returns a human-readable address in **Bech32** format.
     ///
     /// This is the inverse operation of [`addr_canonicalize`].
     ///
