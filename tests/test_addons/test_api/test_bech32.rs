@@ -78,7 +78,9 @@ fn debug_should_not_panic() {
 }
 
 #[test]
-#[should_panic(expected = "Generating address failed with reason: invalid length")]
+#[should_panic(
+    expected = "Generating address failed with reason: hrp is too long, found 85 characters, must be <= 126"
+)]
 fn address_make_prefix_too_long() {
     MockApiBech32::new(
         "juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_",
