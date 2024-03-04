@@ -2000,7 +2000,9 @@ mod test {
             "default address generator returned incorrect address"
         );
 
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), None, payout::contract()).unwrap();
+        let code_id = wasm_keeper
+            .store_code(Addr::unchecked("creator"), None, payout::contract())
+            .unwrap();
         assert_eq!(2, code_id);
 
         let contract_addr = wasm_keeper
