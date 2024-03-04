@@ -10,7 +10,7 @@ pub struct MockApiBech32(MockApiBech<Bech32>);
 
 impl MockApiBech32 {
     /// Returns `Api` implementation that uses specified prefix
-    /// to generate addresses in **Bech32** format.
+    /// to generate addresses in `Bech32` format.
     ///
     /// # Example
     ///
@@ -28,7 +28,7 @@ impl MockApiBech32 {
 }
 
 impl Api for MockApiBech32 {
-    /// Takes a human-readable address in **Bech32** format and checks if it is valid.
+    /// Takes a human-readable address in `Bech32` format and checks if it is valid.
     ///
     /// If the validation succeeds, an `Addr` containing the same string as the input is returned.
     ///
@@ -47,7 +47,7 @@ impl Api for MockApiBech32 {
         self.0.addr_humanize(&self.addr_canonicalize(input)?)
     }
 
-    /// Takes a human-readable address in **Bech32** format and returns
+    /// Takes a human-readable address in `Bech32` format and returns
     /// a canonical binary representation of it.
     ///
     /// # Example
@@ -65,7 +65,7 @@ impl Api for MockApiBech32 {
         self.0.addr_canonicalize(input)
     }
 
-    /// Takes a canonical address and returns a human-readable address in **Bech32** format.
+    /// Takes a canonical address and returns a human-readable address in `Bech32` format.
     ///
     /// This is the inverse operation of [`addr_canonicalize`].
     ///
@@ -131,7 +131,7 @@ impl Api for MockApiBech32 {
 }
 
 impl MockApiBech32 {
-    /// Returns an address in **Bech32** format, built from provided input string.
+    /// Returns an address in `Bech32` format, built from provided input string.
     ///
     /// # Example
     ///

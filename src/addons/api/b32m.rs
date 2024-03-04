@@ -10,17 +10,17 @@ pub struct MockApiBech32m(MockApiBech<Bech32m>);
 
 impl MockApiBech32m {
     /// Returns `Api` implementation that uses specified prefix
-    /// to generate addresses in **Bech32m** format.
+    /// to generate addresses in `Bech32m` format.
     ///
     /// # Example
     ///
     /// ```
     /// use cw_multi_test::addons::MockApiBech32m;
     ///
-    /// let api = MockApiBech32m::new("osmosis");
+    /// let api = MockApiBech32m::new("osmo");
     /// let addr = api.addr_make("sender");
     /// assert_eq!(addr.as_str(),
-    ///            "osmosis1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qgv9940");
+    ///            "osmo1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qdlmaeg");
     /// ```
     pub fn new(prefix: &'static str) -> Self {
         Self(MockApiBech::new(prefix))
@@ -28,7 +28,7 @@ impl MockApiBech32m {
 }
 
 impl Api for MockApiBech32m {
-    /// Takes a human-readable address in **Bech32m** format and checks if it is valid.
+    /// Takes a human-readable address in `Bech32m` format and checks if it is valid.
     ///
     /// If the validation succeeds, an `Addr` containing the same string as the input is returned.
     ///
@@ -38,7 +38,7 @@ impl Api for MockApiBech32m {
     /// use cosmwasm_std::Api;
     /// use cw_multi_test::addons::MockApiBech32m;
     ///
-    /// let api = MockApiBech32m::new("osmosis");
+    /// let api = MockApiBech32m::new("osmo");
     /// let addr = api.addr_make("sender");
     /// assert_eq!(api.addr_validate(addr.as_str()).unwrap().as_str(),
     ///            addr.as_str());
@@ -47,7 +47,7 @@ impl Api for MockApiBech32m {
         self.0.addr_humanize(&self.addr_canonicalize(input)?)
     }
 
-    /// Takes a human-readable address in **Bech32m** format and returns
+    /// Takes a human-readable address in `Bech32m` format and returns
     /// a canonical binary representation of it.
     ///
     /// # Example
@@ -56,7 +56,7 @@ impl Api for MockApiBech32m {
     /// use cosmwasm_std::Api;
     /// use cw_multi_test::addons::MockApiBech32;
     ///
-    /// let api = MockApiBech32::new("osmosis");
+    /// let api = MockApiBech32::new("osmo");
     /// let addr = api.addr_make("sender");
     /// assert_eq!(api.addr_canonicalize(addr.as_str()).unwrap().to_string(),
     ///            "0A367B92CF0B037DFD89960EE832D56F7FC151681BB41E53690E776F5786998A");
@@ -65,7 +65,7 @@ impl Api for MockApiBech32m {
         self.0.addr_canonicalize(input)
     }
 
-    /// Takes a canonical address and returns a human-readable address in **Bech32m** format.
+    /// Takes a canonical address and returns a human-readable address in `Bech32m` format.
     ///
     /// This is the inverse operation of [`addr_canonicalize`].
     ///
@@ -77,7 +77,7 @@ impl Api for MockApiBech32m {
     /// use cosmwasm_std::Api;
     /// use cw_multi_test::addons::MockApiBech32m;
     ///
-    /// let api = MockApiBech32m::new("osmosis");
+    /// let api = MockApiBech32m::new("osmo");
     /// let addr = api.addr_make("sender");
     /// let canonical_addr = api.addr_canonicalize(addr.as_str()).unwrap();
     /// assert_eq!(api.addr_humanize(&canonical_addr).unwrap().as_str(),
@@ -131,17 +131,17 @@ impl Api for MockApiBech32m {
 }
 
 impl MockApiBech32m {
-    /// Returns an address in **Bech32m** format, built from provided input string.
+    /// Returns an address in `Bech32m` format, built from provided input string.
     ///
     /// # Example
     ///
     /// ```
     /// use cw_multi_test::addons::MockApiBech32m;
     ///
-    /// let api = MockApiBech32m::new("osmosis");
+    /// let api = MockApiBech32m::new("osmo");
     /// let addr = api.addr_make("sender");
     /// assert_eq!(addr.as_str(),
-    ///            "osmosis1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qgv9940");
+    ///            "osmo1pgm8hyk0pvphmlvfjc8wsvk4daluz5tgrw6pu5mfpemk74uxnx9qdlmaeg");
     /// ```
     ///
     /// # Panics
