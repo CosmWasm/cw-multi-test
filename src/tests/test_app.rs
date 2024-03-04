@@ -850,7 +850,7 @@ fn sent_funds_properly_visible_on_execution() {
 /// via a custom module, as an example of ability to do privileged actions.
 mod custom_handler {
     use super::*;
-    use crate::{BankSudo, BasicAppBuilder, CosmosRouter};
+    use crate::{BankSudo, BasicAppBuilder};
 
     const LOTTERY: Item<Coin> = Item::new("lottery");
     const PITY: Item<Coin> = Item::new("pity");
@@ -988,9 +988,6 @@ mod custom_handler {
 
 mod reply_data_overwrite {
     use super::*;
-    use cosmwasm_std::to_json_binary;
-
-    use echo::EXECUTE_REPLY_BASE_ID;
 
     fn make_echo_submsg(
         contract: Addr,
@@ -1555,6 +1552,7 @@ mod response_validation {
 }
 
 mod contract_instantiation {
+
     #[test]
     #[cfg(feature = "cosmwasm_1_2")]
     fn instantiate2_works() {
@@ -1569,13 +1567,14 @@ mod contract_instantiation {
 
         // initialize the contract
         let init_msg = to_json_binary(&Empty {}).unwrap();
+        let salt = cosmwasm_std::HexBinary::from_hex("010203040506").unwrap();
         let msg = WasmMsg::Instantiate2 {
             admin: None,
             code_id,
             msg: init_msg,
             funds: vec![],
             label: "label".into(),
-            salt: [1, 2, 3, 4, 5, 6].as_slice().into(),
+            salt: salt.clone().into(),
         };
         let res = app.execute(sender, msg.into()).unwrap();
 
@@ -1585,7 +1584,14 @@ mod contract_instantiation {
 
         // assert contract's address is exactly the predicted one,
         // in default address generator, this is like `contract` + salt in hex
-        assert_eq!(parsed.contract_address, "contract010203040506");
+        assert_eq!(
+            parsed.contract_address,
+            format!(
+                "contract{}{}",
+                app.api().addr_canonicalize("sender").unwrap(),
+                salt.to_hex()
+            ),
+        );
     }
 }
 
@@ -1810,7 +1816,6 @@ mod protobuf_wrapped_data {
 
 mod errors {
     use super::*;
-    use cosmwasm_std::to_json_binary;
 
     #[test]
     fn simple_instantiation() {

@@ -1240,15 +1240,12 @@ mod test {
     use crate::bank::BankKeeper;
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
-    use crate::stargate::StargateFailing;
+    use crate::stargate::StargateFailingModule;
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule};
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{
-        coin, from_json, to_json_vec, BankMsg, CanonicalAddr, Coin, CosmosMsg, Empty, HexBinary,
-        StdError,
-    };
+    use cosmwasm_std::{coin, from_json, to_json_vec, CanonicalAddr, CosmosMsg, Empty, StdError};
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
@@ -1259,7 +1256,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >;
 
     fn wasm_keeper() -> WasmKeeper<Empty, Empty> {
@@ -1275,7 +1272,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailingModule::new(),
         }
     }
 
@@ -1978,6 +1975,8 @@ mod test {
             "default address generator returned incorrect address"
         );
 
+        let salt = HexBinary::from_hex("c0ffee").unwrap();
+
         let contract_addr = wasm_keeper
             .register_contract(
                 &api,
@@ -1987,12 +1986,43 @@ mod test {
                 Addr::unchecked("admin"),
                 "label".to_owned(),
                 1000,
-                Binary::from(HexBinary::from_hex("01C0FFEE").unwrap()),
+                Binary::from(salt.clone()),
             )
             .unwrap();
 
         assert_eq!(
-            contract_addr, "contract01c0ffee",
+            contract_addr,
+            format!(
+                "contract{}{}",
+                api.addr_canonicalize("foobar").unwrap(),
+                salt.to_hex()
+            ),
+            "default address generator returned incorrect address"
+        );
+
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), None, payout::contract()).unwrap();
+        assert_eq!(2, code_id);
+
+        let contract_addr = wasm_keeper
+            .register_contract(
+                &api,
+                &mut wasm_storage,
+                code_id,
+                Addr::unchecked("boobaz"),
+                Addr::unchecked("admin"),
+                "label".to_owned(),
+                1000,
+                Binary::from(salt.clone()),
+            )
+            .unwrap();
+
+        assert_eq!(
+            contract_addr,
+            format!(
+                "contract{}{}",
+                api.addr_canonicalize("boobaz").unwrap(),
+                salt.to_hex()
+            ),
             "default address generator returned incorrect address"
         );
     }

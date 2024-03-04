@@ -7,6 +7,8 @@ use cosmwasm_std::{
     coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
     Binary, BlockInfo, Coin, Event, Querier, Storage,
 };
+#[cfg(feature = "cosmwasm_1_3")]
+use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadata, DenomMetadataResponse};
 #[cfg(feature = "cosmwasm_1_1")]
 use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint128};
 use cw_storage_plus::Map;
@@ -16,6 +18,10 @@ use schemars::JsonSchema;
 
 /// Collection of bank balances.
 const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
+
+/// Collection of metadata for denomination.
+#[cfg(feature = "cosmwasm_1_3")]
+const DENOM_METADATA: Map<String, DenomMetadata> = Map::new("metadata");
 
 /// Default namespace for bank module.
 pub const NAMESPACE_BANK: &[u8] = b"bank";
@@ -53,7 +59,7 @@ impl BankKeeper {
         Self::default()
     }
 
-    /// _Admin_ function for adjusting bank accounts in genesis.
+    /// Administration function for adjusting bank accounts in genesis.
     pub fn init_balance(
         &self,
         storage: &mut dyn Storage,
@@ -64,7 +70,7 @@ impl BankKeeper {
         self.set_balance(&mut bank_storage, account, amount)
     }
 
-    /// _Admin_ function for adjusting bank accounts.
+    /// Administration function for adjusting bank accounts.
     fn set_balance(
         &self,
         bank_storage: &mut dyn Storage,
@@ -78,8 +84,22 @@ impl BankKeeper {
             .map_err(Into::into)
     }
 
-    fn get_balance(&self, bank_storage: &dyn Storage, account: &Addr) -> AnyResult<Vec<Coin>> {
-        let val = BALANCES.may_load(bank_storage, account)?;
+    /// Administration function for adjusting denomination metadata.
+    #[cfg(feature = "cosmwasm_1_3")]
+    pub fn set_denom_metadata(
+        &self,
+        bank_storage: &mut dyn Storage,
+        denom: String,
+        metadata: DenomMetadata,
+    ) -> AnyResult<()> {
+        DENOM_METADATA
+            .save(bank_storage, denom, &metadata)
+            .map_err(Into::into)
+    }
+
+    /// Returns balance for specified address.
+    fn get_balance(&self, bank_storage: &dyn Storage, addr: &Addr) -> AnyResult<Vec<Coin>> {
+        let val = BALANCES.may_load(bank_storage, addr)?;
         Ok(val.unwrap_or_default().into_vec())
     }
 
@@ -154,8 +174,7 @@ fn coins_to_string(coins: &[Coin]) -> String {
         .map(|c| format!("{}{}", c.amount, c.denom))
         .join(",")
 }
-///This trait defines the interface for simulating banking operations within the testing environment,
-/// essential for creating and testing scenarios involving financial transactions and account management in smart contracts.
+
 impl Bank for BankKeeper {}
 
 impl Module for BankKeeper {
@@ -193,7 +212,58 @@ impl Module for BankKeeper {
                 self.burn(&mut bank_storage, sender, amount)?;
                 Ok(AppResponse::default())
             }
-            _ => unimplemented!("bank message: {msg:?}"),
+            other => unimplemented!("bank message: {other:?}"),
+        }
+    }
+
+    fn query(
+        &self,
+        api: &dyn Api,
+        storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        request: BankQuery,
+    ) -> AnyResult<Binary> {
+        let bank_storage = prefixed_read(storage, NAMESPACE_BANK);
+        match request {
+            BankQuery::AllBalances { address } => {
+                let address = api.addr_validate(&address)?;
+                let amount = self.get_balance(&bank_storage, &address)?;
+                let res = AllBalanceResponse { amount };
+                to_json_binary(&res).map_err(Into::into)
+            }
+            BankQuery::Balance { address, denom } => {
+                let address = api.addr_validate(&address)?;
+                let all_amounts = self.get_balance(&bank_storage, &address)?;
+                let amount = all_amounts
+                    .into_iter()
+                    .find(|c| c.denom == denom)
+                    .unwrap_or_else(|| coin(0, denom));
+                let res = BalanceResponse { amount };
+                to_json_binary(&res).map_err(Into::into)
+            }
+            #[cfg(feature = "cosmwasm_1_1")]
+            BankQuery::Supply { denom } => {
+                let amount = self.get_supply(&bank_storage, denom)?;
+                let res = SupplyResponse::new(amount);
+                to_json_binary(&res).map_err(Into::into)
+            }
+            #[cfg(feature = "cosmwasm_1_3")]
+            BankQuery::DenomMetadata { denom } => {
+                let meta = DENOM_METADATA.may_load(storage, denom)?.unwrap_or_default();
+                let res = DenomMetadataResponse::new(meta);
+                to_json_binary(&res).map_err(Into::into)
+            }
+            #[cfg(feature = "cosmwasm_1_3")]
+            BankQuery::AllDenomMetadata { pagination: _ } => {
+                let mut metadata = vec![];
+                for key in DENOM_METADATA.keys(storage, None, None, Order::Ascending) {
+                    metadata.push(DENOM_METADATA.may_load(storage, key?)?.unwrap_or_default());
+                }
+                let res = AllDenomMetadataResponse::new(metadata, None);
+                to_json_binary(&res).map_err(Into::into)
+            }
+            other => unimplemented!("bank query: {other:?}"),
         }
     }
 
@@ -212,43 +282,6 @@ impl Module for BankKeeper {
                 self.mint(&mut bank_storage, to_address, amount)?;
                 Ok(AppResponse::default())
             }
-        }
-    }
-
-    fn query(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        request: BankQuery,
-    ) -> AnyResult<Binary> {
-        let bank_storage = prefixed_read(storage, NAMESPACE_BANK);
-        match request {
-            BankQuery::AllBalances { address } => {
-                let address = api.addr_validate(&address)?;
-                let amount = self.get_balance(&bank_storage, &address)?;
-                let res = AllBalanceResponse { amount };
-                Ok(to_json_binary(&res)?)
-            }
-            BankQuery::Balance { address, denom } => {
-                let address = api.addr_validate(&address)?;
-                let all_amounts = self.get_balance(&bank_storage, &address)?;
-                let amount = all_amounts
-                    .into_iter()
-                    .find(|c| c.denom == denom)
-                    .unwrap_or_else(|| coin(0, denom));
-                let res = BalanceResponse { amount };
-                Ok(to_json_binary(&res)?)
-            }
-            #[cfg(feature = "cosmwasm_1_1")]
-            BankQuery::Supply { denom } => {
-                let amount = self.get_supply(&bank_storage, denom)?;
-                let mut res = SupplyResponse::default();
-                res.amount = amount;
-                Ok(to_json_binary(&res)?)
-            }
-            _ => unimplemented!("bank query: {request:?}",),
         }
     }
 }
@@ -475,6 +508,72 @@ mod test {
             .execute(&api, &mut store, &router, &block, rcpt, msg)
             .unwrap_err();
         assert!(matches!(err.downcast().unwrap(), StdError::Overflow { .. }));
+    }
+
+    #[test]
+    #[cfg(feature = "cosmwasm_1_3")]
+    fn set_get_denom_metadata_should_work() {
+        let api = MockApi::default();
+        let mut store = MockStorage::new();
+        let block = mock_env().block;
+        let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
+        let bank = BankKeeper::new();
+        // set metadata for Ether
+        let denom_eth_name = "eth".to_string();
+        bank.set_denom_metadata(
+            &mut store,
+            denom_eth_name.clone(),
+            DenomMetadata {
+                name: denom_eth_name.clone(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        // query metadata
+        let req = BankQuery::DenomMetadata {
+            denom: denom_eth_name.clone(),
+        };
+        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+        let res: DenomMetadataResponse = from_json(raw).unwrap();
+        assert_eq!(res.metadata.name, denom_eth_name);
+    }
+
+    #[test]
+    #[cfg(feature = "cosmwasm_1_3")]
+    fn set_get_all_denom_metadata_should_work() {
+        let api = MockApi::default();
+        let mut store = MockStorage::new();
+        let block = mock_env().block;
+        let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
+        let bank = BankKeeper::new();
+        // set metadata for Bitcoin
+        let denom_btc_name = "btc".to_string();
+        bank.set_denom_metadata(
+            &mut store,
+            denom_btc_name.clone(),
+            DenomMetadata {
+                name: denom_btc_name.clone(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        // set metadata for Ether
+        let denom_eth_name = "eth".to_string();
+        bank.set_denom_metadata(
+            &mut store,
+            denom_eth_name.clone(),
+            DenomMetadata {
+                name: denom_eth_name.clone(),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        // query metadata
+        let req = BankQuery::AllDenomMetadata { pagination: None };
+        let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
+        let res: AllDenomMetadataResponse = from_json(raw).unwrap();
+        assert_eq!(res.metadata[0].name, denom_btc_name);
+        assert_eq!(res.metadata[1].name, denom_eth_name);
     }
 
     #[test]

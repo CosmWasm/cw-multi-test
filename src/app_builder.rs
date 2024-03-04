@@ -2,8 +2,8 @@
 
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
-    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Stargate, StargateFailing, Wasm,
-    WasmKeeper,
+    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Stargate, StargateFailingModule,
+    Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
@@ -38,7 +38,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    StargateFailing,
+    StargateFailingModule,
 >;
 
 /// Utility to build [App] in stages.
@@ -68,7 +68,7 @@ impl Default
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >
 {
     fn default() -> Self {
@@ -87,7 +87,7 @@ impl
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -103,7 +103,7 @@ impl
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailingModule::new(),
         }
     }
 }
@@ -119,7 +119,7 @@ impl<ExecC, QueryC>
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >
 where
     ExecC: CustomMsg + DeserializeOwned + 'static,
@@ -139,7 +139,7 @@ where
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailingModule::new(),
         }
     }
 }
