@@ -384,6 +384,8 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         if let Some(code_id) = requested_code_id {
             if self.code_data.contains_key(&code_id) {
                 bail!(Error::duplicated_code_id(code_id));
+            } else if code_id == 0 {
+                bail!(Error::invalid_contract_code_id());
             } else {
                 Ok(code_id)
             }
@@ -394,7 +396,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
                 .last()
                 .unwrap_or(&0u64)
                 .checked_add(1)
-                .ok_or(Error::InvalidCodeId)?)
+                .ok_or_else(Error::invalid_contract_code_id)?)
         }
     }
 }
