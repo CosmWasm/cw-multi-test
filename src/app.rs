@@ -256,7 +256,7 @@ where
     /// so it can later be used to instantiate a contract.
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
         self.init_modules(|router, _, _| {
-            let creator = Addr::unchecked("creator");
+            let creator = MockApi::default().addr_make("creator");
             router.wasm.store_code(creator, None, code)
         })
         .unwrap()
@@ -273,18 +273,15 @@ where
             .unwrap()
     }
 
-    /// Registers contract code (like [store_code](Self::store_code)),
+    /// Registers contract code (like [store_code_with_creator](Self::store_code_with_creator)),
     /// but takes the code identifier as an additional argument.
     pub fn store_code_with_id(
         &mut self,
+        creator: Addr,
         code_id: u64,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
-    ) -> u64 {
-        self.init_modules(|router, _, _| {
-            let creator = Addr::unchecked("creator");
-            router.wasm.store_code(creator, code_id.into(), code)
-        })
-        .unwrap()
+    ) -> AnyResult<u64> {
+        self.init_modules(|router, _, _| router.wasm.store_code(creator, code_id.into(), code))
     }
 
     /// Duplicates the contract code identified by `code_id` and returns
