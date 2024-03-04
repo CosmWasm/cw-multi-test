@@ -99,9 +99,8 @@ impl Api for MockApiBech32m {
     ///            addr.as_str());
     /// ```
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        if let Ok(encoded) =
-            encode::<Bech32m>(Hrp::parse_unchecked(self.prefix), canonical.as_slice())
-        {
+        let hrp = Hrp::parse(self.prefix).map_err(|e| StdError::generic_err(e.to_string()))?;
+        if let Ok(encoded) = encode::<Bech32m>(hrp, canonical.as_slice()) {
             Ok(Addr::unchecked(encoded))
         } else {
             Err(StdError::generic_err("Invalid canonical address"))
@@ -171,11 +170,11 @@ impl MockApiBech32m {
     /// This function panics when generating a valid address in **Bech32**
     /// format is not possible, especially when prefix is too long or empty.
     pub fn addr_make(&self, input: &str) -> Addr {
-        match encode::<Bech32m>(
-            Hrp::parse_unchecked(self.prefix),
-            Sha256::digest(input).as_slice(),
-        ) {
-            Ok(address) => Addr::unchecked(address),
+        match Hrp::parse(self.prefix) {
+            Ok(hrp) => match encode::<Bech32m>(hrp, Sha256::digest(input).as_slice()) {
+                Ok(address) => Addr::unchecked(address),
+                Err(reason) => panic!("Generating address failed with reason: {}", reason),
+            },
             Err(reason) => panic!("Generating address failed with reason: {}", reason),
         }
     }
