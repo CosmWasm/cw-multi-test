@@ -80,7 +80,7 @@ impl Api for MockApiBech32m {
         Err(StdError::generic_err("Invalid input"))
     }
 
-    /// Takes a canonical address and returns a human readable address in **Bech32m** format.
+    /// Takes a canonical address and returns a human-readable address in **Bech32m** format.
     ///
     /// This is the inverse operation of [`addr_canonicalize`].
     ///
