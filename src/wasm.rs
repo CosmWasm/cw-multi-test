@@ -19,6 +19,7 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 //TODO Make `CONTRACTS` private in version 1.0 when the function AddressGenerator::next_address will be removed.
@@ -71,8 +72,8 @@ struct CodeData {
     creator: Addr,
     /// Checksum of the contract's code base.
     checksum: HexBinary,
-    /// Identifier of the code base where the contract code is stored in memory.
-    code_base_id: usize,
+    /// Identifier of the _source_ code of the contract stored in wasm keeper.
+    source_id: usize,
 }
 
 /// Acts as the interface for interacting with WebAssembly (Wasm) modules.
@@ -114,6 +115,15 @@ pub trait Wasm<ExecC, QueryC> {
     /// Stores the contract's code and returns an identifier of the stored contract's code.
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64;
 
+    /// Stores the contract's code under specified identifier,
+    /// returns the same code identifier when successful.
+    fn store_code_with_id(
+        &mut self,
+        creator: Addr,
+        code_id: u64,
+        code: Box<dyn Contract<ExecC, QueryC>>,
+    ) -> AnyResult<u64>;
+
     /// Duplicates the contract's code with specified identifier
     /// and returns an identifier of the copy of the contract's code.
     fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64>;
@@ -130,7 +140,7 @@ pub struct WasmKeeper<ExecC, QueryC> {
     /// Contract codes that stand for wasm code in real-life blockchain.
     code_base: Vec<Box<dyn Contract<ExecC, QueryC>>>,
     /// Code data with code base identifier and additional attributes.
-    code_data: Vec<CodeData>,
+    code_data: BTreeMap<u64, CodeData>,
     /// Contract's address generator.
     address_generator: Box<dyn AddressGenerator>,
     /// Contract's code checksum generator.
@@ -144,7 +154,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
     fn default() -> Self {
         Self {
             code_base: Vec::default(),
-            code_data: Vec::default(),
+            code_data: BTreeMap::default(),
             address_generator: Box::new(SimpleAddressGenerator),
             checksum_generator: Box::new(SimpleChecksumGenerator),
             _p: std::marker::PhantomData,
@@ -231,28 +241,45 @@ where
     /// Stores the contract's code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
     fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
-        let code_base_id = self.code_base.len();
-        self.code_base.push(code);
-        let code_id = (self.code_data.len() + 1) as u64;
-        let checksum = self.checksum_generator.checksum(&creator, code_id);
-        self.code_data.push(CodeData {
-            creator,
-            checksum,
-            code_base_id,
-        });
-        code_id
+        let code_id = self
+            .next_code_id()
+            .unwrap_or_else(|| panic!("{}", Error::NoMoreCodeIdAvailable));
+        self.save_code(code_id, creator, code)
+    }
+
+    /// Stores the contract's code in the in-memory lookup table.
+    /// Returns an identifier of the stored contract code.
+    fn store_code_with_id(
+        &mut self,
+        creator: Addr,
+        code_id: u64,
+        code: Box<dyn Contract<ExecC, QueryC>>,
+    ) -> AnyResult<u64> {
+        // validate provided contract code identifier
+        if self.code_data.contains_key(&code_id) {
+            bail!(Error::duplicated_code_id(code_id));
+        } else if code_id == 0 {
+            bail!(Error::invalid_code_id());
+        }
+        Ok(self.save_code(code_id, creator, code))
     }
 
     /// Duplicates the contract's code with specified identifier.
     /// Returns an identifier of the copy of the contract's code.
     fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         let code_data = self.code_data(code_id)?;
-        self.code_data.push(CodeData {
-            creator: code_data.creator.clone(),
-            checksum: code_data.checksum.clone(),
-            code_base_id: code_data.code_base_id,
-        });
-        Ok(code_id + 1)
+        let new_code_id = self
+            .next_code_id()
+            .ok_or_else(Error::no_more_code_id_available)?;
+        self.code_data.insert(
+            new_code_id,
+            CodeData {
+                creator: code_data.creator.clone(),
+                checksum: code_data.checksum.clone(),
+                source_id: code_data.source_id,
+            },
+        );
+        Ok(new_code_id)
     }
 
     /// Returns `ContractData` for the contract with specified address.
@@ -273,17 +300,17 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Returns a handler to code of the contract with specified code id.
     pub fn contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
         let code_data = self.code_data(code_id)?;
-        Ok(self.code_base[code_data.code_base_id].borrow())
+        Ok(self.code_base[code_data.source_id].borrow())
     }
 
     /// Returns code data of the contract with specified code id.
     fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
         if code_id < 1 {
-            bail!(Error::invalid_contract_code_id());
+            bail!(Error::invalid_code_id());
         }
         Ok(self
             .code_data
-            .get((code_id - 1) as usize)
+            .get(&code_id)
             .ok_or_else(|| Error::unregistered_code_id(code_id))?)
     }
 
@@ -354,6 +381,35 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         }
 
         Ok(response)
+    }
+
+    fn save_code(
+        &mut self,
+        code_id: u64,
+        creator: Addr,
+        code: Box<dyn Contract<ExecC, QueryC>>,
+    ) -> u64 {
+        // prepare the next identifier for the contract 'source' code
+        let source_id = self.code_base.len();
+        // calculate the checksum of the contract 'source' code based on code_id
+        let checksum = self.checksum_generator.checksum(&creator, code_id);
+        // store the 'source' code of the contract
+        self.code_base.push(code);
+        // store the additional code attributes like creator address and checksum
+        self.code_data.insert(
+            code_id,
+            CodeData {
+                creator,
+                checksum,
+                source_id,
+            },
+        );
+        code_id
+    }
+
+    /// Returns the next code identifier.
+    fn next_code_id(&self) -> Option<u64> {
+        self.code_data.keys().last().unwrap_or(&0u64).checked_add(1)
     }
 }
 
@@ -1154,17 +1210,14 @@ where
     }
 }
 
-// TODO: replace with code in utils
-
 #[derive(Clone, PartialEq, Message)]
 struct InstantiateResponse {
     #[prost(string, tag = "1")]
-    pub address: ::prost::alloc::string::String,
+    pub address: String,
     #[prost(bytes, tag = "2")]
-    pub data: ::prost::alloc::vec::Vec<u8>,
+    pub data: Vec<u8>,
 }
 
-// TODO: encode helpers in utils
 fn instantiate_response(data: Option<Binary>, contact_address: &Addr) -> Binary {
     let data = data.unwrap_or_default().to_vec();
     let init_data = InstantiateResponse {
@@ -1180,7 +1233,7 @@ fn instantiate_response(data: Option<Binary>, contact_address: &Addr) -> Binary 
 #[derive(Clone, PartialEq, Message)]
 struct ExecuteResponse {
     #[prost(bytes, tag = "1")]
-    pub data: ::prost::alloc::vec::Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 // empty return if no data present in original
@@ -1895,7 +1948,6 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
         let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
-        assert_eq!(1, code_id);
 
         let mut wasm_storage = MockStorage::new();
 

@@ -64,6 +64,15 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         CODE_ID
     }
 
+    fn store_code_with_id(
+        &mut self,
+        _creator: Addr,
+        code_id: u64,
+        _code: Box<dyn Contract<ExecT, QueryT>>,
+    ) -> AnyResult<u64> {
+        Ok(code_id)
+    }
+
     fn duplicate_code(&mut self, _code_id: u64) -> AnyResult<u64> {
         bail!(DUPLICATE_CODE_MSG);
     }

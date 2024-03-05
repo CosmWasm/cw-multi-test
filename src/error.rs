@@ -39,6 +39,14 @@ pub enum Error {
     #[error("code id {0}: no such code")]
     UnregisteredCodeId(u64),
 
+    /// Error variant for reporting duplicated contract code identifier.
+    #[error("duplicated code id {0}")]
+    DuplicatedCodeId(u64),
+
+    /// Error variant for reporting a situation when no more contract code identifiers are available.
+    #[error("no more code identifiers available")]
+    NoMoreCodeIdAvailable,
+
     /// Error variant for reporting duplicated contract addresses.
     #[error("Contract with this address already exists: {0}")]
     DuplicatedContractAddress(String),
@@ -76,13 +84,23 @@ impl Error {
     }
 
     /// Creates an instance of the [Error](Self) for invalid contract code identifier.
-    pub fn invalid_contract_code_id() -> Self {
+    pub fn invalid_code_id() -> Self {
         Self::InvalidCodeId
     }
 
     /// Creates an instance of the [Error](Self) for unregistered contract code identifier.
     pub fn unregistered_code_id(code_id: u64) -> Self {
         Self::UnregisteredCodeId(code_id)
+    }
+
+    /// Creates an instance of the [Error](Self) for duplicated contract code identifier.
+    pub fn duplicated_code_id(code_id: u64) -> Self {
+        Self::DuplicatedCodeId(code_id)
+    }
+
+    /// Creates an instance of the [Error](Self) for exhausted contract code identifiers.
+    pub fn no_more_code_id_available() -> Self {
+        Self::NoMoreCodeIdAvailable
     }
 
     /// Creates an instance of the [Error](Self) for duplicated contract addresses.

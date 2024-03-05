@@ -35,10 +35,7 @@ fn instantiating_error_should_work() {
         })
         .to_string()
     );
-    assert_eq!(
-        "code id: invalid",
-        Error::invalid_contract_code_id().to_string()
-    );
+    assert_eq!("code id: invalid", Error::invalid_code_id().to_string());
     assert_eq!(
         "code id 53: no such code",
         Error::unregistered_code_id(53).to_string()
