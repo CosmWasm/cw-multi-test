@@ -22,13 +22,15 @@ use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
-//TODO Make `CONTRACTS` private in version 1.0 when the function AddressGenerator::next_address will be removed.
 /// Contract state kept in storage, separate from the contracts themselves (contract code).
-pub(crate) const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
+const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 
-//TODO Make `NAMESPACE_WASM` private in version 1.0 when the function AddressGenerator::next_address will be removed.
-pub(crate) const NAMESPACE_WASM: &[u8] = b"wasm";
-/// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
+/// Wasm module namespace.
+const NAMESPACE_WASM: &[u8] = b"wasm";
+
+/// Contract [address namespace].
+///
+/// [address namespace]: https://github.com/CosmWasm/wasmd/blob/96e2b91144c9a371683555f3c696f882583cc6a2/x/wasm/types/events.go#L59
 const CONTRACT_ATTR: &str = "_contract_address";
 
 /// A structure representing a privileged message.
@@ -2100,21 +2102,5 @@ mod test {
             contract_addr, expected_predictable_addr,
             "custom address generator returned incorrect address"
         );
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn remove_this_test_in_version_1_0() {
-        //TODO Remove this test in version 1.0.0 of multitest, now provided only for code coverage.
-
-        let addr_gen = TestAddressGenerator {
-            address: Addr::unchecked("a"),
-            predictable_address: Addr::unchecked("b"),
-        };
-        let mut storage = MockStorage::default();
-        let contract_addr = addr_gen.next_address(&mut storage);
-        assert_eq!(contract_addr, "contract0");
-
-        let _: WasmKeeper<Empty, Empty> = WasmKeeper::new_with_custom_address_generator(addr_gen);
     }
 }
