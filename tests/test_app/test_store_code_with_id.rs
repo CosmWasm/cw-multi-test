@@ -54,7 +54,7 @@ fn storing_with_the_same_id_is_not_allowed() {
 }
 
 #[test]
-#[should_panic(expected = "called `Result::unwrap()` on an `Err` value: code id: invalid")]
+#[should_panic(expected = "no more code identifiers available")]
 fn no_more_identifiers_available() {
     let mut app = App::default();
     let creator = app.api().addr_make("prometheus");

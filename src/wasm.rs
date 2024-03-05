@@ -113,10 +113,14 @@ pub trait Wasm<ExecC, QueryC> {
     ) -> AnyResult<AppResponse>;
 
     /// Stores the contract's code and returns an identifier of the stored contract's code.
-    fn store_code(
+    fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64;
+
+    /// Stores the contract's code under specified identifier,
+    /// returns the same code identifier when successful.
+    fn store_code_with_id(
         &mut self,
         creator: Addr,
-        opt_code_id: Option<u64>,
+        code_id: u64,
         code: Box<dyn Contract<ExecC, QueryC>>,
     ) -> AnyResult<u64>;
 
@@ -236,37 +240,37 @@ where
 
     /// Stores the contract's code in the in-memory lookup table.
     /// Returns an identifier of the stored contract code.
-    fn store_code(
+    fn store_code(&mut self, creator: Addr, code: Box<dyn Contract<ExecC, QueryC>>) -> u64 {
+        let code_id = self
+            .next_code_id()
+            .unwrap_or_else(|| panic!("{}", Error::NoMoreCodeIdAvailable));
+        self.save_code(code_id, creator, code)
+    }
+
+    /// Stores the contract's code in the in-memory lookup table.
+    /// Returns an identifier of the stored contract code.
+    fn store_code_with_id(
         &mut self,
         creator: Addr,
-        opt_code_id: Option<u64>,
+        code_id: u64,
         code: Box<dyn Contract<ExecC, QueryC>>,
     ) -> AnyResult<u64> {
-        // prepare the next identifier for the contract 'source' code
-        let source_id = self.code_base.len();
-        // prepare the next contract code identifier
-        let code_id = self.next_code_id(opt_code_id)?;
-        // calculate the checksum of the contract 'source' code based on code_id
-        let checksum = self.checksum_generator.checksum(&creator, code_id);
-        // store the 'source' code of the contract
-        self.code_base.push(code);
-        // store the additional code attributes like creator address and checksum
-        self.code_data.insert(
-            code_id,
-            CodeData {
-                creator,
-                checksum,
-                source_id,
-            },
-        );
-        Ok(code_id)
+        // validate provided contract code identifier
+        if self.code_data.contains_key(&code_id) {
+            bail!(Error::duplicated_code_id(code_id));
+        } else if code_id == 0 {
+            bail!(Error::invalid_code_id());
+        }
+        Ok(self.save_code(code_id, creator, code))
     }
 
     /// Duplicates the contract's code with specified identifier.
     /// Returns an identifier of the copy of the contract's code.
     fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
         let code_data = self.code_data(code_id)?;
-        let new_code_id = self.next_code_id(None)?;
+        let new_code_id = self
+            .next_code_id()
+            .ok_or_else(Error::no_more_code_id_available)?;
         self.code_data.insert(
             new_code_id,
             CodeData {
@@ -302,7 +306,7 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
     /// Returns code data of the contract with specified code id.
     fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
         if code_id < 1 {
-            bail!(Error::invalid_contract_code_id());
+            bail!(Error::invalid_code_id());
         }
         Ok(self
             .code_data
@@ -379,25 +383,33 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
         Ok(response)
     }
 
+    fn save_code(
+        &mut self,
+        code_id: u64,
+        creator: Addr,
+        code: Box<dyn Contract<ExecC, QueryC>>,
+    ) -> u64 {
+        // prepare the next identifier for the contract 'source' code
+        let source_id = self.code_base.len();
+        // calculate the checksum of the contract 'source' code based on code_id
+        let checksum = self.checksum_generator.checksum(&creator, code_id);
+        // store the 'source' code of the contract
+        self.code_base.push(code);
+        // store the additional code attributes like creator address and checksum
+        self.code_data.insert(
+            code_id,
+            CodeData {
+                creator,
+                checksum,
+                source_id,
+            },
+        );
+        code_id
+    }
+
     /// Returns the next code identifier.
-    fn next_code_id(&self, requested_code_id: Option<u64>) -> AnyResult<u64> {
-        if let Some(code_id) = requested_code_id {
-            if self.code_data.contains_key(&code_id) {
-                bail!(Error::duplicated_code_id(code_id));
-            } else if code_id == 0 {
-                bail!(Error::invalid_contract_code_id());
-            } else {
-                Ok(code_id)
-            }
-        } else {
-            Ok(self
-                .code_data
-                .keys()
-                .last()
-                .unwrap_or(&0u64)
-                .checked_add(1)
-                .ok_or_else(Error::invalid_contract_code_id)?)
-        }
+    fn next_code_id(&self) -> Option<u64> {
+        self.code_data.keys().last().unwrap_or(&0u64).checked_add(1)
     }
 }
 
@@ -1284,9 +1296,7 @@ mod test {
         let mut wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, error::contract(false))
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), error::contract(false));
 
         transactional(&mut wasm_storage, |cache, _| {
             // cannot register contract with unregistered codeId
@@ -1380,9 +1390,7 @@ mod test {
         let mut wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("buzz"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
         assert_eq!(1, code_id);
 
         let creator = "foobar";
@@ -1425,9 +1433,7 @@ mod test {
         let wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query = WasmQuery::CodeInfo { code_id };
         let code_info = wasm_keeper
@@ -1446,12 +1452,8 @@ mod test {
         let wasm_storage = MockStorage::new();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id_payout = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, payout::contract())
-            .unwrap();
-        let code_id_caller = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, caller::contract())
-            .unwrap();
+        let code_id_payout = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        let code_id_caller = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let query_payout = WasmQuery::CodeInfo {
             code_id: code_id_payout,
@@ -1495,9 +1497,7 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("buzz"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1550,9 +1550,7 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("buzz"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
         let mut cache = StorageTransaction::new(&wasm_storage);
@@ -1665,9 +1663,7 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("buzz"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("buzz"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1837,9 +1833,7 @@ mod test {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, caller::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1953,9 +1947,7 @@ mod test {
     fn uses_simple_address_generator_by_default() {
         let api = MockApi::default();
         let mut wasm_keeper = wasm_keeper();
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -2002,9 +1994,7 @@ mod test {
             "default address generator returned incorrect address"
         );
 
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
         assert_eq!(2, code_id);
 
         let contract_addr = wasm_keeper
@@ -2071,9 +2061,7 @@ mod test {
                 address: expected_addr.clone(),
                 predictable_address: expected_predictable_addr.clone(),
             });
-        let code_id = wasm_keeper
-            .store_code(Addr::unchecked("creator"), None, payout::contract())
-            .unwrap();
+        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 

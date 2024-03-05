@@ -257,9 +257,8 @@ where
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
         self.init_modules(|router, _, _| {
             let creator = MockApi::default().addr_make("creator");
-            router.wasm.store_code(creator, None, code)
+            router.wasm.store_code(creator, code)
         })
-        .unwrap()
     }
 
     /// Registers contract code (like [store_code](Self::store_code)),
@@ -269,8 +268,7 @@ where
         creator: Addr,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> u64 {
-        self.init_modules(|router, _, _| router.wasm.store_code(creator, None, code))
-            .unwrap()
+        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
     }
 
     /// Registers contract code (like [store_code_with_creator](Self::store_code_with_creator)),
@@ -281,7 +279,7 @@ where
         code_id: u64,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> AnyResult<u64> {
-        self.init_modules(|router, _, _| router.wasm.store_code(creator, code_id.into(), code))
+        self.init_modules(|router, _, _| router.wasm.store_code_with_id(creator, code_id, code))
     }
 
     /// Duplicates the contract code identified by `code_id` and returns
