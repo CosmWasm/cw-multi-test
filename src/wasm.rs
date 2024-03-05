@@ -435,22 +435,6 @@ where
         Self::default()
     }
 
-    #[deprecated(
-        since = "0.18.0",
-        note = "use `WasmKeeper::new().with_address_generator` instead; will be removed in version 1.0.0"
-    )]
-    /// Populates an existing [WasmKeeper] with custom contract address generator.
-    ///
-    /// See description of [with_address_generator](Self::with_address_generator) function for details.
-    pub fn new_with_custom_address_generator(
-        address_generator: impl AddressGenerator + 'static,
-    ) -> Self {
-        Self {
-            address_generator: Box::new(address_generator),
-            ..Default::default()
-        }
-    }
-
     /// Populates an existing [WasmKeeper] with custom contract address generator.
     ///
     /// # Example
@@ -2100,21 +2084,5 @@ mod test {
             contract_addr, expected_predictable_addr,
             "custom address generator returned incorrect address"
         );
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn remove_this_test_in_version_1_0() {
-        //TODO Remove this test in version 1.0.0 of multitest, now provided only for code coverage.
-
-        let addr_gen = TestAddressGenerator {
-            address: Addr::unchecked("a"),
-            predictable_address: Addr::unchecked("b"),
-        };
-        let mut storage = MockStorage::default();
-        let contract_addr = addr_gen.next_address(&mut storage);
-        assert_eq!(contract_addr, "contract0");
-
-        let _: WasmKeeper<Empty, Empty> = WasmKeeper::new_with_custom_address_generator(addr_gen);
     }
 }
