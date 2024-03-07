@@ -144,7 +144,7 @@ mod tests;
 mod transactions;
 mod wasm;
 
-pub use crate::addresses::{AddressGenerator, IntoBech32, SimpleAddressGenerator};
+pub use crate::addresses::{AddressGenerator, IntoBech32, IntoBech32m, SimpleAddressGenerator};
 pub use crate::app::{
     custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
 };
