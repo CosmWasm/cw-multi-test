@@ -148,7 +148,9 @@ jobs:
   coverage:
     # https://circleci.com/developer/images?imageType=machine
     machine:
-      image: ubuntu-2204:2024.01.1
+      - image: ubuntu-2204:2024.01.1
+    docker:
+      - image: xd009642/tarpaulin:0.27.1
     steps:
       - checkout
       - run:
