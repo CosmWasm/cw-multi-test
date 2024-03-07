@@ -294,7 +294,7 @@ where
         }
     }
 
-    /// Overwrites the default custom messages' handler.
+    /// Overwrites the default handler for custom messages.
     ///
     /// At this point it is needed that new custom implements some `Module` trait, but it doesn't need
     /// to be bound to ExecC or QueryC yet - as those may change. The cross-components validation is
