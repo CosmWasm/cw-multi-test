@@ -29,7 +29,7 @@ impl AppResponse {
 
     /// Checks if there is an Event that is a super-set of this.
     ///
-    /// It has the same type, and all compare.attributes are included in it as well.
+    /// It has the same type, and all compared attributes are included in it as well.
     /// You don't need to specify them all.
     pub fn has_event(&self, expected: &Event) -> bool {
         self.events.iter().any(|ev| {

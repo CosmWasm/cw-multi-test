@@ -16,7 +16,7 @@ pub struct InstantiateMsg {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MigrateMsg {
-    // just use some other string so we see there are other types
+    // just use some other string, so we see there are other types
     pub new_guy: String,
 }
 
