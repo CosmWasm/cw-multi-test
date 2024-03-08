@@ -124,8 +124,8 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(rustdoc::missing_crate_level_docs)]
 
-pub mod addons;
 mod addresses;
+mod api;
 mod app;
 mod app_builder;
 mod bank;
@@ -145,7 +145,11 @@ mod tests;
 mod transactions;
 mod wasm;
 
-pub use crate::addresses::{AddressGenerator, SimpleAddressGenerator};
+pub use crate::addresses::{
+    AddressGenerator, IntoAddr, IntoBech32, IntoBech32m, MockAddressGenerator,
+    SimpleAddressGenerator,
+};
+pub use crate::api::{MockApiBech32, MockApiBech32m};
 pub use crate::app::{
     custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
 };

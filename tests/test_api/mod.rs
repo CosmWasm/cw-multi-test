@@ -1,6 +1,7 @@
 use cosmwasm_std::Api;
 use hex_literal::hex;
 
+mod test_addr;
 mod test_bech32;
 mod test_bech32m;
 

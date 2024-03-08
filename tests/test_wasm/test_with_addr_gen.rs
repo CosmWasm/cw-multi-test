@@ -1,8 +1,8 @@
 use cosmwasm_std::{Addr, Api, Empty, Storage};
 
-use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::{no_init, AddressGenerator, AppBuilder, Executor, WasmKeeper};
+use cw_multi_test::{MockAddressGenerator, MockApiBech32};
 
 use crate::test_contracts;
 
