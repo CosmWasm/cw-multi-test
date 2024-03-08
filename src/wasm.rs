@@ -27,7 +27,9 @@ const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
 /// Wasm module namespace.
 const NAMESPACE_WASM: &[u8] = b"wasm";
 
-/// See <https://github.com/chipshort/wasmd/blob/d0e3ed19f041e65f112d8e800416b3230d0005a2/x/wasm/types/events.go#L58>
+/// Contract [address namespace].
+///
+/// [address namespace]: https://github.com/CosmWasm/wasmd/blob/96e2b91144c9a371683555f3c696f882583cc6a2/x/wasm/types/events.go#L59
 const CONTRACT_ATTR: &str = "_contract_address";
 
 /// A structure representing a privileged message.
@@ -1151,17 +1153,14 @@ where
     }
 }
 
-// TODO: replace with code in utils
-
 #[derive(Clone, PartialEq, Message)]
 struct InstantiateResponse {
     #[prost(string, tag = "1")]
-    pub address: ::prost::alloc::string::String,
+    pub address: String,
     #[prost(bytes, tag = "2")]
-    pub data: ::prost::alloc::vec::Vec<u8>,
+    pub data: Vec<u8>,
 }
 
-// TODO: encode helpers in utils
 fn instantiate_response(data: Option<Binary>, contact_address: &Addr) -> Binary {
     let data = data.unwrap_or_default().to_vec();
     let init_data = InstantiateResponse {
@@ -1177,7 +1176,7 @@ fn instantiate_response(data: Option<Binary>, contact_address: &Addr) -> Binary 
 #[derive(Clone, PartialEq, Message)]
 struct ExecuteResponse {
     #[prost(bytes, tag = "1")]
-    pub data: ::prost::alloc::vec::Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 // empty return if no data present in original
