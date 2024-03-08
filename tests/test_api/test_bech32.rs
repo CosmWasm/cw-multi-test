@@ -2,18 +2,20 @@ use super::*;
 use cosmwasm_std::CanonicalAddr;
 use cw_multi_test::{IntoBech32, IntoBech32m, MockApiBech32, MockApiBech32m};
 
-const HUMAN_ADDRESS: &str = "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp";
+const ADDR_JUNO: &str = "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp";
+const ADDR_DEFAULT: &str = "cosmwasm1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqs8s7vcp";
 
 #[test]
 fn new_api_bech32_should_work() {
     assert_eq!(
         MockApiBech32::new("juno").addr_make("creator").as_str(),
-        HUMAN_ADDRESS
+        ADDR_JUNO
     );
     assert_eq!(
         "creator".into_bech32_with_prefix("juno").as_str(),
-        HUMAN_ADDRESS
+        ADDR_JUNO
     );
+    assert_eq!("creator".into_bech32().as_str(), ADDR_DEFAULT);
 }
 
 #[test]
@@ -26,16 +28,20 @@ fn api_bech32_should_differ_from_bech32m() {
         "sender".into_bech32_with_prefix("juno").as_str(),
         "sender".into_bech32m_with_prefix("juno").as_str()
     );
+    assert_ne!(
+        "sender".into_bech32().as_str(),
+        "sender".into_bech32m().as_str()
+    );
 }
 
 #[test]
 fn address_validate_should_work() {
     assert_eq!(
         MockApiBech32::new("juno")
-            .addr_validate(HUMAN_ADDRESS)
+            .addr_validate(ADDR_JUNO)
             .unwrap()
             .as_str(),
-        HUMAN_ADDRESS
+        ADDR_JUNO
     )
 }
 
@@ -64,10 +70,10 @@ fn address_validate_invalid_variant() {
 fn address_canonicalize_humanize_should_work() {
     let api = MockApiBech32::new("juno");
     assert_eq!(
-        api.addr_humanize(&api.addr_canonicalize(HUMAN_ADDRESS).unwrap())
+        api.addr_humanize(&api.addr_canonicalize(ADDR_JUNO).unwrap())
             .unwrap()
             .as_str(),
-        HUMAN_ADDRESS
+        ADDR_JUNO
     );
 }
 
