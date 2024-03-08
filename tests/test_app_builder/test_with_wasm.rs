@@ -139,7 +139,7 @@ fn building_app_with_custom_wasm_should_work() {
         app.sudo(
             WasmSudo {
                 contract_addr,
-                msg: Default::default()
+                message: Default::default()
             }
             .into()
         )

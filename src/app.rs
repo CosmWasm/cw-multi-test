@@ -427,7 +427,7 @@ where
     ) -> AnyResult<AppResponse> {
         let msg = WasmSudo {
             contract_addr: contract_addr.into(),
-            msg: to_json_binary(msg)?,
+            message: to_json_binary(msg)?,
         };
 
         let Self {

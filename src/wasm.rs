@@ -39,7 +39,7 @@ pub struct WasmSudo {
     /// Address of a contract the privileged action will be sent to.
     pub contract_addr: Addr,
     /// Message representing privileged action to be executed by contract `sudo` entry-point.
-    pub msg: Binary,
+    pub message: Binary,
 }
 
 impl WasmSudo {
@@ -47,7 +47,7 @@ impl WasmSudo {
     pub fn new<T: Serialize>(contract_addr: &Addr, msg: &T) -> StdResult<WasmSudo> {
         Ok(WasmSudo {
             contract_addr: contract_addr.clone(),
-            msg: to_json_binary(msg)?,
+            message: to_json_binary(msg)?,
         })
     }
 }
@@ -238,7 +238,7 @@ where
             storage,
             router,
             block,
-            msg.msg.to_vec(),
+            msg.message.to_vec(),
         )?;
         let (res, msgs) = self.build_app_response(&msg.contract_addr, custom_event, res);
         self.process_response(api, router, storage, block, msg.contract_addr, res, msgs)
