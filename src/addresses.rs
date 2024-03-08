@@ -1,10 +1,67 @@
-//! # Implementation of address generators
+//! # Implementation of address conversions and generators
 
 use crate::error::AnyResult;
+use crate::{MockApiBech32, MockApiBech32m};
 use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, Storage};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
+
+/// Defines conversions to [Addr].
+pub trait IntoAddr {
+    /// Converts into [Addr].
+    fn into_addr(self) -> Addr;
+
+    /// Converts into [Addr] with custom prefix.
+    fn into_addr_with_prefix(self, prefix: &'static str) -> Addr;
+}
+
+impl IntoAddr for &str {
+    fn into_addr(self) -> Addr {
+        MockApi::default().addr_make(self)
+    }
+
+    fn into_addr_with_prefix(self, prefix: &'static str) -> Addr {
+        MockApi::default().with_prefix(prefix).addr_make(self)
+    }
+}
+
+/// Defines conversions to `Bech32` compatible addresses.
+pub trait IntoBech32 {
+    /// Converts into [Addr] containing a string compatible with `Bech32` format with default prefix.
+    fn into_bech32(self) -> Addr;
+
+    /// Converts into [Addr] containing a string compatible with `Bech32` format with custom prefix.
+    fn into_bech32_with_prefix(self, prefix: &'static str) -> Addr;
+}
+
+impl IntoBech32 for &str {
+    fn into_bech32(self) -> Addr {
+        MockApiBech32::new("cosmwasm").addr_make(self)
+    }
+
+    fn into_bech32_with_prefix(self, prefix: &'static str) -> Addr {
+        MockApiBech32::new(prefix).addr_make(self)
+    }
+}
+
+/// Defines conversions to `Bech32m` compatible addresses.
+pub trait IntoBech32m {
+    /// Converts into [Addr] containing a string compatible with `Bech32m` format with default prefix.
+    fn into_bech32m(self) -> Addr;
+    /// Converts into [Addr] containing a string compatible with `Bech32m` format with custom prefix.
+    fn into_bech32m_with_prefix(self, prefix: &'static str) -> Addr;
+}
+
+impl IntoBech32m for &str {
+    fn into_bech32m(self) -> Addr {
+        MockApiBech32m::new("cosmwasm").addr_make(self)
+    }
+
+    fn into_bech32m_with_prefix(self, prefix: &'static str) -> Addr {
+        MockApiBech32m::new(prefix).addr_make(self)
+    }
+}
 
 /// Common address generator interface.
 ///
@@ -127,41 +184,3 @@ fn instantiate_address(code_id: u64, instance_id: u64) -> CanonicalAddr {
 pub struct SimpleAddressGenerator;
 
 impl AddressGenerator for SimpleAddressGenerator {}
-
-/// Defines conversions to `Bech32` compatible addresses.
-pub trait IntoBech32 {
-    /// Converts into [Addr] containing a string compatible with `Bech32` format with default prefix.
-    fn into_bech32(self) -> Addr;
-
-    /// Converts into [Addr] containing a string compatible with `Bech32` format with custom prefix.
-    fn into_bech32_with_prefix(self, prefix: &'static str) -> Addr;
-}
-
-impl IntoBech32 for &str {
-    fn into_bech32(self) -> Addr {
-        MockApi::default().addr_make(self)
-    }
-
-    fn into_bech32_with_prefix(self, prefix: &'static str) -> Addr {
-        MockApi::default().with_prefix(prefix).addr_make(self)
-    }
-}
-
-/// Defines conversions to `Bech32m` compatible addresses.
-#[allow(dead_code)]
-pub trait IntoBech32m {
-    /// Converts into [Addr] containing a string compatible with `Bech32m` format with default prefix.
-    fn into_bech32m(self) -> Addr;
-    /// Converts into [Addr] containing a string compatible with `Bech32m` format with custom prefix.
-    fn into_bech32m_with_prefix(self, prefix: &'static str) -> Addr;
-}
-
-impl IntoBech32m for &str {
-    fn into_bech32m(self) -> Addr {
-        unimplemented!()
-    }
-
-    fn into_bech32m_with_prefix(self, _prefix: &'static str) -> Addr {
-        unimplemented!()
-    }
-}

@@ -1,6 +1,9 @@
 use cosmwasm_std::Api;
 use hex_literal::hex;
 
+mod test_addr;
+mod test_bech32;
+mod test_bech32m;
 mod test_prefixed;
 
 const SECP256K1_MSG_HASH: [u8; 32] =

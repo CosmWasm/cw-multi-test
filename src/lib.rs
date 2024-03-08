@@ -125,6 +125,7 @@
 #![deny(rustdoc::missing_crate_level_docs)]
 
 mod addresses;
+mod api;
 mod app;
 mod app_builder;
 mod bank;
@@ -144,7 +145,10 @@ mod tests;
 mod transactions;
 mod wasm;
 
-pub use crate::addresses::{AddressGenerator, IntoBech32, IntoBech32m, SimpleAddressGenerator};
+pub use crate::addresses::{
+    AddressGenerator, IntoAddr, IntoBech32, IntoBech32m, SimpleAddressGenerator,
+};
+pub use crate::api::{MockApiBech32, MockApiBech32m};
 pub use crate::app::{
     custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
 };
