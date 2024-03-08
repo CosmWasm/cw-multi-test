@@ -87,6 +87,13 @@ fn address_humanize_prefix_too_long() {
 }
 
 #[test]
+fn address_humanize_canonical_too_long() {
+    MockApiBech32::new("juno")
+        .addr_humanize(&CanonicalAddr::from([1; 1024]))
+        .unwrap_err();
+}
+
+#[test]
 fn debug_should_not_panic() {
     assert_debug_does_not_panic(&MockApiBech32::new("juno"));
 }
