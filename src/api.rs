@@ -1,15 +1,12 @@
 use bech32::primitives::decode::CheckedHrpstring;
-use bech32::{encode, Hrp};
+use bech32::{encode, Bech32, Bech32m, Hrp};
 use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{
     Addr, Api, CanonicalAddr, RecoverPubkeyError, StdError, StdResult, VerificationError,
 };
 use sha2::{Digest, Sha256};
 
-pub mod b32;
-pub mod b32m;
-
-struct MockApiBech<T> {
+pub struct MockApiBech<T> {
     api: MockApi,
     prefix: &'static str,
     _phantom_data: std::marker::PhantomData<T>,
@@ -100,14 +97,23 @@ impl<T: bech32::Checksum> MockApiBech<T> {
     /// # Panics
     ///
     /// This function panics when generating a valid address in `Bech32` or `Bech32m`
-    /// format is not possible, especially when prefix is too long or empty.
+    /// format is not possible, especially when the prefix is too long or empty.
     pub fn addr_make(&self, input: &str) -> Addr {
         match Hrp::parse(self.prefix) {
-            Ok(hrp) => match encode::<T>(hrp, Sha256::digest(input).as_slice()) {
-                Ok(address) => Addr::unchecked(address),
-                Err(reason) => panic!("Generating address failed with reason: {}", reason),
-            },
+            Ok(hrp) => Addr::unchecked(encode::<T>(hrp, Sha256::digest(input).as_slice()).unwrap()),
             Err(reason) => panic!("Generating address failed with reason: {}", reason),
         }
     }
 }
+
+/// Implementation of the `cosmwasm_std::Api` trait that uses [Bech32] format
+/// for humanizing canonical addresses.
+///
+/// [Bech32]: https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki
+pub type MockApiBech32 = MockApiBech<Bech32>;
+
+/// Implementation of the `cosmwasm_std::Api` trait that uses [Bech32m] format
+/// for humanizing canonical addresses.
+///
+/// [Bech32m]: https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
+pub type MockApiBech32m = MockApiBech<Bech32m>;

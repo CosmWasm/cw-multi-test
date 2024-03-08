@@ -2,8 +2,8 @@
 
 use crate::test_contracts::counter;
 use cosmwasm_std::{instantiate2_address, to_json_binary, Api, Empty, WasmMsg};
-use cw_multi_test::addons::{MockAddressGenerator, MockApiBech32};
 use cw_multi_test::{no_init, AppBuilder, Executor, WasmKeeper};
+use cw_multi_test::{MockAddressGenerator, MockApiBech32};
 use cw_utils::parse_instantiate_response_data;
 
 #[test]

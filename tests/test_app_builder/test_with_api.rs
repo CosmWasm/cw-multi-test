@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Api, CanonicalAddr, HexBinary};
-use cw_multi_test::addons::MockApiBech32;
+use cw_multi_test::MockApiBech32;
 use cw_multi_test::{no_init, AppBuilder};
 
 #[test]

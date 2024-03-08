@@ -1,8 +1,8 @@
 #![cfg(feature = "cosmwasm_1_2")]
 
 use crate::test_contracts::counter;
-use cw_multi_test::addons::{MockApiBech32, MockApiBech32m};
 use cw_multi_test::{no_init, AppBuilder};
+use cw_multi_test::{MockApiBech32, MockApiBech32m};
 
 #[test]
 fn store_code_with_custom_creator_address_should_work() {
