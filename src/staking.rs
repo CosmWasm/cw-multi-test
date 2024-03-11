@@ -160,7 +160,7 @@ impl StakeKeeper {
     pub fn new() -> Self {
         StakeKeeper {
             // The address of the staking module. This holds all staked tokens.
-            module_addr: "staking_module".into_addr(),
+            module_addr: Addr::unchecked("staking_module"),
         }
     }
 
