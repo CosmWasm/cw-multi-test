@@ -1563,12 +1563,14 @@ mod contract_instantiation {
     fn instantiate2_works() {
         use super::*;
 
-        // prepare application and actors
+        // prepare the application
         let mut app = App::default();
-        let sender = Addr::unchecked("sender");
+
+        let sender_addr = app.api().addr_make("sender");
+        let creator_addr = app.api().addr_make("creator");
 
         // store contract's code
-        let code_id = app.store_code_with_creator(app.api().addr_make("creator"), echo::contract());
+        let code_id = app.store_code_with_creator(creator_addr, echo::contract());
 
         // initialize the contract
         let init_msg = to_json_binary(&Empty {}).unwrap();
@@ -1581,7 +1583,7 @@ mod contract_instantiation {
             label: "label".into(),
             salt: salt.clone().into(),
         };
-        let res = app.execute(sender, msg.into()).unwrap();
+        let res = app.execute(sender_addr.clone(), msg.into()).unwrap();
 
         // assert a proper instantiate result
         let parsed = parse_instantiate_response_data(res.data.unwrap().as_slice()).unwrap();
@@ -1590,12 +1592,12 @@ mod contract_instantiation {
         // assert contract's address is exactly the predicted one,
         // in default address generator, this is like `contract` + salt in hex
         assert_eq!(
-            parsed.contract_address,
+            parsed.contract_address.as_str(),
             format!(
                 "contract{}{}",
-                app.api().addr_canonicalize("sender").unwrap(),
+                app.api().addr_canonicalize(sender_addr.as_str()).unwrap(),
                 salt.to_hex()
-            ),
+            )
         );
     }
 }
@@ -1607,13 +1609,11 @@ mod wasm_queries {
     fn query_existing_code_info() {
         use super::*;
         let mut app = App::default();
-        let code_id = app.store_code_with_creator(app.api().addr_make("creator"), echo::contract());
+        let creator_addr = app.api().addr_make("creator");
+        let code_id = app.store_code_with_creator(creator_addr.clone(), echo::contract());
         let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
         assert_eq!(code_id, code_info_response.code_id);
-        assert_eq!(
-            "cosmwasm1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqs8s7vcp",
-            code_info_response.creator
-        );
+        assert_eq!(creator_addr.as_str(), code_info_response.creator.as_str());
         assert!(!code_info_response.checksum.is_empty());
     }
 

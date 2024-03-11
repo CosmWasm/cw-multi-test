@@ -1829,23 +1829,25 @@ mod test {
     #[test]
     fn update_clear_admin_works() {
         let api = MockApi::default();
+        let creator_addr = api.addr_make("creator");
+
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), caller::contract());
+        let code_id = wasm_keeper.store_code(creator_addr.clone(), caller::contract());
 
         let mut wasm_storage = MockStorage::new();
 
-        let admin: Addr = Addr::unchecked("admin");
-        let new_admin: Addr = Addr::unchecked("new_admin");
-        let normal_user: Addr = Addr::unchecked("normal_user");
+        let admin_addr = api.addr_make("admin");
+        let new_admin_addr = api.addr_make("new_admin");
+        let user_addr = api.addr_make("normal_user");
 
         let contract_addr = wasm_keeper
             .register_contract(
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("creator"),
-                admin.clone(),
+                creator_addr,
+                admin_addr.clone(),
                 "label".to_owned(),
                 1000,
                 None,
@@ -1872,7 +1874,7 @@ mod test {
             &wasm_storage,
             &wasm_keeper,
             &contract_addr,
-            Some(admin.clone()),
+            Some(admin_addr.clone()),
         );
 
         // non-admin should not be allowed to become admin on their own
@@ -1882,10 +1884,10 @@ mod test {
                 &mut wasm_storage,
                 &mock_router(),
                 &block,
-                normal_user.clone(),
+                user_addr.clone(),
                 WasmMsg::UpdateAdmin {
                     contract_addr: contract_addr.to_string(),
-                    admin: normal_user.to_string(),
+                    admin: user_addr.to_string(),
                 },
             )
             .unwrap_err();
@@ -1895,7 +1897,7 @@ mod test {
             &wasm_storage,
             &wasm_keeper,
             &contract_addr,
-            Some(admin.clone()),
+            Some(admin_addr.clone()),
         );
 
         // admin should be allowed to transfer administration permissions
@@ -1905,10 +1907,10 @@ mod test {
                 &mut wasm_storage,
                 &mock_router(),
                 &block,
-                admin,
+                admin_addr,
                 WasmMsg::UpdateAdmin {
                     contract_addr: contract_addr.to_string(),
-                    admin: new_admin.to_string(),
+                    admin: new_admin_addr.to_string(),
                 },
             )
             .unwrap();
@@ -1919,7 +1921,7 @@ mod test {
             &wasm_storage,
             &wasm_keeper,
             &contract_addr,
-            Some(new_admin.clone()),
+            Some(new_admin_addr.clone()),
         );
 
         // new_admin should now be able to clear to admin
@@ -1929,7 +1931,7 @@ mod test {
                 &mut wasm_storage,
                 &mock_router(),
                 &block,
-                new_admin,
+                new_admin_addr,
                 WasmMsg::ClearAdmin {
                     contract_addr: contract_addr.to_string(),
                 },
@@ -1944,8 +1946,14 @@ mod test {
     #[test]
     fn uses_simple_address_generator_by_default() {
         let api = MockApi::default();
+
+        let creator_addr = api.addr_make("creator");
+        let admin_addr = api.addr_make("admin");
+        let user_1_addr = api.addr_make("foobar");
+        let user_2_addr = api.addr_make("boobaz");
+
         let mut wasm_keeper = wasm_keeper();
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        let code_id = wasm_keeper.store_code(creator_addr.clone(), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -1954,8 +1962,8 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("foobar"),
-                Addr::unchecked("admin"),
+                user_1_addr.clone(),
+                admin_addr.clone(),
                 "label".to_owned(),
                 1000,
                 None,
@@ -1974,8 +1982,8 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("foobar"),
-                Addr::unchecked("admin"),
+                user_1_addr.clone(),
+                admin_addr.clone(),
                 "label".to_owned(),
                 1000,
                 Binary::from(salt.clone()),
@@ -1983,16 +1991,16 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr,
+            contract_addr.as_str(),
             format!(
                 "contract{}{}",
-                api.addr_canonicalize("foobar").unwrap(),
+                api.addr_canonicalize(user_1_addr.as_str()).unwrap(),
                 salt.to_hex()
             ),
             "default address generator returned incorrect address"
         );
 
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        let code_id = wasm_keeper.store_code(creator_addr, payout::contract());
         assert_eq!(2, code_id);
 
         let contract_addr = wasm_keeper
@@ -2000,8 +2008,8 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("boobaz"),
-                Addr::unchecked("admin"),
+                user_2_addr.clone(),
+                admin_addr,
                 "label".to_owned(),
                 1000,
                 Binary::from(salt.clone()),
@@ -2012,7 +2020,7 @@ mod test {
             contract_addr,
             format!(
                 "contract{}{}",
-                api.addr_canonicalize("boobaz").unwrap(),
+                api.addr_canonicalize(user_2_addr.as_str()).unwrap(),
                 salt.to_hex()
             ),
             "default address generator returned incorrect address"
@@ -2052,14 +2060,14 @@ mod test {
     #[test]
     fn can_use_custom_address_generator() {
         let api = MockApi::default();
-        let expected_addr = Addr::unchecked("address");
-        let expected_predictable_addr = Addr::unchecked("predictable_address");
+        let expected_addr = api.addr_make("address");
+        let expected_predictable_addr = api.addr_make("predictable_address");
         let mut wasm_keeper: WasmKeeper<Empty, Empty> =
             WasmKeeper::new().with_address_generator(TestAddressGenerator {
                 address: expected_addr.clone(),
                 predictable_address: expected_predictable_addr.clone(),
             });
-        let code_id = wasm_keeper.store_code(Addr::unchecked("creator"), payout::contract());
+        let code_id = wasm_keeper.store_code(api.addr_make("creator"), payout::contract());
 
         let mut wasm_storage = MockStorage::new();
 
@@ -2068,8 +2076,8 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("foobar"),
-                Addr::unchecked("admin"),
+                api.addr_make("foobar"),
+                api.addr_make("admin"),
                 "label".to_owned(),
                 1000,
                 None,
@@ -2086,8 +2094,8 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                Addr::unchecked("foobar"),
-                Addr::unchecked("admin"),
+                api.addr_make("foobar"),
+                api.addr_make("admin"),
                 "label".to_owned(),
                 1000,
                 Binary::from(HexBinary::from_hex("23A74B8C").unwrap()),
