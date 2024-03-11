@@ -1,5 +1,5 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
-use cosmwasm_std::{to_json_vec, Addr, CosmosMsg, Empty, QueryRequest};
+use cosmwasm_std::{to_json_vec, CosmosMsg, Empty, QueryRequest};
 use cw_multi_test::{
     no_init, AppBuilder, Executor, Stargate, StargateAcceptingModule, StargateFailingModule,
     StargateMsg, StargateQuery,
@@ -25,7 +25,7 @@ fn building_app_with_custom_stargate_should_work() {
     // an error defined in custom stargate keeper
     assert_eq!(
         app.execute(
-            Addr::unchecked("sender"),
+            app.api().addr_make("sender"),
             CosmosMsg::Stargate {
                 type_url: "test".to_string(),
                 value: Default::default()
@@ -59,7 +59,7 @@ fn building_app_with_accepting_stargate_should_work() {
         .build(no_init);
 
     app.execute(
-        Addr::unchecked("sender"),
+        app.api().addr_make("sender"),
         CosmosMsg::Stargate {
             type_url: "test".to_string(),
             value: Default::default(),
@@ -84,7 +84,7 @@ fn building_app_with_failing_stargate_should_work() {
         .build(no_init);
 
     app.execute(
-        Addr::unchecked("sender"),
+        app.api().addr_make("sender"),
         CosmosMsg::Stargate {
             type_url: "test".to_string(),
             value: Default::default(),

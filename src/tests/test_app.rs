@@ -4,11 +4,11 @@ use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomHelperMsg};
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
-use crate::AppBuilder;
 use crate::{
     custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
     Module, Router, Staking, Wasm, WasmSudo,
 };
+use crate::{AppBuilder, IntoAddr};
 use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_json, to_json_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
@@ -105,8 +105,8 @@ fn update_block() {
 #[test]
 fn multi_level_bank_cache() {
     // set personal balance
-    let owner = Addr::unchecked("owner");
-    let rcpt = Addr::unchecked("recipient");
+    let owner = "owner".into_addr();
+    let recipient = "recipient".into_addr();
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
     let mut app = App::new(|router, _, storage| {
@@ -119,7 +119,7 @@ fn multi_level_bank_cache() {
     // cache 1 - send some tokens
     let mut cache = StorageTransaction::new(app.storage());
     let msg = BankMsg::Send {
-        to_address: rcpt.clone().into(),
+        to_address: recipient.clone().into(),
         amount: coins(25, "eth"),
     };
     app.router()
@@ -133,15 +133,15 @@ fn multi_level_bank_cache() {
         .unwrap();
 
     // shows up in cache
-    let cached_rcpt = query_router(app.router(), app.api(), &cache, &rcpt);
+    let cached_rcpt = query_router(app.router(), app.api(), &cache, &recipient);
     assert_eq!(coins(25, "eth"), cached_rcpt);
-    let router_rcpt = query_app(&app, &rcpt);
+    let router_rcpt = query_app(&app, &recipient);
     assert_eq!(router_rcpt, vec![]);
 
     // now, second level cache
     transactional(&mut cache, |cache2, read| {
         let msg = BankMsg::Send {
-            to_address: rcpt.clone().into(),
+            to_address: recipient.clone().into(),
             amount: coins(12, "eth"),
         };
         app.router()
@@ -149,9 +149,9 @@ fn multi_level_bank_cache() {
             .unwrap();
 
         // shows up in 2nd cache
-        let cached_rcpt = query_router(app.router(), app.api(), read, &rcpt);
+        let cached_rcpt = query_router(app.router(), app.api(), read, &recipient);
         assert_eq!(coins(25, "eth"), cached_rcpt);
-        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &rcpt);
+        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &recipient);
         assert_eq!(coins(37, "eth"), cached2_rcpt);
         Ok(())
     })
@@ -160,7 +160,7 @@ fn multi_level_bank_cache() {
     // apply first to router
     cache.prepare().commit(app.storage_mut());
 
-    let committed = query_app(&app, &rcpt);
+    let committed = query_app(&app, &recipient);
     assert_eq!(coins(37, "eth"), committed);
 }
 
@@ -187,8 +187,8 @@ fn duplicate_contract_code() {
 
 #[test]
 fn send_tokens() {
-    let owner = Addr::unchecked("owner");
-    let rcpt = Addr::unchecked("receiver");
+    let owner = "owner".into_addr();
+    let recipient = "receiver".into_addr();
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let rcpt_funds = vec![coin(5, "btc")];
 
@@ -200,29 +200,29 @@ fn send_tokens() {
             .unwrap();
         router
             .bank
-            .init_balance(storage, &rcpt, rcpt_funds)
+            .init_balance(storage, &recipient, rcpt_funds)
             .unwrap();
     });
 
     // send both tokens
     let to_send = vec![coin(30, "eth"), coin(5, "btc")];
     let msg: CosmosMsg = BankMsg::Send {
-        to_address: rcpt.clone().into(),
+        to_address: recipient.clone().into(),
         amount: to_send,
     }
     .into();
     app.execute(owner.clone(), msg.clone()).unwrap();
     let rich = get_balance(&app, &owner);
     assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
-    let poor = get_balance(&app, &rcpt);
+    let poor = get_balance(&app, &recipient);
     assert_eq!(vec![coin(10, "btc"), coin(30, "eth")], poor);
 
     // can send from other account (but funds will be deducted from sender)
-    app.execute(rcpt.clone(), msg).unwrap();
+    app.execute(recipient.clone(), msg).unwrap();
 
     // cannot send too much
     let msg = BankMsg::Send {
-        to_address: rcpt.into(),
+        to_address: recipient.into(),
         amount: coins(20, "btc"),
     }
     .into();
@@ -235,7 +235,7 @@ fn send_tokens() {
 #[test]
 fn simple_contract() {
     // set personal balance
-    let owner = Addr::unchecked("owner");
+    let owner = "owner".into_addr();
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
     let mut app = App::new(|router, _, storage| {
@@ -282,7 +282,7 @@ fn simple_contract() {
     assert_eq!(funds, coins(23, "eth"));
 
     // create empty account
-    let random = Addr::unchecked("random");
+    let random = app.api().addr_make("random");
     let funds = get_balance(&app, &random);
     assert_eq!(funds, vec![]);
 
@@ -306,7 +306,7 @@ fn simple_contract() {
 
     // then the transfer event
     let expected_transfer = Event::new("transfer")
-        .add_attribute("recipient", "random")
+        .add_attribute("recipient", random.to_string())
         .add_attribute("sender", &contract_addr)
         .add_attribute("amount", "5eth");
     assert_eq!(&expected_transfer, &res.events[2]);
@@ -322,7 +322,7 @@ fn simple_contract() {
 #[test]
 fn reflect_success() {
     // set personal balance
-    let owner = Addr::unchecked("owner");
+    let owner = "owner".into_addr();
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
@@ -1916,8 +1916,8 @@ mod errors {
 
     #[test]
     fn double_nested_call() {
-        let owner = Addr::unchecked("owner");
         let mut app = App::default();
+        let owner = app.api().addr_make("owner");
 
         let error_code_id = app.store_code(error::contract(true));
         let caller_code_id = app.store_code(caller::contract());
@@ -1946,7 +1946,7 @@ mod errors {
             funds: vec![],
         };
         let err = app
-            .execute_contract(Addr::unchecked("random"), caller_addr1, &msg, &[])
+            .execute_contract(app.api().addr_make("random"), caller_addr1, &msg, &[])
             .unwrap_err();
 
         // uncomment to have the test fail and see how the error stringifies

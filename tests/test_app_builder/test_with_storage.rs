@@ -1,5 +1,5 @@
 use crate::{test_contracts, CounterQueryMsg, CounterResponseMsg};
-use cosmwasm_std::{to_json_binary, Addr, Empty, Order, Record, Storage, WasmMsg};
+use cosmwasm_std::{to_json_binary, Empty, Order, Record, Storage, WasmMsg};
 use cw_multi_test::{no_init, AppBuilder, Executor};
 use std::collections::BTreeMap;
 use std::iter;
@@ -34,7 +34,6 @@ impl Storage for MyStorage {
 #[test]
 fn building_app_with_custom_storage_should_work() {
     // prepare additional test input data
-    let owner = Addr::unchecked("owner");
     let msg = to_json_binary(&Empty {}).unwrap();
     let admin = None;
     let funds = vec![];
@@ -45,6 +44,8 @@ fn building_app_with_custom_storage_should_work() {
     let mut app = app_builder
         .with_storage(MyStorage::default())
         .build(no_init);
+
+    let owner = app.api().addr_make("owner");
 
     // store a contract code
     let code_id = app.store_code(test_contracts::counter::contract());
