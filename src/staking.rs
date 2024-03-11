@@ -2,7 +2,7 @@ use crate::app::CosmosRouter;
 use crate::error::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read};
-use crate::{BankSudo, Module};
+use crate::{BankSudo, IntoAddr, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
@@ -160,7 +160,7 @@ impl StakeKeeper {
     pub fn new() -> Self {
         StakeKeeper {
             // The address of the staking module. This holds all staked tokens.
-            module_addr: Addr::unchecked("staking_module"),
+            module_addr: "staking_module".into_addr(),
         }
     }
 
