@@ -1,5 +1,5 @@
 use crate::test_app_builder::MyKeeper;
-use cosmwasm_std::{Addr, Api, BlockInfo, Coin, CustomQuery, StakingMsg, StakingQuery, Storage};
+use cosmwasm_std::{Api, BlockInfo, Coin, CustomQuery, StakingMsg, StakingQuery, Storage};
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::{
     no_init, AppBuilder, AppResponse, CosmosRouter, Executor, Staking, StakingSudo,
@@ -34,13 +34,13 @@ fn building_app_with_custom_staking_should_work() {
     let mut app = app_builder.with_staking(stake_keeper).build(no_init);
 
     // prepare additional input data
-    let validator = Addr::unchecked("recipient");
+    let validator = app.api().addr_make("recipient");
 
     // executing staking message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            Addr::unchecked("sender"),
+            app.api().addr_make("sender"),
             StakingMsg::Delegate {
                 validator: validator.clone().into(),
                 amount: Coin::new(1, "eth"),
