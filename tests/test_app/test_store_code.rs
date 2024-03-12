@@ -30,6 +30,6 @@ fn store_code_generates_default_address_for_creator() {
     // address of the creator should be the default one
     assert_eq!(
         MockApi::default().addr_make("creator").as_str(),
-        code_info_response.creator
+        code_info_response.creator.as_str()
     );
 }

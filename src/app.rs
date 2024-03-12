@@ -256,8 +256,9 @@ where
     /// so it can later be used to instantiate a contract.
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
         self.init_modules(|router, _, _| {
-            let creator = MockApi::default().addr_make("creator");
-            router.wasm.store_code(creator, code)
+            router
+                .wasm
+                .store_code(MockApi::default().addr_make("creator"), code)
         })
     }
 
