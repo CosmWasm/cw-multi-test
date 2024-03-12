@@ -998,17 +998,6 @@ impl Module for DistributionKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        _msg: Empty,
-    ) -> AnyResult<AppResponse> {
-        bail!("Something went wrong - Distribution doesn't have sudo messages")
-    }
-
     fn query(
         &self,
         _api: &dyn Api,
@@ -1018,6 +1007,17 @@ impl Module for DistributionKeeper {
         _request: Empty,
     ) -> AnyResult<Binary> {
         bail!("Something went wrong - Distribution doesn't have query messages")
+    }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _msg: Empty,
+    ) -> AnyResult<AppResponse> {
+        bail!("Something went wrong - Distribution doesn't have sudo messages")
     }
 }
 
