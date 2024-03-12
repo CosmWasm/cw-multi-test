@@ -96,16 +96,16 @@ pub trait AddressGenerator {
     /// let my_address_generator = MyAddressGenerator{};
     ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 0).unwrap();
-    /// assert_eq!(addr.to_string(),"contract0");
+    /// assert_eq!(addr.as_str(), "contract0");
     ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 1).unwrap();
-    /// assert_eq!(addr.to_string(),"contract1");
+    /// assert_eq!(addr.as_str(), "contract1");
     ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 200, 5).unwrap();
-    /// assert_eq!(addr.to_string(),"contract5");
+    /// assert_eq!(addr.as_str(), "contract5");
     ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 200, 6).unwrap();
-    /// assert_eq!(addr.to_string(),"contract6");
+    /// assert_eq!(addr.as_str(), "contract6");
     /// ```
     fn contract_address(
         &self,

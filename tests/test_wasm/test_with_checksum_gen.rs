@@ -11,7 +11,7 @@ fn default_checksum_generator_should_work() {
 
     // store contract's code
     let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
+        app.api().addr_make("creator"),
         test_contracts::counter::contract(),
     );
 
@@ -44,7 +44,7 @@ fn custom_checksum_generator_should_work() {
 
     // store contract's code
     let code_id = app.store_code_with_creator(
-        Addr::unchecked("creator"),
+        app.api().addr_make("creator"),
         test_contracts::counter::contract(),
     );
 

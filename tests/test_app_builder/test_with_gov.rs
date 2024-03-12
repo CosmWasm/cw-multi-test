@@ -1,5 +1,5 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
-use cosmwasm_std::{Addr, Empty, GovMsg, VoteOption};
+use cosmwasm_std::{Empty, GovMsg, VoteOption};
 use cw_multi_test::{no_init, AppBuilder, Executor, Gov};
 
 type MyGovKeeper = MyKeeper<GovMsg, Empty, Empty>;
@@ -21,7 +21,7 @@ fn building_app_with_custom_gov_should_work() {
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            Addr::unchecked("sender"),
+            app.api().addr_make("sender"),
             GovMsg::Vote {
                 proposal_id: 1,
                 vote: VoteOption::Yes,
