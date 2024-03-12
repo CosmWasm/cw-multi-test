@@ -53,7 +53,7 @@ impl AppResponse {
     }
 }
 
-/// They have the same shape, SubMsgExecutionResponse is what is returned in reply.
+/// They have the same shape, SubMsgResponse is what is returned in reply.
 /// This is just to make some test cases easier.
 impl From<SubMsgResponse> for AppResponse {
     fn from(reply: SubMsgResponse) -> Self {
