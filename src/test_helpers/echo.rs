@@ -1,7 +1,7 @@
 //! Very simple echoing contract which just returns incoming string if any,
 //! but performing sub call of given message to test response.
 //!
-//! Additionally it bypasses all events and attributes send to it.
+//! Additionally, it bypasses all events and attributes send to it.
 
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
