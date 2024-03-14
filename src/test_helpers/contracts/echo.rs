@@ -4,8 +4,8 @@
 //! Additionally it bypass all events and attributes send to it
 
 use cosmwasm_std::{
-    to_json_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply,
-    Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
+    to_binary, Attribute, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
+    StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -86,7 +86,7 @@ where
 }
 
 fn query(_deps: Deps, _env: Env, msg: EmptyMsg) -> Result<Binary, StdError> {
-    to_json_binary(&msg)
+    to_binary(&msg)
 }
 
 #[allow(clippy::unnecessary_wraps)]

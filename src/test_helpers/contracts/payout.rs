@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    to_binary, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
 
@@ -71,11 +71,11 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
         QueryMsg::Count {} => {
             let count = COUNT.load(deps.storage)?;
             let res = CountResponse { count };
-            to_json_binary(&res)
+            to_binary(&res)
         }
         QueryMsg::Payout {} => {
             let payout = PAYOUT.load(deps.storage)?;
-            to_json_binary(&payout)
+            to_binary(&payout)
         }
     }
 }

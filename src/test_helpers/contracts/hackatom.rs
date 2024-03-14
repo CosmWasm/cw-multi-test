@@ -1,7 +1,7 @@
 //! Simplified contract which when executed releases the funds to beneficiary
 
 use cosmwasm_std::{
-    to_json_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+    to_binary, BankMsg, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
 };
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
@@ -61,7 +61,7 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
     match msg {
         QueryMsg::Beneficiary {} => {
             let res = HACKATOM.load(deps.storage)?;
-            to_json_binary(&res)
+            to_binary(&res)
         }
     }
 }
