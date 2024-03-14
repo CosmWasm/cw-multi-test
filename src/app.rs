@@ -1528,8 +1528,6 @@ mod test {
         use cw_storage_plus::Item;
         use serde::{Deserialize, Serialize};
 
-        use crate::Executor;
-
         const LOTTERY: Item<Coin> = Item::new("lottery");
         const PITY: Item<Coin> = Item::new("pity");
 

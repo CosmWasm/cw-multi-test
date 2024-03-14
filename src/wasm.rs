@@ -959,8 +959,7 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 mod test {
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
-        coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery,
-        StdError,
+        coin, from_slice, to_vec, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery, StdError,
     };
 
     use crate::app::Router;

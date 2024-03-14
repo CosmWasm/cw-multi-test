@@ -70,7 +70,7 @@ impl Ibc for IbcAcceptingModule {}
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Empty};
+    use cosmwasm_std::Addr;
 
     use crate::test_helpers::contracts::stargate::{contract, ExecMsg};
     use crate::{App, AppBuilder, Executor};
