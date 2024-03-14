@@ -3,8 +3,8 @@ use itertools::Itertools;
 use schemars::JsonSchema;
 
 use cosmwasm_std::{
-    coin, to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery, Binary,
-    BlockInfo, Coin, Event, Querier, Storage,
+    coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
+    Binary, BlockInfo, Coin, Event, Querier, Storage,
 };
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
@@ -193,7 +193,7 @@ impl Module for BankKeeper {
                 let address = api.addr_validate(&address)?;
                 let amount = self.get_balance(&bank_storage, &address)?;
                 let res = AllBalanceResponse { amount };
-                Ok(to_binary(&res)?)
+                Ok(to_json_binary(&res)?)
             }
             BankQuery::Balance { address, denom } => {
                 let address = api.addr_validate(&address)?;
@@ -203,7 +203,7 @@ impl Module for BankKeeper {
                     .find(|c| c.denom == denom)
                     .unwrap_or_else(|| coin(0, denom));
                 let res = BalanceResponse { amount };
-                Ok(to_binary(&res)?)
+                Ok(to_json_binary(&res)?)
             }
             q => bail!("Unsupported bank query: {:?}", q),
         }
@@ -216,7 +216,7 @@ mod test {
 
     use crate::app::MockRouter;
     use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{coins, from_slice, Empty, StdError};
+    use cosmwasm_std::{coins, from_json, Empty, StdError};
 
     fn query_balance(
         bank: &BankKeeper,
@@ -231,7 +231,7 @@ mod test {
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
 
         let raw = bank.query(api, store, &querier, &block, req).unwrap();
-        let res: AllBalanceResponse = from_slice(&raw).unwrap();
+        let res: AllBalanceResponse = from_json(&raw).unwrap();
         res.amount
     }
 
@@ -263,14 +263,14 @@ mod test {
             address: owner.clone().into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: AllBalanceResponse = from_slice(&raw).unwrap();
+        let res: AllBalanceResponse = from_json(&raw).unwrap();
         assert_eq!(res.amount, norm);
 
         let req = BankQuery::AllBalances {
             address: rcpt.clone().into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: AllBalanceResponse = from_slice(&raw).unwrap();
+        let res: AllBalanceResponse = from_json(&raw).unwrap();
         assert_eq!(res.amount, vec![]);
 
         let req = BankQuery::Balance {
@@ -278,7 +278,7 @@ mod test {
             denom: "eth".into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: BalanceResponse = from_slice(&raw).unwrap();
+        let res: BalanceResponse = from_json(&raw).unwrap();
         assert_eq!(res.amount, coin(100, "eth"));
 
         let req = BankQuery::Balance {
@@ -286,7 +286,7 @@ mod test {
             denom: "foobar".into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: BalanceResponse = from_slice(&raw).unwrap();
+        let res: BalanceResponse = from_json(&raw).unwrap();
         assert_eq!(res.amount, coin(0, "foobar"));
 
         let req = BankQuery::Balance {
@@ -294,7 +294,7 @@ mod test {
             denom: "eth".into(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: BalanceResponse = from_slice(&raw).unwrap();
+        let res: BalanceResponse = from_json(&raw).unwrap();
         assert_eq!(res.amount, coin(0, "eth"));
     }
 

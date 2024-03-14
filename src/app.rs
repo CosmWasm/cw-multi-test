@@ -5,9 +5,9 @@ use anyhow::bail;
 use anyhow::Result as AnyResult;
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{
-    from_slice, to_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomQuery,
-    Empty, GovMsg, IbcMsg, IbcQuery, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record,
-    Storage, SystemError, SystemResult,
+    from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg,
+    CustomQuery, Empty, GovMsg, IbcMsg, IbcQuery, Querier, QuerierResult, QuerierWrapper,
+    QueryRequest, Record, Storage, SystemError, SystemResult,
 };
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -785,7 +785,7 @@ where
         contract_addr: U,
         msg: &T,
     ) -> AnyResult<AppResponse> {
-        let msg = to_binary(msg)?;
+        let msg = to_json_binary(msg)?;
 
         let Self {
             block,
@@ -1082,7 +1082,7 @@ where
     QueryC: CustomQuery + DeserializeOwned + 'static,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
-        let request: QueryRequest<QueryC> = match from_slice(bin_request) {
+        let request: QueryRequest<QueryC> = match from_json(bin_request) {
             Ok(v) => v,
             Err(e) => {
                 return SystemResult::Err(SystemError::InvalidRequest {
@@ -1104,8 +1104,8 @@ mod test {
     use super::*;
     use cosmwasm_std::testing::MockQuerier;
     use cosmwasm_std::{
-        coin, coins, to_binary, AllBalanceResponse, Attribute, BankMsg, BankQuery, Coin, Event,
-        OverflowError, OverflowOperation, Reply, StdError, StdResult, SubMsg, WasmMsg,
+        coin, coins, AllBalanceResponse, Attribute, BankMsg, BankQuery, Coin, Event, OverflowError,
+        OverflowOperation, Reply, StdError, StdResult, SubMsg, WasmMsg,
     };
 
     use crate::error::Error;
@@ -1508,7 +1508,7 @@ mod test {
         let msg = payout::SudoMsg { set_count: 49 };
         let sudo_msg = WasmSudo {
             contract_addr: payout_addr.clone(),
-            msg: to_binary(&msg).unwrap(),
+            msg: to_json_binary(&msg).unwrap(),
         };
         app.sudo(sudo_msg.into()).unwrap();
 
@@ -1778,7 +1778,7 @@ mod test {
             .bank
             .query(api, storage, &querier, &block, query)
             .unwrap();
-        let val: AllBalanceResponse = from_slice(&res).unwrap();
+        let val: AllBalanceResponse = from_json(&res).unwrap();
         val.amount
     }
 
@@ -2047,6 +2047,7 @@ mod test {
 
     mod reply_data_overwrite {
         use super::*;
+        use cosmwasm_std::to_json_binary;
 
         use echo::EXECUTE_REPLY_BASE_ID;
 
@@ -2060,7 +2061,7 @@ mod test {
             SubMsg::reply_always(
                 CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: contract.into(),
-                    msg: to_binary(&echo::Message {
+                    msg: to_json_binary(&echo::Message {
                         data,
                         sub_msg,
                         ..echo::Message::default()
@@ -2080,7 +2081,7 @@ mod test {
             let data = data.into().map(|s| s.to_owned());
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract.into(),
-                msg: to_binary(&echo::Message {
+                msg: to_json_binary(&echo::Message {
                     data,
                     sub_msg,
                     ..echo::Message::default()
@@ -2276,7 +2277,7 @@ mod test {
             let reflect_msg = reflect::Message {
                 messages: vec![SubMsg::new(WasmMsg::Execute {
                     contract_addr: echo_addr.to_string(),
-                    msg: to_binary(&echo_msg).unwrap(),
+                    msg: to_json_binary(&echo_msg).unwrap(),
                     funds: vec![],
                 })],
             };
@@ -2682,7 +2683,7 @@ mod test {
 
             // set up reflect contract
             let code_id = app.store_code(reflect::contract());
-            let init_msg = to_binary(&EmptyMsg {}).unwrap();
+            let init_msg = to_json_binary(&EmptyMsg {}).unwrap();
             let msg = WasmMsg::Instantiate {
                 admin: None,
                 code_id,
@@ -2715,7 +2716,7 @@ mod test {
                 data: Some("food".into()),
                 sub_msg: None,
             };
-            let init_msg = to_binary(&msg).unwrap();
+            let init_msg = to_json_binary(&msg).unwrap();
             let msg = WasmMsg::Instantiate {
                 admin: None,
                 code_id,
@@ -2755,7 +2756,7 @@ mod test {
             let sub_msg = SubMsg::reply_on_success(
                 WasmMsg::Execute {
                     contract_addr: addr1.to_string(),
-                    msg: to_binary(&msg).unwrap(),
+                    msg: to_json_binary(&msg).unwrap(),
                     funds: vec![],
                 },
                 EXECUTE_REPLY_BASE_ID,
@@ -2764,7 +2765,7 @@ mod test {
                 data: Some("Overwrite me".into()),
                 sub_msg: Some(vec![sub_msg]),
             };
-            let init_msg = to_binary(&init_msg).unwrap();
+            let init_msg = to_json_binary(&init_msg).unwrap();
             let msg = WasmMsg::Instantiate {
                 admin: None,
                 code_id,
@@ -2807,6 +2808,7 @@ mod test {
 
     mod errors {
         use super::*;
+        use cosmwasm_std::to_json_binary;
 
         #[test]
         fn simple_instantiation() {
@@ -2883,7 +2885,7 @@ mod test {
             // execute should error
             let msg = WasmMsg::Execute {
                 contract_addr: error_addr.into(),
-                msg: to_binary(&EmptyMsg {}).unwrap(),
+                msg: to_json_binary(&EmptyMsg {}).unwrap(),
                 funds: vec![],
             };
             let err = app
@@ -2926,9 +2928,9 @@ mod test {
             // caller1 calls caller2, caller2 calls error
             let msg = WasmMsg::Execute {
                 contract_addr: caller_addr2.into(),
-                msg: to_binary(&WasmMsg::Execute {
+                msg: to_json_binary(&WasmMsg::Execute {
                     contract_addr: error_addr.into(),
-                    msg: to_binary(&EmptyMsg {}).unwrap(),
+                    msg: to_json_binary(&EmptyMsg {}).unwrap(),
                     funds: vec![],
                 })
                 .unwrap(),
