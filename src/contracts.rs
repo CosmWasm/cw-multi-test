@@ -6,81 +6,73 @@ use cosmwasm_std::{
     QuerierWrapper, Reply, Response, SubMsg,
 };
 use serde::de::DeserializeOwned;
-use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
-/// Serves as the primary interface for interacting with contracts.
-///
-/// It includes methods for executing, querying, and managing contract states,
-/// making it a fundamental trait for testing contracts.
-pub trait Contract<T, Q = Empty>
+/// This trait serves as a primary interface for interacting with contracts.
+#[rustfmt::skip]
+pub trait Contract<C, Q = Empty>
 where
-    T: CustomMsg,
+    C: CustomMsg,
     Q: CustomQuery,
 {
     /// Evaluates contract's `execute` entry-point.
-    fn execute(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        info: MessageInfo,
-        msg: Vec<u8>,
-    ) -> AnyResult<Response<T>>;
+    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `instantiate` entry-point.
-    fn instantiate(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        info: MessageInfo,
-        msg: Vec<u8>,
-    ) -> AnyResult<Response<T>>;
+    fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
 
     /// Evaluates contract's `sudo` entry-point.
-    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>>;
+    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `reply` entry-point.
-    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<T>>;
+    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `migrate` entry-point.
-    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<T>>;
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
 }
 
-type ContractFn<T, C, E, Q> =
-    fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
-type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
-type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
-type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
+#[rustfmt::skip]
+mod closures {
+    use super::*;
 
-type ContractClosure<T, C, E, Q> =
-    Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
-type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
-type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
-type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
+    // function types
+    pub type ContractFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
+    pub type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
+    pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
+    pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
+
+    // closure types
+    pub type ContractClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
+    pub type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
+    pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
+    pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
+}
+
+use closures::*;
 
 /// Standardizes interactions with contracts in CosmWasm tests, especially useful for contracts that
 /// do not possess extensive privileges. It simplifies and unifies the way developers interact with
 /// different contracts.
 pub struct ContractWrapper<
-    T1,
-    T2,
-    T3,
-    E1,
-    E2,
-    E3,
-    C = Empty,
-    Q = Empty,
-    T4 = Empty,
-    E4 = AnyError,
-    E5 = AnyError,
-    T6 = Empty,
-    E6 = AnyError,
+    T1,            // Type of message passed to `execute` entry-point.
+    T2,            // Type of message passed to `instantiate` entry-point.
+    T3,            // Type of message passed to `query` entry-point.
+    E1,            // Type of error returned from `execute` entry-point.
+    E2,            // Type of error returned from `instantiate` entry-point.
+    E3,            // Type of error returned from `query` entry-point.
+    C = Empty,     // Type of custom message returned from all entry-points except `query`.
+    Q = Empty,     // Type of custom query in querier passed as deps/deps_mut to all entry-points.
+    T4 = Empty,    // Type of message passed to `sudo` entry-point.
+    E4 = AnyError, // Type of error returned from `sudo` entry-point.
+    E5 = AnyError, // Type of error returned from `reply` entry-point.
+    T6 = Empty,    // Type of message passed to `migrate` entry-point.
+    E6 = AnyError, // Type of error returned from `migrate` entry-point.
 > where
-    T1: DeserializeOwned + Debug,
+    T1: DeserializeOwned,
     T2: DeserializeOwned,
     T3: DeserializeOwned,
     T4: DeserializeOwned,
@@ -104,7 +96,7 @@ pub struct ContractWrapper<
 
 impl<T1, T2, T3, E1, E2, E3, C, Q> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q>
 where
-    T1: DeserializeOwned + Debug + 'static,
+    T1: DeserializeOwned + 'static,
     T2: DeserializeOwned + 'static,
     T3: DeserializeOwned + 'static,
     E1: Display + Debug + Send + Sync + 'static,
@@ -137,9 +129,9 @@ where
         query_fn: QueryFn<T3, E3, Empty>,
     ) -> Self {
         Self {
-            execute_fn: customize_fn(execute_fn),
-            instantiate_fn: customize_fn(instantiate_fn),
-            query_fn: customize_query(query_fn),
+            execute_fn: customize_contract_fn(execute_fn),
+            instantiate_fn: customize_contract_fn(instantiate_fn),
+            query_fn: customize_query_fn(query_fn),
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
@@ -150,7 +142,7 @@ where
 impl<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
     ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
 where
-    T1: DeserializeOwned + Debug + 'static,
+    T1: DeserializeOwned + 'static,
     T2: DeserializeOwned + 'static,
     T3: DeserializeOwned + 'static,
     T4: DeserializeOwned + 'static,
@@ -277,35 +269,56 @@ where
     }
 }
 
-fn customize_fn<T, C, E, Q>(raw_fn: ContractFn<T, Empty, E, Empty>) -> ContractClosure<T, C, E, Q>
+fn customize_contract_fn<T, C, E, Q>(
+    raw_fn: ContractFn<T, Empty, E, Empty>,
+) -> ContractClosure<T, C, E, Q>
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
     C: CustomMsg + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
-    let customized = move |mut deps: DepsMut<Q>,
-                           env: Env,
-                           info: MessageInfo,
-                           msg: T|
-          -> Result<Response<C>, E> {
-        let deps = decustomize_deps_mut(&mut deps);
-        raw_fn(deps, env, info, msg).map(customize_response::<C>)
-    };
-    Box::new(customized)
+    Box::new(
+        move |mut deps: DepsMut<Q>,
+              env: Env,
+              info: MessageInfo,
+              msg: T|
+              -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, info, msg).map(customize_response::<C>)
+        },
+    )
 }
 
-fn customize_query<T, E, Q>(raw_fn: QueryFn<T, E, Empty>) -> QueryClosure<T, E, Q>
+fn customize_query_fn<T, E, Q>(raw_fn: QueryFn<T, E, Empty>) -> QueryClosure<T, E, Q>
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
-    let customized = move |deps: Deps<Q>, env: Env, msg: T| -> Result<Binary, E> {
-        let deps = decustomize_deps(&deps);
-        raw_fn(deps, env, msg)
-    };
-    Box::new(customized)
+    Box::new(
+        move |deps: Deps<Q>, env: Env, msg: T| -> Result<Binary, E> {
+            let deps = decustomize_deps(&deps);
+            raw_fn(deps, env, msg)
+        },
+    )
+}
+
+fn customize_permissioned_fn<T, C, E, Q>(
+    raw_fn: PermissionedFn<T, Empty, E, Empty>,
+) -> PermissionedClosure<T, C, E, Q>
+where
+    T: DeserializeOwned + 'static,
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg + 'static,
+    Q: CustomQuery + DeserializeOwned + 'static,
+{
+    Box::new(
+        move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, msg).map(customize_response::<C>)
+        },
+    )
 }
 
 fn decustomize_deps_mut<'a, Q>(deps: &'a mut DepsMut<Q>) -> DepsMut<'a, Empty>
@@ -328,22 +341,6 @@ where
         api: deps.api,
         querier: QuerierWrapper::new(deps.querier.deref()),
     }
-}
-
-fn customize_permissioned_fn<T, C, E, Q>(
-    raw_fn: PermissionedFn<T, Empty, E, Empty>,
-) -> PermissionedClosure<T, C, E, Q>
-where
-    T: DeserializeOwned + 'static,
-    E: Display + Debug + Send + Sync + 'static,
-    C: CustomMsg + 'static,
-    Q: CustomQuery + DeserializeOwned + 'static,
-{
-    let customized = move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
-        let deps = decustomize_deps_mut(&mut deps);
-        raw_fn(deps, env, msg).map(customize_response::<C>)
-    };
-    Box::new(customized)
 }
 
 fn customize_response<C>(resp: Response<Empty>) -> Response<C>
@@ -382,14 +379,14 @@ where
 impl<T1, T2, T3, E1, E2, E3, C, T4, E4, E5, T6, E6, Q> Contract<C, Q>
     for ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
 where
-    T1: DeserializeOwned + Debug + Clone,
-    T2: DeserializeOwned + Debug + Clone,
-    T3: DeserializeOwned + Debug + Clone,
+    T1: DeserializeOwned,
+    T2: DeserializeOwned,
+    T3: DeserializeOwned,
     T4: DeserializeOwned,
     T6: DeserializeOwned,
-    E1: Display + Debug + Send + Sync + Error + 'static,
-    E2: Display + Debug + Send + Sync + Error + 'static,
-    E3: Display + Debug + Send + Sync + Error + 'static,
+    E1: Display + Debug + Send + Sync + 'static,
+    E2: Display + Debug + Send + Sync + 'static,
+    E3: Display + Debug + Send + Sync + 'static,
     E4: Display + Debug + Send + Sync + 'static,
     E5: Display + Debug + Send + Sync + 'static,
     E6: Display + Debug + Send + Sync + 'static,
@@ -404,7 +401,7 @@ where
         msg: Vec<u8>,
     ) -> AnyResult<Response<C>> {
         let msg: T1 = from_json(msg)?;
-        (self.execute_fn)(deps, env, info, msg).map_err(|err| anyhow!(err))
+        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
     }
 
     fn instantiate(
@@ -415,36 +412,37 @@ where
         msg: Vec<u8>,
     ) -> AnyResult<Response<C>> {
         let msg: T2 = from_json(msg)?;
-        (self.instantiate_fn)(deps, env, info, msg).map_err(|err| anyhow!(err))
+        (self.instantiate_fn)(deps, env, info, msg).map_err(|err: E2| anyhow!(err))
     }
 
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
         let msg: T3 = from_json(msg)?;
-        (self.query_fn)(deps, env, msg).map_err(|err| anyhow!(err))
+        (self.query_fn)(deps, env, msg).map_err(|err: E3| anyhow!(err))
     }
 
     // this returns an error if the contract doesn't implement sudo
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
-        let msg = from_json(msg)?;
+        let msg: T4 = from_json(msg)?;
         match &self.sudo_fn {
-            Some(sudo) => sudo(deps, env, msg).map_err(|err| anyhow!(err)),
+            Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| anyhow!(err)),
             None => bail!("sudo not implemented for contract"),
         }
     }
 
     // this returns an error if the contract doesn't implement reply
     fn reply(&self, deps: DepsMut<Q>, env: Env, reply_data: Reply) -> AnyResult<Response<C>> {
+        let msg: Reply = reply_data;
         match &self.reply_fn {
-            Some(reply) => reply(deps, env, reply_data).map_err(|err| anyhow!(err)),
+            Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
             None => bail!("reply not implemented for contract"),
         }
     }
 
     // this returns an error if the contract doesn't implement migrate
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
-        let msg = from_json(msg)?;
+        let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
-            Some(migrate) => migrate(deps, env, msg).map_err(|err| anyhow!(err)),
+            Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
             None => bail!("migrate not implemented for contract"),
         }
     }
