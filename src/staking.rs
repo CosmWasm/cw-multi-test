@@ -492,7 +492,7 @@ impl StakeKeeper {
         unbonding_queue
             .iter_mut()
             .filter(|ub| &ub.validator == validator)
-            .for_each(|mut ub| {
+            .for_each(|ub| {
                 ub.amount = ub.amount * remaining_percentage;
             });
         UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
@@ -1414,9 +1414,7 @@ mod test {
     }
 
     mod msg {
-        use cosmwasm_std::{
-            coins, from_slice, Addr, BondedDenomResponse, Decimal, QuerierWrapper, StakingQuery,
-        };
+        use cosmwasm_std::{coins, QuerierWrapper};
         use serde::de::DeserializeOwned;
 
         use super::*;

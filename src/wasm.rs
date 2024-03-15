@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt;
-use std::ops::Deref;
 
 use cosmwasm_std::{
     to_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Coin, ContractInfo,
@@ -861,7 +860,7 @@ where
 
         let deps = Deps {
             storage: storage.as_ref(),
-            api: api.deref(),
+            api,
             querier: QuerierWrapper::new(querier),
         };
         action(handler, deps, env)
@@ -897,7 +896,7 @@ where
 
             let deps = DepsMut {
                 storage: contract_storage.as_mut(),
-                api: api.deref(),
+                api,
                 querier: QuerierWrapper::new(&querier),
             };
             action(handler, deps, env)
@@ -960,8 +959,7 @@ fn execute_response(data: Option<Binary>) -> Option<Binary> {
 mod test {
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
-        coin, from_slice, to_vec, BankMsg, Coin, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery,
-        StdError,
+        coin, from_slice, to_vec, CosmosMsg, Empty, GovMsg, IbcMsg, IbcQuery, StdError,
     };
 
     use crate::app::Router;
@@ -1082,10 +1080,7 @@ mod test {
         .unwrap_err();
 
         // Default error message from router when not found
-        assert_eq!(
-            StdError::not_found("cw_multi_test::wasm::ContractData"),
-            err.downcast().unwrap()
-        );
+        assert!(matches!(err.downcast().unwrap(), StdError::NotFound { .. }));
     }
 
     #[test]
