@@ -172,7 +172,7 @@ where
 
     pub fn with_sudo_empty<T4A, E4A>(
         self,
-        sudo_fn: PermissionedFn<T4A, Empty, E4A, Q>,
+        sudo_fn: PermissionedFn<T4A, Empty, E4A, Empty>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4A, E4A, E5, T6, E6>
     where
         T4A: DeserializeOwned + 'static,
@@ -208,7 +208,7 @@ where
     /// A correlate of new_with_empty
     pub fn with_reply_empty<E5A>(
         self,
-        reply_fn: ReplyFn<Empty, E5A, Q>,
+        reply_fn: ReplyFn<Empty, E5A, Empty>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5A, T6, E6>
     where
         E5A: Display + Debug + Send + Sync + 'static,
@@ -243,7 +243,7 @@ where
 
     pub fn with_migrate_empty<T6A, E6A>(
         self,
-        migrate_fn: PermissionedFn<T6A, Empty, E6A, Q>,
+        migrate_fn: PermissionedFn<T6A, Empty, E6A, Empty>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6A, E6A>
     where
         T6A: DeserializeOwned + 'static,
@@ -314,7 +314,7 @@ where
 }
 
 fn customize_permissioned_fn<T, C, E, Q>(
-    raw_fn: PermissionedFn<T, Empty, E, Q>,
+    raw_fn: PermissionedFn<T, Empty, E, Empty>,
 ) -> PermissionedClosure<T, C, E, Q>
 where
     T: DeserializeOwned + 'static,
@@ -322,7 +322,8 @@ where
     C: Clone + Debug + PartialEq + JsonSchema + 'static,
     Q: CustomQuery + DeserializeOwned + 'static,
 {
-    let customized = move |deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
+    let customized = move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
+        let deps = decustomize_deps_mut(&mut deps);
         raw_fn(deps, env, msg).map(customize_response::<C>)
     };
     Box::new(customized)
