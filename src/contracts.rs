@@ -393,6 +393,9 @@ where
     C: CustomMsg,
     Q: CustomQuery + DeserializeOwned,
 {
+    /// Calls [execute] on wrapped [Contract] trait implementor.
+    ///
+    /// [execute]: Contract::execute
     fn execute(
         &self,
         deps: DepsMut<Q>,
@@ -404,6 +407,9 @@ where
         (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
     }
 
+    /// Calls [instantiate] on wrapped [Contract] trait implementor.
+    ///
+    /// [instantiate]: Contract::instantiate
     fn instantiate(
         &self,
         deps: DepsMut<Q>,
@@ -415,35 +421,47 @@ where
         (self.instantiate_fn)(deps, env, info, msg).map_err(|err: E2| anyhow!(err))
     }
 
+    /// Calls [query] on wrapped [Contract] trait implementor.
+    ///
+    /// [query]: Contract::query
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
         let msg: T3 = from_json(msg)?;
         (self.query_fn)(deps, env, msg).map_err(|err: E3| anyhow!(err))
     }
 
-    // this returns an error if the contract doesn't implement sudo
+    /// Calls [sudo] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [sudo].
+    ///
+    /// [sudo]: Contract::sudo
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
         let msg: T4 = from_json(msg)?;
         match &self.sudo_fn {
             Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| anyhow!(err)),
-            None => bail!("sudo not implemented for contract"),
+            None => bail!("sudo is not implemented for contract"),
         }
     }
 
-    // this returns an error if the contract doesn't implement reply
+    /// Calls [reply] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [reply].
+    ///
+    /// [reply]: Contract::reply
     fn reply(&self, deps: DepsMut<Q>, env: Env, reply_data: Reply) -> AnyResult<Response<C>> {
         let msg: Reply = reply_data;
         match &self.reply_fn {
             Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
-            None => bail!("reply not implemented for contract"),
+            None => bail!("reply is not implemented for contract"),
         }
     }
 
-    // this returns an error if the contract doesn't implement migrate
+    /// Calls [migrate] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [migrate].
+    ///
+    /// [migrate]: Contract::migrate
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
             Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
-            None => bail!("migrate not implemented for contract"),
+            None => bail!("migrate is not implemented for contract"),
         }
     }
 }
