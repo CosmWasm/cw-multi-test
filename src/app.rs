@@ -551,7 +551,7 @@ impl From<StakingSudo> for SudoMsg {
 /// correct destinations during testing, simulating real-world blockchain operations.
 pub trait CosmosRouter {
     /// Type of the executed custom message.
-    type ExecC;
+    type ExecC: CustomMsg;
     /// Type of the query custom message.
     type QueryC: CustomQuery;
 
@@ -683,6 +683,7 @@ impl<ExecC, QueryC> MockRouter<ExecC, QueryC> {
 
 impl<ExecC, QueryC> CosmosRouter for MockRouter<ExecC, QueryC>
 where
+    ExecC: CustomMsg,
     QueryC: CustomQuery,
 {
     type ExecC = ExecC;
