@@ -1,4 +1,4 @@
-//! # Implementation of address generators
+//! # Implementation of address conversions and generators
 
 use crate::error::AnyResult;
 use crate::{MockApiBech32, MockApiBech32m};
@@ -21,10 +21,12 @@ pub trait IntoAddr {
 }
 
 impl IntoAddr for &str {
+    /// Converts [&str] into [Addr].
     fn into_addr(self) -> Addr {
         MockApiBech32::new(DEFAULT_PREFIX).addr_make(self)
     }
 
+    /// Converts [&str] into [Addr] with custom prefix.
     fn into_addr_with_prefix(self, prefix: &'static str) -> Addr {
         MockApiBech32::new(prefix).addr_make(self)
     }
@@ -40,10 +42,12 @@ pub trait IntoBech32 {
 }
 
 impl IntoBech32 for &str {
+    /// Converts [&str] into [Addr] containing a string compatible with `Bech32` format with default prefix.
     fn into_bech32(self) -> Addr {
         MockApiBech32::new(DEFAULT_PREFIX).addr_make(self)
     }
 
+    /// Converts [&str] into [Addr] containing a string compatible with `Bech32` format with custom prefix.
     fn into_bech32_with_prefix(self, prefix: &'static str) -> Addr {
         MockApiBech32::new(prefix).addr_make(self)
     }
@@ -58,10 +62,12 @@ pub trait IntoBech32m {
 }
 
 impl IntoBech32m for &str {
+    /// Converts [&str] into [Addr] containing a string compatible with `Bech32m` format with default prefix.
     fn into_bech32m(self) -> Addr {
         MockApiBech32m::new(DEFAULT_PREFIX).addr_make(self)
     }
 
+    /// Converts [&str] into [Addr] containing a string compatible with `Bech32m` format with custom prefix.
     fn into_bech32m_with_prefix(self, prefix: &'static str) -> Addr {
         MockApiBech32m::new(prefix).addr_make(self)
     }
