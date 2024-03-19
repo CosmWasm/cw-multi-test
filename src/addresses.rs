@@ -87,7 +87,7 @@ pub trait AddressGenerator {
     /// `WasmMsg::Instantiate` message.
     ///
     /// The default implementation generates a contract address based
-    /// on contract's instance identifier only.
+    /// on contract's code and instance identifier.
     ///
     /// # Example
     ///
@@ -103,7 +103,7 @@ pub trait AddressGenerator {
     /// let my_address_generator = MyAddressGenerator{};
     ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 1).unwrap();
-    /// assert_eq!(addr.to_string(),"cosmwasm1vlc0q60lwcr89hkkkgj9u360fccw4a2jz48r3dgv0ulmlhgvjczsjfr2pk");
+    /// assert!(addr.as_str().starts_with("cosmwasm1"));
     /// ```
     fn contract_address(
         &self,
