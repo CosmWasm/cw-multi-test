@@ -136,19 +136,19 @@ pub struct ContractWrapper<
     T6 = Empty,
     E6 = AnyError,
 > where
-    T1: DeserializeOwned + 'static, // Type of message passed to `execute` entry-point.
-    T2: DeserializeOwned + 'static, // Type of message passed to `instantiate` entry-point.
-    T3: DeserializeOwned + 'static, // Type of message passed to `query` entry-point.
-    T4: DeserializeOwned + 'static, // Type of message passed to `sudo` entry-point.
-    T6: DeserializeOwned + 'static, // Type of message passed to `migrate` entry-point.
-    E1: Display + Debug + Send + Sync + 'static, // Type of error returned from `execute` entry-point.
-    E2: Display + Debug + Send + Sync + 'static, // Type of error returned from `instantiate` entry-point.
-    E3: Display + Debug + Send + Sync + 'static, // Type of error returned from `query` entry-point.
-    E4: Display + Debug + Send + Sync + 'static, // Type of error returned from `sudo` entry-point.
-    E5: Display + Debug + Send + Sync + 'static, // Type of error returned from `reply` entry-point.
-    E6: Display + Debug + Send + Sync + 'static, // Type of error returned from `migrate` entry-point.
-    C: CustomMsg + 'static, // Type of custom message returned from all entry-points except `query`.
-    Q: CustomQuery + DeserializeOwned + 'static, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
+    T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
+    T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
+    T3: DeserializeOwned, // Type of message passed to `query` entry-point.
+    T4: DeserializeOwned, // Type of message passed to `sudo` entry-point.
+    T6: DeserializeOwned, // Type of message passed to `migrate` entry-point.
+    E1: Display + Debug + Send + Sync, // Type of error returned from `execute` entry-point.
+    E2: Display + Debug + Send + Sync, // Type of error returned from `instantiate` entry-point.
+    E3: Display + Debug + Send + Sync, // Type of error returned from `query` entry-point.
+    E4: Display + Debug + Send + Sync, // Type of error returned from `sudo` entry-point.
+    E5: Display + Debug + Send + Sync, // Type of error returned from `reply` entry-point.
+    E6: Display + Debug + Send + Sync, // Type of error returned from `migrate` entry-point.
+    C: CustomMsg,         // Type of custom message returned from all entry-points except `query`.
+    Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
     execute_fn: ContractClosure<T1, C, E1, Q>,
     instantiate_fn: ContractClosure<T2, C, E2, Q>,
@@ -207,17 +207,17 @@ where
 impl<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
     ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
 where
-    T1: DeserializeOwned + 'static, // Type of message passed to `execute` entry-point.
-    T2: DeserializeOwned + 'static, // Type of message passed to `instantiate` entry-point.
-    T3: DeserializeOwned + 'static, // Type of message passed to `query` entry-point.
-    T4: DeserializeOwned + 'static, // Type of message passed to `sudo` entry-point.
-    T6: DeserializeOwned + 'static, // Type of message passed to `migrate` entry-point.
-    E1: Display + Debug + Send + Sync + 'static, // Type of error returned from `execute` entry-point.
-    E2: Display + Debug + Send + Sync + 'static, // Type of error returned from `instantiate` entry-point.
-    E3: Display + Debug + Send + Sync + 'static, // Type of error returned from `query` entry-point.
-    E4: Display + Debug + Send + Sync + 'static, // Type of error returned from `sudo` entry-point.
-    E5: Display + Debug + Send + Sync + 'static, // Type of error returned from `reply` entry-point.
-    E6: Display + Debug + Send + Sync + 'static, // Type of error returned from `migrate` entry-point.
+    T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
+    T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
+    T3: DeserializeOwned, // Type of message passed to `query` entry-point.
+    T4: DeserializeOwned, // Type of message passed to `sudo` entry-point.
+    T6: DeserializeOwned, // Type of message passed to `migrate` entry-point.
+    E1: Display + Debug + Send + Sync, // Type of error returned from `execute` entry-point.
+    E2: Display + Debug + Send + Sync, // Type of error returned from `instantiate` entry-point.
+    E3: Display + Debug + Send + Sync, // Type of error returned from `query` entry-point.
+    E4: Display + Debug + Send + Sync, // Type of error returned from `sudo` entry-point.
+    E5: Display + Debug + Send + Sync, // Type of error returned from `reply` entry-point.
+    E6: Display + Debug + Send + Sync, // Type of error returned from `migrate` entry-point.
     C: CustomMsg + 'static, // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned + 'static, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
@@ -340,8 +340,8 @@ fn customize_contract_fn<T, C, E, Q>(
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    C: CustomMsg + 'static,
-    Q: CustomQuery + DeserializeOwned + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
 {
     Box::new(
         move |mut deps: DepsMut<Q>,
@@ -359,7 +359,7 @@ fn customize_query_fn<T, E, Q>(raw_fn: QueryFn<T, E, Empty>) -> QueryClosure<T, 
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    Q: CustomQuery + DeserializeOwned + 'static,
+    Q: CustomQuery + DeserializeOwned,
 {
     Box::new(
         move |deps: Deps<Q>, env: Env, msg: T| -> Result<Binary, E> {
@@ -375,8 +375,8 @@ fn customize_permissioned_fn<T, C, E, Q>(
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
-    C: CustomMsg + 'static,
-    Q: CustomQuery + DeserializeOwned + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
 {
     Box::new(
         move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
@@ -388,7 +388,7 @@ where
 
 fn decustomize_deps_mut<'a, Q>(deps: &'a mut DepsMut<Q>) -> DepsMut<'a, Empty>
 where
-    Q: CustomQuery + DeserializeOwned + 'static,
+    Q: CustomQuery + DeserializeOwned,
 {
     DepsMut {
         storage: deps.storage,
@@ -399,7 +399,7 @@ where
 
 fn decustomize_deps<'a, Q>(deps: &'a Deps<'a, Q>) -> Deps<'a, Empty>
 where
-    Q: CustomQuery + DeserializeOwned + 'static,
+    Q: CustomQuery + DeserializeOwned,
 {
     Deps {
         storage: deps.storage,
@@ -444,19 +444,19 @@ where
 impl<T1, T2, T3, E1, E2, E3, C, T4, E4, E5, T6, E6, Q> Contract<C, Q>
     for ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
 where
-    T1: DeserializeOwned + 'static, // Type of message passed to `execute` entry-point.
-    T2: DeserializeOwned + 'static, // Type of message passed to `instantiate` entry-point.
-    T3: DeserializeOwned + 'static, // Type of message passed to `query` entry-point.
-    T4: DeserializeOwned + 'static, // Type of message passed to `sudo` entry-point.
-    T6: DeserializeOwned + 'static, // Type of message passed to `migrate` entry-point.
+    T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
+    T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
+    T3: DeserializeOwned, // Type of message passed to `query` entry-point.
+    T4: DeserializeOwned, // Type of message passed to `sudo` entry-point.
+    T6: DeserializeOwned, // Type of message passed to `migrate` entry-point.
     E1: Display + Debug + Send + Sync + 'static, // Type of error returned from `execute` entry-point.
     E2: Display + Debug + Send + Sync + 'static, // Type of error returned from `instantiate` entry-point.
     E3: Display + Debug + Send + Sync + 'static, // Type of error returned from `query` entry-point.
     E4: Display + Debug + Send + Sync + 'static, // Type of error returned from `sudo` entry-point.
     E5: Display + Debug + Send + Sync + 'static, // Type of error returned from `reply` entry-point.
     E6: Display + Debug + Send + Sync + 'static, // Type of error returned from `migrate` entry-point.
-    C: CustomMsg + 'static, // Type of custom message returned from all entry-points except `query`.
-    Q: CustomQuery + DeserializeOwned + 'static, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
+    C: CustomMsg, // Type of custom message returned from all entry-points except `query`.
+    Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
     /// Calls [execute] on wrapped [Contract] trait implementor.
     ///
