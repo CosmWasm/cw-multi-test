@@ -108,7 +108,7 @@ use closures::*;
 ///             Q >──┘           │                      │          └──> E1,E2,E3,E4,E5,E6
 ///    T1,T2,T3,T4,Reply,T6 >────┘                      └─────────────> C,Binary
 /// ```
-/// Generic type **C** defines a custom message that specific for the **whole blockchain**.
+/// Generic type **C** defines a custom message that is specific for the **whole blockchain**.
 /// Similarly, the generic type **Q** defines a custom query that is also specific
 /// to the **whole blockchain**. Other generic types a specific to the implemented contract.
 /// So all smart contracts used in the same blockchain will have the same types for **C** and **Q**,
