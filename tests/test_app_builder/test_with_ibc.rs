@@ -18,11 +18,14 @@ fn building_app_with_custom_ibc_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_ibc(ibc_keeper).build(no_init);
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     // executing ibc message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            app.api().addr_make("sender"),
+            sender_addr,
             IbcMsg::CloseChannel {
                 channel_id: "my-channel".to_string()
             }

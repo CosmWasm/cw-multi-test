@@ -10,7 +10,7 @@ fn instantiate(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> St
 fn execute(_deps: DepsMut, _env: Env, _info: MessageInfo, _msg: Empty) -> StdResult<Response> {
     let msg: CosmosMsg = GovMsg::Vote {
         proposal_id: 1,
-        vote: cosmwasm_std::VoteOption::No,
+        option: cosmwasm_std::VoteOption::No,
     }
     .into();
     let resp = Response::new().add_message(msg);

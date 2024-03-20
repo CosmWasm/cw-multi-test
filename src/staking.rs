@@ -115,11 +115,6 @@ pub enum StakingSudo {
         /// Percentage of the validator's stake.
         percentage: Decimal,
     },
-    /// Causes the unbonding queue to be processed.
-    /// This needs to be triggered manually, since there is no good place to do this right now.
-    /// In cosmos-sdk, this is done in `EndBlock`, but we don't have that here.
-    #[deprecated(note = "This is not needed anymore. Just call `update_block`")]
-    ProcessQueue {},
 }
 
 /// A trait defining a behavior of the stake keeper.
@@ -132,11 +127,13 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
     /// If you're implementing a dummy staking module, this can be a no-op.
     fn process_queue<ExecC: CustomMsg, QueryC: CustomQuery>(
         &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-    ) -> AnyResult<AppResponse>;
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+    ) -> AnyResult<AppResponse> {
+        Ok(AppResponse::default())
+    }
 }
 
 /// A trait defining a behavior of the distribution keeper.
@@ -764,25 +761,24 @@ impl Module for StakeKeeper {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
 
-                let res: AnyResult<Vec<Delegation>> = validators
-                    .into_iter()
-                    .filter_map(|validator| {
-                        let delegator = delegator.clone();
-                        let amount = self
-                            .get_stake(
-                                &staking_storage,
-                                &delegator,
-                                &Addr::unchecked(&validator.address),
-                            )
-                            .transpose()?;
+                let res: AnyResult<Vec<Delegation>> =
+                    validators
+                        .into_iter()
+                        .filter_map(|validator| {
+                            let delegator = delegator.clone();
+                            let amount = self
+                                .get_stake(
+                                    &staking_storage,
+                                    &delegator,
+                                    &Addr::unchecked(&validator.address),
+                                )
+                                .transpose()?;
 
-                        Some(amount.map(|amount| Delegation {
-                            delegator,
-                            validator: validator.address,
-                            amount,
-                        }))
-                    })
-                    .collect();
+                            Some(amount.map(|amount| {
+                                Delegation::new(delegator, validator.address, amount)
+                            }))
+                        })
+                        .collect();
 
                 Ok(to_json_binary(&AllDelegationsResponse::new(res?))?)
             }
@@ -820,17 +816,17 @@ impl Module for StakeKeeper {
                     // no delegation
                     DelegationResponse::new(None)
                 } else {
-                    DelegationResponse::new(Some(FullDelegation {
+                    DelegationResponse::new(Some(FullDelegation::new(
                         delegator,
                         validator,
-                        amount: amount.clone(),
-                        can_redelegate: amount, // TODO: not implemented right now
-                        accumulated_rewards: if reward.amount.is_zero() {
+                        amount.clone(),
+                        amount, // TODO: not implemented right now
+                        if reward.amount.is_zero() {
                             vec![]
                         } else {
                             vec![reward]
                         },
-                    }))
+                    )))
                 };
 
                 let res = to_json_binary(&full_delegation_response)?;
@@ -850,7 +846,7 @@ impl Module for StakeKeeper {
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
         msg: StakingSudo,
     ) -> AnyResult<AppResponse> {
@@ -865,8 +861,6 @@ impl Module for StakeKeeper {
                 self.slash(api, &mut staking_storage, block, &validator, percentage)?;
                 Ok(AppResponse::default())
             }
-            #[allow(deprecated)]
-            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
         }
     }
 }
@@ -923,16 +917,16 @@ impl DistributionKeeper {
     pub fn set_withdraw_address(
         storage: &mut dyn Storage,
         delegator: &Addr,
-        withdraw_address: &Addr,
+        withdraw_addr: &Addr,
     ) -> AnyResult<()> {
-        if delegator == withdraw_address {
+        if delegator == withdraw_addr {
             WITHDRAW_ADDRESS.remove(storage, delegator);
             Ok(())
         } else {
             // technically we should require that this address is not
             // the address of a module. TODO: how?
             WITHDRAW_ADDRESS
-                .save(storage, delegator, withdraw_address)
+                .save(storage, delegator, withdraw_addr)
                 .map_err(|e| e.into())
         }
     }
@@ -1075,7 +1069,7 @@ mod test {
         let mut store = MockStorage::new();
         let block = mock_env().block;
 
-        let validator = api.addr_validate("testvaloper1").unwrap();
+        let validator_addr = api.addr_make("testvaloper1");
 
         router
             .staking
@@ -1090,18 +1084,18 @@ mod test {
             .unwrap();
 
         // add validator
-        let valoper1 = Validator {
-            address: "testvaloper1".to_string(),
-            commission: validator_commission,
-            max_commission: Decimal::percent(100),
-            max_change_rate: Decimal::percent(1),
-        };
+        let valoper1 = Validator::new(
+            validator_addr.to_string(),
+            validator_commission,
+            Decimal::percent(100),
+            Decimal::percent(1),
+        );
         router
             .staking
             .add_validator(&api, &mut store, &block, valoper1)
             .unwrap();
 
-        (api, store, router, block, validator)
+        (api, store, router, block, validator_addr)
     }
 
     #[test]
@@ -1111,49 +1105,45 @@ mod test {
         let stake = StakeKeeper::default();
         let block = mock_env().block;
 
+        let validator_addr = api.addr_make("test-validator");
+
         // add validator
-        let valoper1 = Validator {
-            address: "testvaloper1".to_string(),
-            commission: Decimal::percent(10),
-            max_commission: Decimal::percent(20),
-            max_change_rate: Decimal::percent(1),
-        };
+        let validator = Validator::new(
+            validator_addr.to_string(),
+            Decimal::percent(10),
+            Decimal::percent(20),
+            Decimal::percent(1),
+        );
         stake
-            .add_validator(&api, &mut store, &block, valoper1.clone())
+            .add_validator(&api, &mut store, &block, validator.clone())
             .unwrap();
 
         // get it
         let staking_storage = prefixed_read(&store, NAMESPACE_STAKING);
         let val = stake
-            .get_validator(
-                &staking_storage,
-                &api.addr_validate("testvaloper1").unwrap(),
-            )
+            .get_validator(&staking_storage, &validator_addr)
             .unwrap()
             .unwrap();
-        assert_eq!(val, valoper1);
+        assert_eq!(val, validator);
 
         // try to add with same address
-        let valoper1_fake = Validator {
-            address: "testvaloper1".to_string(),
-            commission: Decimal::percent(1),
-            max_commission: Decimal::percent(10),
-            max_change_rate: Decimal::percent(100),
-        };
+        let validator_fake = Validator::new(
+            validator_addr.to_string(),
+            Decimal::percent(1),
+            Decimal::percent(10),
+            Decimal::percent(100),
+        );
         stake
-            .add_validator(&api, &mut store, &block, valoper1_fake)
+            .add_validator(&api, &mut store, &block, validator_fake)
             .unwrap_err();
 
         // should still be original value
         let staking_storage = prefixed_read(&store, NAMESPACE_STAKING);
         let val = stake
-            .get_validator(
-                &staking_storage,
-                &api.addr_validate("testvaloper1").unwrap(),
-            )
+            .get_validator(&staking_storage, &validator_addr)
             .unwrap()
             .unwrap();
-        assert_eq!(val, valoper1);
+        assert_eq!(val, validator);
     }
 
     #[test]
@@ -1164,16 +1154,16 @@ mod test {
         let stake = StakeKeeper::new();
         let block = mock_env().block;
 
-        let delegator = api.addr_make("delegator");
-        let validator = api.addr_make("testvaloper1");
+        let delegator_addr = api.addr_make("delegator");
+        let validator_addr = api.addr_make("testvaloper1");
 
         // add validator
-        let valoper1 = Validator {
-            address: validator.to_string(),
-            commission: Decimal::percent(10),
-            max_commission: Decimal::percent(20),
-            max_change_rate: Decimal::percent(1),
-        };
+        let valoper1 = Validator::new(
+            validator_addr.to_string(),
+            Decimal::percent(10),
+            Decimal::percent(20),
+            Decimal::percent(1),
+        );
         stake
             .add_validator(&api, &mut store, &block, valoper1)
             .unwrap();
@@ -1185,8 +1175,8 @@ mod test {
                 &api,
                 &mut staking_storage,
                 &block,
-                &delegator,
-                &validator,
+                &delegator_addr,
+                &validator_addr,
                 coin(100, "TOKEN"),
             )
             .unwrap();
@@ -1199,7 +1189,7 @@ mod test {
                 &router,
                 &block,
                 StakingSudo::Slash {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                     percentage: Decimal::percent(50),
                 },
             )
@@ -1208,7 +1198,7 @@ mod test {
         // check stake
         let staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
         let stake_left = stake
-            .get_stake(&staking_storage, &delegator, &validator)
+            .get_stake(&staking_storage, &delegator_addr, &validator_addr)
             .unwrap();
         assert_eq!(
             stake_left.unwrap().amount.u128(),
@@ -1224,7 +1214,7 @@ mod test {
                 &router,
                 &block,
                 StakingSudo::Slash {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                     percentage: Decimal::percent(100),
                 },
             )
@@ -1233,18 +1223,18 @@ mod test {
         // check stake
         let staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
         let stake_left = stake
-            .get_stake(&staking_storage, &delegator, &validator)
+            .get_stake(&staking_storage, &delegator_addr, &validator_addr)
             .unwrap();
         assert_eq!(stake_left, None, "should have slashed whole stake");
     }
 
     #[test]
     fn rewards_work_for_single_delegator() {
-        let (api, mut store, router, mut block, validator) =
+        let (api, mut store, router, mut block, validator_addr) =
             setup_test_env(Decimal::percent(10), Decimal::percent(10));
         let stake = &router.staking;
         let distr = &router.distribution;
-        let delegator = api.addr_make("delegator");
+        let delegator_addr = api.addr_make("delegator");
 
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
         // stake 200 tokens
@@ -1253,8 +1243,8 @@ mod test {
                 &api,
                 &mut staking_storage,
                 &block,
-                &delegator,
-                &validator,
+                &delegator_addr,
+                &validator_addr,
                 coin(200, "TOKEN"),
             )
             .unwrap();
@@ -1264,7 +1254,7 @@ mod test {
 
         // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
         let rewards = stake
-            .get_rewards(&store, &block, &delegator, &validator)
+            .get_rewards(&store, &block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9, "should have 9 tokens reward");
@@ -1276,16 +1266,16 @@ mod test {
                 &mut store,
                 &router,
                 &block,
-                delegator.clone(),
+                delegator_addr.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                 },
             )
             .unwrap();
 
         // should have no rewards left
         let rewards = stake
-            .get_rewards(&store, &block, &delegator, &validator)
+            .get_rewards(&store, &block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 0);
@@ -1294,7 +1284,7 @@ mod test {
         block.time = block.time.plus_seconds(60 * 60 * 24 * 365 / 2);
         // should now have 9 tokens again
         let rewards = stake
-            .get_rewards(&store, &block, &delegator, &validator)
+            .get_rewards(&store, &block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9);
@@ -1572,12 +1562,12 @@ mod test {
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.block,
-                    Validator {
-                        address: validator2.to_string(),
-                        commission: Decimal::zero(),
-                        max_commission: Decimal::percent(20),
-                        max_change_rate: Decimal::percent(1),
-                    },
+                    Validator::new(
+                        validator2.to_string(),
+                        Decimal::zero(),
+                        Decimal::percent(20),
+                        Decimal::percent(1),
+                    ),
                 )
                 .unwrap();
 
@@ -1649,11 +1639,11 @@ mod test {
             .unwrap();
             assert_eq!(
                 delegations.delegations,
-                [Delegation {
-                    delegator: delegator1.clone(),
-                    validator: validator2.to_string(),
-                    amount: coin(100, "TOKEN"),
-                }]
+                [Delegation::new(
+                    delegator1.clone(),
+                    validator2.to_string(),
+                    coin(100, "TOKEN"),
+                )]
             );
 
             // undelegate all tokens
@@ -1813,12 +1803,12 @@ mod test {
                     &test_env.api,
                     &mut test_env.store,
                     &test_env.block,
-                    Validator {
-                        address: validator2.to_string(),
-                        commission: Decimal::zero(),
-                        max_commission: Decimal::percent(20),
-                        max_change_rate: Decimal::percent(1),
-                    },
+                    Validator::new(
+                        validator2.to_string(),
+                        Decimal::zero(),
+                        Decimal::percent(20),
+                        Decimal::percent(1),
+                    ),
                 )
                 .unwrap();
 
@@ -1853,24 +1843,28 @@ mod test {
 
         #[test]
         fn denom_validation() {
-            let (mut test_env, validator) =
+            let (mut test_env, validator_addr) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = test_env.api.addr_make("delegator1");
+            let delegator_addr = test_env.api.addr_make("delegator");
 
             // fund delegator1 account
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "FAKE")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator_addr,
+                    vec![coin(100, "FAKE")],
+                )
                 .unwrap();
 
-            // try to delegate 100 to validator1
+            // try to delegate 100 to validator
             let e = execute_stake(
                 &mut test_env,
-                delegator1.clone(),
+                delegator_addr.clone(),
                 StakingMsg::Delegate {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                     amount: coin(100, "FAKE"),
                 },
             )
@@ -1887,13 +1881,14 @@ mod test {
             let (mut test_env, _) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = test_env.api.addr_make("delegator1");
+            let delegator = test_env.api.addr_make("delegator");
+            let non_existing_validator = test_env.api.addr_make("nonexistingvaloper");
 
             // fund delegator1 account
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "FAKE")])
+                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "FAKE")])
                 .unwrap();
 
             // try to delegate 100 to validator1
@@ -1906,7 +1901,7 @@ mod test {
                     &test_env.router,
                     &test_env.block,
                     StakingSudo::Slash {
-                        validator: "nonexistingvaloper".to_string(),
+                        validator: non_existing_validator.to_string(),
                         percentage: Decimal::percent(50),
                     },
                 )
@@ -1959,12 +1954,12 @@ mod test {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator = test_env.api.addr_make("delegator1");
+            let delegator_addr = test_env.api.addr_make("delegator");
 
             // delegate 0
             let err = execute_stake(
                 &mut test_env,
-                delegator.clone(),
+                delegator_addr.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
                     amount: coin(0, "TOKEN"),
@@ -1976,7 +1971,7 @@ mod test {
             // undelegate 0
             let err = execute_stake(
                 &mut test_env,
-                delegator,
+                delegator_addr,
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
                     amount: coin(0, "TOKEN"),
@@ -1993,6 +1988,8 @@ mod test {
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
             let delegator1 = test_env.api.addr_make("delegator1");
             let delegator2 = test_env.api.addr_make("delegator2");
+            let validator2 = test_env.api.addr_make("testvaloper2");
+            let not_validator = test_env.api.addr_make("notvaloper");
 
             // init balances
             test_env
@@ -2007,13 +2004,12 @@ mod test {
                 .unwrap();
 
             // add another validator
-            let validator2 = test_env.api.addr_validate("testvaloper2").unwrap();
-            let valoper2 = Validator {
-                address: "testvaloper2".to_string(),
-                commission: Decimal::percent(0),
-                max_commission: Decimal::percent(1),
-                max_change_rate: Decimal::percent(1),
-            };
+            let valoper2 = Validator::new(
+                validator2.to_string(),
+                Decimal::percent(0),
+                Decimal::percent(1),
+                Decimal::percent(1),
+            );
             test_env
                 .router
                 .staking
@@ -2043,7 +2039,7 @@ mod test {
             let response = query_stake::<ValidatorResponse>(
                 &test_env,
                 StakingQuery::Validator {
-                    address: "notvaloper".to_string(),
+                    address: not_validator.to_string(),
                 },
             )
             .unwrap();
@@ -2113,16 +2109,16 @@ mod test {
             assert_eq!(
                 response1.delegations,
                 vec![
-                    Delegation {
-                        delegator: delegator1.clone(),
-                        validator: validator1.to_string(),
-                        amount: coin(50, "TOKEN"),
-                    },
-                    Delegation {
-                        delegator: delegator1.clone(),
-                        validator: validator2.to_string(),
-                        amount: coin(160, "TOKEN"),
-                    },
+                    Delegation::new(
+                        delegator1.clone(),
+                        validator1.to_string(),
+                        coin(50, "TOKEN"),
+                    ),
+                    Delegation::new(
+                        delegator1.clone(),
+                        validator2.to_string(),
+                        coin(160, "TOKEN"),
+                    ),
                 ]
             );
             let response2: DelegationResponse = query_stake(
@@ -2135,13 +2131,13 @@ mod test {
             .unwrap();
             assert_eq!(
                 response2.delegation.unwrap(),
-                FullDelegation {
-                    delegator: delegator2.clone(),
-                    validator: validator1.to_string(),
-                    amount: coin(100, "TOKEN"),
-                    accumulated_rewards: vec![],
-                    can_redelegate: coin(100, "TOKEN"),
-                },
+                FullDelegation::new(
+                    delegator2.clone(),
+                    validator1.to_string(),
+                    coin(100, "TOKEN"),
+                    coin(100, "TOKEN"),
+                    vec![],
+                ),
             );
         }
 
@@ -2215,11 +2211,11 @@ mod test {
             .unwrap();
             assert_eq!(
                 response1.delegations,
-                vec![Delegation {
-                    delegator: delegator1.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
-                }]
+                vec![Delegation::new(
+                    delegator1.clone(),
+                    validator.to_string(),
+                    coin(50, "TOKEN"),
+                )]
             );
             let response2: DelegationResponse = query_stake(
                 &test_env,
@@ -2443,7 +2439,7 @@ mod test {
                     &test_env.router,
                     &test_env.block,
                     StakingSudo::Slash {
-                        validator: "testvaloper1".to_string(),
+                        validator: validator.to_string(),
                         percentage: Decimal::percent(50),
                     },
                 )
@@ -2459,11 +2455,7 @@ mod test {
             .unwrap();
             assert_eq!(
                 response1.delegations[0],
-                Delegation {
-                    delegator: delegator.clone(),
-                    validator: validator.to_string(),
-                    amount: coin(111, "TOKEN"),
-                }
+                Delegation::new(delegator.clone(), validator.to_string(), coin(111, "TOKEN"),)
             );
 
             // wait until unbonding is complete and check if amount was slashed

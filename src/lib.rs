@@ -146,8 +146,7 @@ mod transactions;
 mod wasm;
 
 pub use crate::addresses::{
-    AddressGenerator, IntoAddr, IntoBech32, IntoBech32m, MockAddressGenerator,
-    SimpleAddressGenerator,
+    AddressGenerator, IntoAddr, IntoBech32, IntoBech32m, SimpleAddressGenerator,
 };
 pub use crate::api::{MockApiBech32, MockApiBech32m};
 pub use crate::app::{
@@ -164,7 +163,5 @@ pub use crate::module::{AcceptingModule, FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
-pub use crate::stargate::{
-    Stargate, StargateAcceptingModule, StargateFailingModule, StargateMsg, StargateQuery,
-};
+pub use crate::stargate::{Stargate, StargateAcceptingModule, StargateFailingModule};
 pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};

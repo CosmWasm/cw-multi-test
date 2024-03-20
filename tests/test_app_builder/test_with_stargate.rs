@@ -1,11 +1,10 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
-use cosmwasm_std::{to_json_vec, CosmosMsg, Empty, QueryRequest};
+use cosmwasm_std::{to_json_vec, AnyMsg, CosmosMsg, Empty, GrpcQuery, QueryRequest};
 use cw_multi_test::{
     no_init, AppBuilder, Executor, Stargate, StargateAcceptingModule, StargateFailingModule,
-    StargateMsg, StargateQuery,
 };
 
-type MyStargateKeeper = MyKeeper<StargateMsg, StargateQuery, Empty>;
+type MyStargateKeeper = MyKeeper<AnyMsg, GrpcQuery, Empty>;
 
 impl Stargate for MyStargateKeeper {}
 
@@ -21,15 +20,18 @@ fn building_app_with_custom_stargate_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_stargate(stargate_keeper).build(no_init);
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     // executing stargate message should return
     // an error defined in custom stargate keeper
     assert_eq!(
         app.execute(
-            app.api().addr_make("sender"),
-            CosmosMsg::Stargate {
+            sender_addr,
+            CosmosMsg::Any(AnyMsg {
                 type_url: "test".to_string(),
                 value: Default::default()
-            },
+            }),
         )
         .unwrap_err()
         .to_string(),
@@ -38,10 +40,10 @@ fn building_app_with_custom_stargate_should_work() {
 
     // executing stargate query should return
     // an error defined in custom stargate keeper
-    let query: QueryRequest<Empty> = QueryRequest::Stargate {
+    let query: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
         path: "test".to_string(),
         data: Default::default(),
-    };
+    });
     assert_eq!(
         app.wrap()
             .raw_query(to_json_vec(&query).unwrap().as_slice())
@@ -58,21 +60,24 @@ fn building_app_with_accepting_stargate_should_work() {
         .with_stargate(StargateAcceptingModule::new())
         .build(no_init);
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     app.execute(
-        app.api().addr_make("sender"),
-        CosmosMsg::Stargate {
+        sender_addr,
+        CosmosMsg::Any(AnyMsg {
             type_url: "test".to_string(),
             value: Default::default(),
-        },
+        }),
     )
     .unwrap();
 
     let _ = app
         .wrap()
-        .query::<Empty>(&QueryRequest::Stargate {
+        .query::<Empty>(&QueryRequest::Grpc(GrpcQuery {
             path: "test".to_string(),
             data: Default::default(),
-        })
+        }))
         .is_ok();
 }
 
@@ -83,20 +88,23 @@ fn building_app_with_failing_stargate_should_work() {
         .with_stargate(StargateFailingModule::new())
         .build(no_init);
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     app.execute(
-        app.api().addr_make("sender"),
-        CosmosMsg::Stargate {
+        sender_addr,
+        CosmosMsg::Any(AnyMsg {
             type_url: "test".to_string(),
             value: Default::default(),
-        },
+        }),
     )
     .unwrap_err();
 
     let _ = app
         .wrap()
-        .query::<Empty>(&QueryRequest::Stargate {
+        .query::<Empty>(&QueryRequest::Grpc(GrpcQuery {
             path: "test".to_string(),
             data: Default::default(),
-        })
+        }))
         .unwrap_err();
 }

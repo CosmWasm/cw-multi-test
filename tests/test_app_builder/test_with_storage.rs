@@ -45,7 +45,8 @@ fn building_app_with_custom_storage_should_work() {
         .with_storage(MyStorage::default())
         .build(no_init);
 
-    let owner = app.api().addr_make("owner");
+    // prepare user addresses
+    let owner_addr = app.api().addr_make("owner");
 
     // store a contract code
     let code_id = app.store_code(test_contracts::counter::contract());
@@ -54,7 +55,7 @@ fn building_app_with_custom_storage_should_work() {
     let contract_addr = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &WasmMsg::Instantiate {
                 admin: admin.clone(),
                 code_id,
@@ -70,7 +71,7 @@ fn building_app_with_custom_storage_should_work() {
 
     // execute contract, this increments a counter
     app.execute_contract(
-        owner,
+        owner_addr,
         contract_addr.clone(),
         &WasmMsg::Execute {
             contract_addr: contract_addr.clone().into(),

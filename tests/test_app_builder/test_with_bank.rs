@@ -19,17 +19,20 @@ fn building_app_with_custom_bank_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_bank(bank_keeper).build(no_init);
 
+    // prepare user addresses
+    let recipient_addr = app.api().addr_make("recipient");
+    let sender_addr = app.api().addr_make("sender");
+
     // prepare additional input data
-    let recipient = app.api().addr_make("recipient");
     let denom = "eth";
 
     // executing bank message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            app.api().addr_make("sender"),
+            sender_addr,
             BankMsg::Send {
-                to_address: recipient.clone().into(),
+                to_address: recipient_addr.clone().into(),
                 amount: coins(1, denom),
             }
             .into(),
@@ -43,7 +46,7 @@ fn building_app_with_custom_bank_should_work() {
         SUDO_MSG,
         app.sudo(
             BankSudo::Mint {
-                to_address: recipient.clone().into(),
+                to_address: recipient_addr.clone().into(),
                 amount: vec![],
             }
             .into()
@@ -56,7 +59,7 @@ fn building_app_with_custom_bank_should_work() {
     assert_eq!(
         format!("Generic error: Querier contract error: {}", QUERY_MSG),
         app.wrap()
-            .query_balance(recipient, denom)
+            .query_balance(recipient_addr, denom)
             .unwrap_err()
             .to_string()
     );

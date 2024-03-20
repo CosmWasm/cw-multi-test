@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "1.0.0-rc.2"
+version = "2.0.0-rc.2"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
 description = "Testing tools for multi-contract interactions"
 repository = "https://github.com/CosmWasm/cw-multi-test"
@@ -9,19 +9,16 @@ license = "Apache-2.0"
 edition = "2021"
 
 [features]
-default = []
+default = ["cosmwasm_2_0"]
 backtrace = ["anyhow/backtrace"]
-cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
-cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
-cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
-cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
+cosmwasm_2_0 = ["cosmwasm-std/cosmwasm_2_0"]
 
 [dependencies]
 anyhow = "1.0.81"
 bech32 = "0.11.0"
-cosmwasm-std = { version = "1.5.3", features = ["iterator", "staking", "stargate"] }
-cw-storage-plus = "1.2.0"
-cw-utils = "1.0.3"
+cosmwasm-std = { version = "2.0.0", features = ["iterator", "staking", "stargate"] }
+cw-storage-plus = "2.0.0"
+cw-utils = "2.0.0"
 derivative = "2.2.0"
 itertools = "0.12.1"
 prost = "0.12.3"

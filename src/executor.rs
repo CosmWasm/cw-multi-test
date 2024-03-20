@@ -58,6 +58,7 @@ impl AppResponse {
 impl From<SubMsgResponse> for AppResponse {
     fn from(reply: SubMsgResponse) -> Self {
         AppResponse {
+            #[allow(deprecated)]
             data: reply.data,
             events: reply.events,
         }
@@ -106,7 +107,6 @@ where
     /// Instantiates a new contract and returns its predictable address.
     /// This is a helper function around [execute][Self::execute] function
     /// with `WasmMsg::Instantiate2` message.
-    #[cfg(feature = "cosmwasm_1_2")]
     fn instantiate2_contract<M, L, A, S>(
         &mut self,
         code_id: u64,
