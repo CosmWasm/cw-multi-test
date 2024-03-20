@@ -257,7 +257,7 @@ fn simple_contract() {
     let msg = payout::InstantiateMessage {
         payout: coin(5, "eth"),
     };
-    let contract_address = app
+    let contract_addr = app
         .instantiate_contract(
             code_id,
             owner_addr.clone(),
@@ -268,7 +268,7 @@ fn simple_contract() {
         )
         .unwrap();
 
-    let contract_data = app.contract_data(&contract_address).unwrap();
+    let contract_data = app.contract_data(&contract_addr).unwrap();
     assert_eq!(
         contract_data,
         ContractData {
@@ -284,22 +284,17 @@ fn simple_contract() {
     let sender = get_balance(&app, &owner_addr);
     assert_eq!(sender, vec![coin(20, "btc"), coin(77, "eth")]);
     // get contract address, has funds
-    let funds = get_balance(&app, &contract_address);
+    let funds = get_balance(&app, &contract_addr);
     assert_eq!(funds, coins(23, "eth"));
 
     // create empty account
-    let random_address = app.api().addr_make("random");
-    let funds = get_balance(&app, &random_address);
+    let random_addr = app.api().addr_make("random");
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, vec![]);
 
     // do one payout and see money coming in
     let res = app
-        .execute_contract(
-            random_address.clone(),
-            contract_address.clone(),
-            &Empty {},
-            &[],
-        )
+        .execute_contract(random_addr.clone(), contract_addr.clone(), &Empty {}, &[])
         .unwrap();
     assert_eq!(3, res.events.len());
 
@@ -308,7 +303,7 @@ fn simple_contract() {
     assert_eq!(payout_exec.ty.as_str(), "execute");
     assert_eq!(
         payout_exec.attributes,
-        [("_contract_address", &contract_address)]
+        [("_contract_address", &contract_addr)]
     );
 
     // next is a custom wasm event
@@ -317,16 +312,16 @@ fn simple_contract() {
 
     // then the transfer event
     let expected_transfer = Event::new("transfer")
-        .add_attribute("recipient", &random_address)
-        .add_attribute("sender", &contract_address)
+        .add_attribute("recipient", &random_addr)
+        .add_attribute("sender", &contract_addr)
         .add_attribute("amount", "5eth");
     assert_eq!(&expected_transfer, &res.events[2]);
 
     // random got cash
-    let funds = get_balance(&app, &random_address);
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, coins(5, "eth"));
     // contract lost it
-    let funds = get_balance(&app, &contract_address);
+    let funds = get_balance(&app, &contract_addr);
     assert_eq!(funds, coins(18, "eth"));
 }
 
@@ -469,18 +464,18 @@ fn reflect_error() {
     // reflect has 40 eth
     let funds = get_balance(&app, &reflect_addr);
     assert_eq!(funds, coins(40, "eth"));
-    let random_address = app.api().addr_make("random");
+    let random_addr = app.api().addr_make("random");
 
     // sending 7 eth works
     let msg = SubMsg::new(BankMsg::Send {
-        to_address: random_address.clone().into(),
+        to_address: random_addr.clone().into(),
         amount: coins(7, "eth"),
     });
     let msgs = reflect::Message {
         messages: vec![msg],
     };
     let res = app
-        .execute_contract(random_address.clone(), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
     // no wasm events as no attributes
     assert_eq!(2, res.events.len());
@@ -493,7 +488,7 @@ fn reflect_error() {
     assert_eq!(transfer.ty.as_str(), "transfer");
 
     // ensure random got paid
-    let funds = get_balance(&app, &random_address);
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, coins(7, "eth"));
 
     // reflect count should be updated to 1
@@ -505,18 +500,18 @@ fn reflect_error() {
 
     // sending 8 eth, then 3 btc should fail both
     let msg = SubMsg::new(BankMsg::Send {
-        to_address: random_address.clone().into(),
+        to_address: random_addr.clone().into(),
         amount: coins(8, "eth"),
     });
     let msg2 = SubMsg::new(BankMsg::Send {
-        to_address: random_address.clone().into(),
+        to_address: random_addr.clone().into(),
         amount: coins(3, "btc"),
     });
     let msgs = reflect::Message {
         messages: vec![msg, msg2],
     };
     let err = app
-        .execute_contract(random_address.clone(), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap_err();
     assert_eq!(
         StdError::overflow(OverflowError::new(OverflowOperation::Sub)),
@@ -524,7 +519,7 @@ fn reflect_error() {
     );
 
     // first one should have been rolled-back on error (no second payment)
-    let funds = get_balance(&app, &random_address);
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, coins(7, "eth"));
 
     // failure should not update reflect count

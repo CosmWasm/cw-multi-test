@@ -2077,12 +2077,12 @@ mod test {
     #[test]
     fn can_use_custom_address_generator() {
         let api = MockApi::default();
-        let expected_address = api.addr_make("address");
-        let expected_predictable_address = api.addr_make("predictable_address");
+        let expected_addr = api.addr_make("address");
+        let expected_predictable_addr = api.addr_make("predictable_address");
         let mut wasm_keeper: WasmKeeper<Empty, Empty> =
             WasmKeeper::new().with_address_generator(TestAddressGenerator {
-                address: expected_address.clone(),
-                predictable_address: expected_predictable_address.clone(),
+                address: expected_addr.clone(),
+                predictable_address: expected_predictable_addr.clone(),
             });
         let creator = api.addr_make("creator");
         let code_id = wasm_keeper.store_code(creator.clone(), payout::contract());
@@ -2104,7 +2104,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr, expected_address,
+            contract_addr, expected_addr,
             "custom address generator returned incorrect address"
         );
 
@@ -2122,7 +2122,7 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            contract_addr, expected_predictable_address,
+            contract_addr, expected_predictable_addr,
             "custom address generator returned incorrect address"
         );
     }
