@@ -2,11 +2,11 @@
 name = "cw-multi-test"
 version = "1.0.0-rc.2"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>"]
-edition = "2021"
 description = "Testing tools for multi-contract interactions"
-license = "Apache-2.0"
 repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
+license = "Apache-2.0"
+edition = "2021"
 
 [features]
 default = []
