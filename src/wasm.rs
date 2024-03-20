@@ -801,7 +801,6 @@ where
     ///
     /// The `data` on `AppResponse` is data returned from `reply` call, not from execution of
     /// sub-message itself. In case if `reply` is not called, no `data` is set.
-    #[allow(deprecated)]
     fn execute_submsg(
         &self,
         api: &dyn Api,
@@ -827,11 +826,14 @@ where
                     id,
                     payload: Default::default(),
                     gas_used: 0,
-                    result: SubMsgResult::Ok(SubMsgResponse {
-                        events: r.events.clone(),
-                        data: r.data,
-                        msg_responses: vec![],
-                    }),
+                    result: SubMsgResult::Ok(
+                        #[allow(deprecated)]
+                        SubMsgResponse {
+                            events: r.events.clone(),
+                            data: r.data,
+                            msg_responses: vec![],
+                        },
+                    ),
                 };
                 // do reply and combine it with the original response
                 let reply_res = self.reply(api, router, storage, block, contract, reply)?;
@@ -843,7 +845,6 @@ where
                 // reply is not called, no data should be returned
                 r.data = None;
             }
-
             Ok(r)
         } else if let Err(e) = res {
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Error) {

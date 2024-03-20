@@ -56,9 +56,9 @@ impl AppResponse {
 /// They have the same shape, SubMsgResponse is what is returned in reply.
 /// This is just to make some test cases easier.
 impl From<SubMsgResponse> for AppResponse {
-    #[allow(deprecated)]
     fn from(reply: SubMsgResponse) -> Self {
         AppResponse {
+            #[allow(deprecated)]
             data: reply.data,
             events: reply.events,
         }

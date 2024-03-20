@@ -113,7 +113,7 @@ pub trait AddressGenerator {
         instance_id: u64,
     ) -> AnyResult<Addr> {
         let canonical_addr = instantiate_address(code_id, instance_id);
-        Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
+        Ok(api.addr_humanize(&canonical_addr)?)
     }
 
     /// Generates a _predictable_ contract address, just like the real-life chain
@@ -167,7 +167,7 @@ pub trait AddressGenerator {
         salt: &[u8],
     ) -> AnyResult<Addr> {
         let canonical_addr = instantiate2_address(checksum, creator, salt)?;
-        Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
+        Ok(api.addr_humanize(&canonical_addr)?)
     }
 }
 

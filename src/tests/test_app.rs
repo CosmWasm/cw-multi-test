@@ -4,12 +4,12 @@ use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomHelperMsg};
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
-use crate::AppBuilder;
 use crate::{
     custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
     Module, Router, Staking, Wasm, WasmSudo,
 };
-use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier};
+use crate::{AppBuilder, IntoAddr};
+use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_json, to_json_binary, Addr, AllBalanceResponse, Api, Attribute, BankMsg,
     BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomMsg, CustomQuery, Empty, Event,
@@ -93,7 +93,7 @@ where
 
 /// Utility function for generating user addresses.
 fn addr_make(addr: &str) -> Addr {
-    MockApi::default().addr_make(addr)
+    addr.into_addr()
 }
 
 #[test]
