@@ -18,7 +18,7 @@ mod test_contracts {
         use cw_storage_plus::Item;
         use serde::{Deserialize, Serialize};
 
-        const COUNTER: Item<u64> = Item::new("count");
+        const COUNTER: Item<u64> = Item::new("counter");
 
         #[derive(Debug, Clone, Serialize, Deserialize)]
         #[serde(rename_all = "snake_case")]
