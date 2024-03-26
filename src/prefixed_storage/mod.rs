@@ -19,12 +19,14 @@ pub fn prefixed_read<'a>(
     ReadonlyPrefixedStorage::new(storage, namespace)
 }
 
+/// Prefixed, mutable storage.
 pub struct PrefixedStorage<'a> {
     storage: &'a mut dyn Storage,
     prefix: Vec<u8>,
 }
 
 impl<'a> PrefixedStorage<'a> {
+    /// Returns a mutable prefixed storage with specified namespace.
     pub fn new(storage: &'a mut dyn Storage, namespace: &[u8]) -> Self {
         PrefixedStorage {
             storage,
@@ -32,8 +34,9 @@ impl<'a> PrefixedStorage<'a> {
         }
     }
 
-    // Nested namespaces as documented in
-    // https://github.com/webmaster128/key-namespacing#nesting
+    /// Returns a mutable prefixed storage with [nested namespaces].
+    ///
+    /// [nested namespaces]: https://github.com/webmaster128/key-namespacing#nesting
     pub fn multilevel(storage: &'a mut dyn Storage, namespaces: &[&[u8]]) -> Self {
         PrefixedStorage {
             storage,
@@ -67,12 +70,14 @@ impl<'a> Storage for PrefixedStorage<'a> {
     }
 }
 
+/// Prefixed, read-only storage.
 pub struct ReadonlyPrefixedStorage<'a> {
     storage: &'a dyn Storage,
     prefix: Vec<u8>,
 }
 
 impl<'a> ReadonlyPrefixedStorage<'a> {
+    /// Returns a read-only prefixed storage with specified namespace.
     pub fn new(storage: &'a dyn Storage, namespace: &[u8]) -> Self {
         ReadonlyPrefixedStorage {
             storage,
@@ -80,8 +85,9 @@ impl<'a> ReadonlyPrefixedStorage<'a> {
         }
     }
 
-    // Nested namespaces as documented in
-    // https://github.com/webmaster128/key-namespacing#nesting
+    /// Returns a read-only prefixed storage with [nested namespaces].
+    ///
+    /// [nested namespaces]: https://github.com/webmaster128/key-namespacing#nesting
     pub fn multilevel(storage: &'a dyn Storage, namespaces: &[&[u8]]) -> Self {
         ReadonlyPrefixedStorage {
             storage,

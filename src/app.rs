@@ -5,6 +5,7 @@ use crate::executor::{AppResponse, Executor};
 use crate::gov::Gov;
 use crate::ibc::Ibc;
 use crate::module::{FailingModule, Module};
+use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::stargate::{Stargate, StargateFailingModule};
 use crate::transactions::transactional;
@@ -344,6 +345,16 @@ where
     /// Returns a raw state dump of all key-values held by a contract with specified address.
     pub fn dump_wasm_raw(&self, address: &Addr) -> Vec<Record> {
         self.read_module(|router, _, storage| router.wasm.dump_wasm_raw(storage, address))
+    }
+
+    /// Returns **read-only** prefixed storage with specified namespace.
+    pub fn prefixed_storage<'a>(&'a self, namespace: &[u8]) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed_read(&self.storage, namespace))
+    }
+
+    /// Returns **mutable** prefixed storage with specified namespace.
+    pub fn prefixed_storage_mut<'a>(&'a mut self, namespace: &[u8]) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed(&mut self.storage, namespace))
     }
 }
 
