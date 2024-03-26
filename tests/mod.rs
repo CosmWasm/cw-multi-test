@@ -7,6 +7,7 @@ mod test_api;
 mod test_app;
 mod test_app_builder;
 mod test_module;
+mod test_prefixed_storage;
 mod test_wasm;
 
 const COUNTER: Item<u64> = Item::new("count");
