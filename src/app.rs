@@ -258,11 +258,9 @@ where
     /// Registers contract code (like uploading wasm bytecode on a chain),
     /// so it can later be used to instantiate a contract.
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
-        self.init_modules(|router, _, _| {
-            router
-                .wasm
-                .store_code(MockApi::default().addr_make("creator"), code)
-        })
+        self.router
+            .wasm
+            .store_code(MockApi::default().addr_make("creator"), code)
     }
 
     /// Registers contract code (like [store_code](Self::store_code)),
@@ -272,7 +270,7 @@ where
         creator: Addr,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> u64 {
-        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
+        self.router.wasm.store_code(creator, code)
     }
 
     /// Registers contract code (like [store_code_with_creator](Self::store_code_with_creator)),
@@ -283,7 +281,7 @@ where
         code_id: u64,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> AnyResult<u64> {
-        self.init_modules(|router, _, _| router.wasm.store_code_with_id(creator, code_id, code))
+        self.router.wasm.store_code_with_id(creator, code_id, code)
     }
 
     /// Duplicates the contract code identified by `code_id` and returns
@@ -336,17 +334,31 @@ where
     /// assert_eq!("code id 100: no such code", app.duplicate_code(100).unwrap_err().to_string());
     /// ```
     pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
-        self.init_modules(|router, _, _| router.wasm.duplicate_code(code_id))
+        self.router.wasm.duplicate_code(code_id)
     }
 
     /// Returns `ContractData` for the contract with specified address.
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
-        self.read_module(|router, _, storage| router.wasm.contract_data(storage, address))
+        self.router.wasm.contract_data(&self.storage, address)
     }
 
     /// Returns a raw state dump of all key-values held by a contract with specified address.
     pub fn dump_wasm_raw(&self, address: &Addr) -> Vec<Record> {
-        self.read_module(|router, _, storage| router.wasm.dump_wasm_raw(storage, address))
+        self.router.wasm.dump_wasm_raw(&self.storage, address)
+    }
+
+    /// Returns **read-only** storage for a contract with specified address.
+    pub fn contract_storage<'a>(&'a self, contract_addr: &Addr) -> Box<dyn Storage + 'a> {
+        self.router
+            .wasm
+            .contract_storage(&self.storage, contract_addr)
+    }
+
+    /// Returns **read-write** storage for a contract with specified address.
+    pub fn contract_storage_mut<'a>(&'a mut self, contract_addr: &Addr) -> Box<dyn Storage + 'a> {
+        self.router
+            .wasm
+            .contract_storage_mut(&mut self.storage, contract_addr)
     }
 
     /// Returns **read-only** prefixed storage with specified namespace.
