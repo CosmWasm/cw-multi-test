@@ -5,7 +5,9 @@ use crate::executor::{AppResponse, Executor};
 use crate::gov::Gov;
 use crate::ibc::Ibc;
 use crate::module::{FailingModule, Module};
-use crate::prefixed_storage::{prefixed, prefixed_read};
+use crate::prefixed_storage::{
+    prefixed, prefixed_multilevel, prefixed_multilevel_read, prefixed_read,
+};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
 use crate::stargate::{Stargate, StargateFailingModule};
 use crate::transactions::transactional;
@@ -355,6 +357,22 @@ where
     /// Returns **mutable** prefixed storage with specified namespace.
     pub fn prefixed_storage_mut<'a>(&'a mut self, namespace: &[u8]) -> Box<dyn Storage + 'a> {
         Box::new(prefixed(&mut self.storage, namespace))
+    }
+
+    /// Returns **read-only** prefixed, multilevel storage with specified namespaces.
+    pub fn prefixed_multilevel_storage<'a>(
+        &'a self,
+        namespaces: &[&[u8]],
+    ) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed_multilevel_read(&self.storage, namespaces))
+    }
+
+    /// Returns **mutable** prefixed, multilevel storage with specified namespaces.
+    pub fn prefixed_multilevel_storage_mut<'a>(
+        &'a mut self,
+        namespaces: &[&[u8]],
+    ) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed_multilevel(&mut self.storage, namespaces))
     }
 }
 

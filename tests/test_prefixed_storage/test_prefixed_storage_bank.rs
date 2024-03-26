@@ -2,7 +2,7 @@ use cosmwasm_std::{coin, Addr};
 use cw_multi_test::{App, IntoAddr};
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 const NAMESPACE_BANK: &[u8] = b"bank";
 const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
@@ -39,7 +39,9 @@ fn writing_bank_storage_should_work() {
     // set balances manually
     let mut balance = NativeBalance(vec![coin(3, "BTC"), coin(4, "ETH")]);
     balance.normalize();
-    BALANCES.save(&mut *storage, &owner_addr, &balance).unwrap();
+    BALANCES
+        .save(storage.deref_mut(), &owner_addr, &balance)
+        .unwrap();
 
     // check balances
     let balances = BALANCES.load(storage.deref(), &owner_addr).unwrap();

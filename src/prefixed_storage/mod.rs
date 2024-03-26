@@ -6,17 +6,33 @@ use namespace_helpers::{get_with_prefix, range_with_prefix, remove_with_prefix, 
 mod length_prefixed;
 mod namespace_helpers;
 
-/// An alias of PrefixedStorage::new for less verbose usage
+/// An alias of [PrefixedStorage::new] for less verbose usage.
 pub fn prefixed<'a>(storage: &'a mut dyn Storage, namespace: &[u8]) -> PrefixedStorage<'a> {
     PrefixedStorage::new(storage, namespace)
 }
 
-/// An alias of ReadonlyPrefixedStorage::new for less verbose usage
+/// An alias of [ReadonlyPrefixedStorage::new] for less verbose usage.
 pub fn prefixed_read<'a>(
     storage: &'a dyn Storage,
     namespace: &[u8],
 ) -> ReadonlyPrefixedStorage<'a> {
     ReadonlyPrefixedStorage::new(storage, namespace)
+}
+
+/// An alias of [PrefixedStorage::multilevel] for less verbose usage.
+pub fn prefixed_multilevel<'a>(
+    storage: &'a mut dyn Storage,
+    namespaces: &[&[u8]],
+) -> PrefixedStorage<'a> {
+    PrefixedStorage::multilevel(storage, namespaces)
+}
+
+/// An alias of [ReadonlyPrefixedStorage::multilevel] for less verbose usage.
+pub fn prefixed_multilevel_read<'a>(
+    storage: &'a dyn Storage,
+    namespaces: &[&[u8]],
+) -> ReadonlyPrefixedStorage<'a> {
+    ReadonlyPrefixedStorage::multilevel(storage, namespaces)
 }
 
 /// Prefixed, mutable storage.
