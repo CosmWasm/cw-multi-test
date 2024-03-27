@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn to_length_prefixed_calculates_capacity_correctly() {
         // Those tests cannot guarantee the required capacity was calculated correctly before
-        // the vector allocation but increase the likelyhood of a proper implementation.
+        // the vector allocation but increase the likelihood of a proper implementation.
 
         let key = to_length_prefixed(b"");
         assert_eq!(key.capacity(), key.len());
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn to_length_prefixed_nested_calculates_capacity_correctly() {
         // Those tests cannot guarantee the required capacity was calculated correctly before
-        // the vector allocation but increase the likelyhood of a proper implementation.
+        // the vector allocation but increase the likelihood of a proper implementation.
 
         let key = to_length_prefixed_nested(&[]);
         assert_eq!(key.capacity(), key.len());
