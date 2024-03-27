@@ -622,7 +622,7 @@ fn reflect_sub_message_reply_works() {
         )
         .unwrap();
 
-    // no reply writen beforehand
+    // no reply written beforehand
     let query = reflect::QueryMsg::Reply { id: 123 };
     let res: StdResult<Reply> = app.wrap().query_wasm_smart(&reflect_addr, &query);
     res.unwrap_err();
