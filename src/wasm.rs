@@ -134,6 +134,39 @@ pub trait Wasm<ExecC, QueryC> {
 
     /// Returns a raw state dump of all key-values held by a contract with specified address.
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record>;
+
+    /// Returns the namespace of the contract storage.
+    fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
+        let mut name = b"contract_data/".to_vec();
+        name.extend_from_slice(contract.as_bytes());
+        name
+    }
+
+    /// Returns **read-only** (not mutable) contract storage.
+    fn contract_storage<'a>(
+        &self,
+        storage: &'a dyn Storage,
+        address: &Addr,
+    ) -> Box<dyn Storage + 'a> {
+        // We double-namespace this, once from global storage -> wasm_storage
+        // then from wasm_storage -> the contracts subspace
+        let namespace = self.contract_namespace(address);
+        let storage = ReadonlyPrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
+        Box::new(storage)
+    }
+
+    /// Returns **read-write** (mutable) contract storage.
+    fn contract_storage_mut<'a>(
+        &self,
+        storage: &'a mut dyn Storage,
+        address: &Addr,
+    ) -> Box<dyn Storage + 'a> {
+        // We double-namespace this, once from global storage -> wasm_storage
+        // then from wasm_storage -> the contracts subspace
+        let namespace = self.contract_namespace(address);
+        let storage = PrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
+        Box::new(storage)
+    }
 }
 
 /// A structure representing a default wasm keeper.
@@ -297,7 +330,7 @@ where
 
     /// Returns a raw state dump of all key-values held by a contract with specified address.
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
-        let storage = self.contract_storage_readonly(storage, address);
+        let storage = self.contract_storage(storage, address);
         storage.range(None, None, Order::Ascending).collect()
     }
 }
@@ -318,37 +351,6 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
             .code_data
             .get(&code_id)
             .ok_or_else(|| Error::unregistered_code_id(code_id))?)
-    }
-
-    fn contract_namespace(&self, contract: &Addr) -> Vec<u8> {
-        let mut name = b"contract_data/".to_vec();
-        name.extend_from_slice(contract.as_bytes());
-        name
-    }
-
-    fn contract_storage<'a>(
-        &self,
-        storage: &'a mut dyn Storage,
-        address: &Addr,
-    ) -> Box<dyn Storage + 'a> {
-        // We double-namespace this, once from global storage -> wasm_storage
-        // then from wasm_storage -> the contracts subspace
-        let namespace = self.contract_namespace(address);
-        let storage = PrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
-        Box::new(storage)
-    }
-
-    // fails RUNTIME if you try to write. please don't
-    fn contract_storage_readonly<'a>(
-        &self,
-        storage: &'a dyn Storage,
-        address: &Addr,
-    ) -> Box<dyn Storage + 'a> {
-        // We double-namespace this, once from global storage -> wasm_storage
-        // then from wasm_storage -> the contracts subspace
-        let namespace = self.contract_namespace(address);
-        let storage = ReadonlyPrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
-        Box::new(storage)
     }
 
     fn verify_attributes(attributes: &[Attribute]) -> AnyResult<()> {
@@ -533,7 +535,7 @@ where
 
     /// Returns the value stored under specified key in contracts storage.
     pub fn query_raw(&self, address: Addr, storage: &dyn Storage, key: &[u8]) -> Binary {
-        let storage = self.contract_storage_readonly(storage, &address);
+        let storage = self.contract_storage(storage, &address);
         let data = storage.get(key).unwrap_or_default();
         data.into()
     }
@@ -1131,7 +1133,7 @@ where
     {
         let contract = self.contract_data(storage, &address)?;
         let handler = self.contract_code(contract.code_id)?;
-        let storage = self.contract_storage_readonly(storage, &address);
+        let storage = self.contract_storage(storage, &address);
         let env = self.get_env(address, block);
 
         let deps = Deps {
@@ -1163,7 +1165,7 @@ where
         // However, we need to get write and read access to the same storage in two different objects,
         // and this is the only way I know how to do so.
         transactional(storage, |write_cache, read_store| {
-            let mut contract_storage = self.contract_storage(write_cache, &address);
+            let mut contract_storage = self.contract_storage_mut(write_cache, &address);
             let querier = RouterQuerier::new(router, api, read_store, block);
             let env = self.get_env(address, block);
 

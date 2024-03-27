@@ -1,4 +1,5 @@
-use crate::{test_contracts, CounterQueryMsg, CounterResponseMsg};
+use crate::test_contracts;
+use crate::test_contracts::counter::{CounterQueryMsg, CounterResponseMsg};
 use cosmwasm_std::{to_json_binary, Empty, Order, Record, Storage, WasmMsg};
 use cw_multi_test::{no_init, AppBuilder, Executor};
 use std::collections::BTreeMap;
