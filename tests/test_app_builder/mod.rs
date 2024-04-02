@@ -14,6 +14,7 @@ mod test_with_ibc;
 mod test_with_staking;
 mod test_with_stargate;
 mod test_with_storage;
+mod test_with_transaction;
 mod test_with_wasm;
 
 const NO_MESSAGE: &str = "";
