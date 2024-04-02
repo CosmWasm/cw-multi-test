@@ -65,7 +65,6 @@ pub struct App<
     pub(crate) api: Api,
     pub(crate) storage: Storage,
     pub(crate) block: BlockInfo,
-    pub(crate) transaction: TransactionInfo,
 }
 
 /// No-op application initialization function.
@@ -411,6 +410,7 @@ where
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
+        self.router.wasm.reset_transaction_index();
         self.block = block;
     }
 
@@ -420,8 +420,8 @@ where
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
+        self.router.wasm.reset_transaction_index();
         action(&mut self.block);
-        self.transaction.index = 0;
     }
 
     /// Returns a copy of the current [BlockInfo].
@@ -431,7 +431,7 @@ where
 
     /// Returns a copy of the current [TransactionInfo].
     pub fn transaction_info(&self) -> TransactionInfo {
-        self.transaction.clone()
+        self.router.wasm.transaction_info()
     }
 
     /// Simple helper so we get access to all the QuerierWrapper helpers,
@@ -454,17 +454,22 @@ where
 
         let Self {
             block,
-            transaction: _,
             router,
             api,
             storage,
         } = self;
 
-        transactional(&mut *storage, |write_cache, _| {
-            msgs.into_iter()
-                .map(|msg| router.execute(&*api, write_cache, block, sender.clone(), msg))
-                .collect()
-        })
+        router.wasm.increment_transaction_index();
+
+        transactional(
+            &mut *storage,
+            |write_cache, _| {
+                msgs.into_iter()
+                    .map(|msg| router.execute(&*api, write_cache, block, sender.clone(), msg))
+                    .collect()
+            },
+            || router.wasm.increment_transaction_index(),
+        )
     }
 
     /// Call a smart contract in "sudo" mode.
@@ -482,15 +487,18 @@ where
 
         let Self {
             block,
-            transaction: _,
             router,
             api,
             storage,
         } = self;
 
-        transactional(&mut *storage, |write_cache, _| {
-            router.wasm.sudo(&*api, write_cache, router, block, msg)
-        })
+        router.wasm.increment_transaction_index();
+
+        transactional(
+            &mut *storage,
+            |write_cache, _| router.wasm.sudo(&*api, write_cache, router, block, msg),
+            || router.wasm.increment_transaction_index(),
+        )
     }
 
     /// Runs arbitrary SudoMsg.
@@ -502,15 +510,18 @@ where
         // returns a success do we flush it (otherwise drop it)
         let Self {
             block,
-            transaction: _,
             router,
             api,
             storage,
         } = self;
 
-        transactional(&mut *storage, |write_cache, _| {
-            router.sudo(&*api, write_cache, block, msg)
-        })
+        router.wasm.increment_transaction_index();
+
+        transactional(
+            &mut *storage,
+            |write_cache, _| router.sudo(&*api, write_cache, block, msg),
+            || router.wasm.increment_transaction_index(),
+        )
     }
 }
 /// The Router plays a critical role in managing and directing

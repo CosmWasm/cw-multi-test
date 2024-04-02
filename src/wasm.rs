@@ -19,6 +19,7 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 
@@ -167,6 +168,17 @@ pub trait Wasm<ExecC, QueryC> {
         let storage = PrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
         Box::new(storage)
     }
+
+    /// Increments transaction index.
+    fn increment_transaction_index(&self) {}
+
+    /// Resets transaction index to zero.
+    fn reset_transaction_index(&self) {}
+
+    /// Returns a copy of the current transaction info.
+    fn transaction_info(&self) -> TransactionInfo {
+        TransactionInfo { index: 0 }
+    }
 }
 
 /// A structure representing a default wasm keeper.
@@ -179,6 +191,8 @@ pub struct WasmKeeper<ExecC, QueryC> {
     address_generator: Box<dyn AddressGenerator>,
     /// Contract's code checksum generator.
     checksum_generator: Box<dyn ChecksumGenerator>,
+    /// Transaction info.
+    transaction: RefCell<TransactionInfo>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
 }
@@ -192,6 +206,7 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
             address_generator: Box::new(SimpleAddressGenerator),
             checksum_generator: Box::new(SimpleChecksumGenerator),
             _p: std::marker::PhantomData,
+            transaction: RefCell::new(TransactionInfo { index: 0 }),
         }
     }
 }
@@ -335,6 +350,18 @@ where
     fn dump_wasm_raw(&self, storage: &dyn Storage, address: &Addr) -> Vec<Record> {
         let storage = self.contract_storage(storage, address);
         storage.range(None, None, Order::Ascending).collect()
+    }
+
+    fn increment_transaction_index(&self) {
+        self.transaction.borrow_mut().index += 1;
+    }
+
+    fn reset_transaction_index(&self) {
+        self.transaction.borrow_mut().index = 0;
+    }
+
+    fn transaction_info(&self) -> TransactionInfo {
+        self.transaction.borrow().clone()
     }
 }
 
@@ -817,9 +844,11 @@ where
         } = msg;
 
         // execute in cache
-        let res = transactional(storage, |write_cache, _| {
-            router.execute(api, write_cache, block, contract.clone(), msg)
-        });
+        let res = transactional(
+            storage,
+            |write_cache, _| router.execute(api, write_cache, block, contract.clone(), msg),
+            || self.increment_transaction_index(),
+        );
 
         // call reply if meaningful
         if let Ok(mut r) = res {
@@ -1173,18 +1202,22 @@ where
         // execute_submsg or App.execute_multi.
         // However, we need to get write and read access to the same storage in two different objects,
         // and this is the only way I know how to do so.
-        transactional(storage, |write_cache, read_store| {
-            let mut contract_storage = self.contract_storage_mut(write_cache, &address);
-            let querier = RouterQuerier::new(router, api, read_store, block);
-            let env = self.get_env(address, block);
+        transactional(
+            storage,
+            |write_cache, read_store| {
+                let mut contract_storage = self.contract_storage_mut(write_cache, &address);
+                let querier = RouterQuerier::new(router, api, read_store, block);
+                let env = self.get_env(address, block);
 
-            let deps = DepsMut {
-                storage: contract_storage.as_mut(),
-                api,
-                querier: QuerierWrapper::new(&querier),
-            };
-            action(handler, deps, env)
-        })
+                let deps = DepsMut {
+                    storage: contract_storage.as_mut(),
+                    api,
+                    querier: QuerierWrapper::new(&querier),
+                };
+                action(handler, deps, env)
+            },
+            || {},
+        )
     }
 
     /// Saves contract data in a storage under specified address.
@@ -1310,34 +1343,42 @@ mod test {
         let block = mock_env().block;
         let code_id = wasm_keeper.store_code(creator_addr, error::contract(false));
 
-        transactional(&mut wasm_storage, |cache, _| {
-            // cannot register contract with unregistered codeId
-            wasm_keeper.register_contract(
-                &api,
-                cache,
-                code_id + 1,
-                user_addr.clone(),
-                admin_addr.clone(),
-                "label".to_owned(),
-                1000,
-                None,
-            )
-        })
+        transactional(
+            &mut wasm_storage,
+            |cache, _| {
+                // cannot register contract with unregistered codeId
+                wasm_keeper.register_contract(
+                    &api,
+                    cache,
+                    code_id + 1,
+                    user_addr.clone(),
+                    admin_addr.clone(),
+                    "label".to_owned(),
+                    1000,
+                    None,
+                )
+            },
+            || wasm_keeper.increment_transaction_index(),
+        )
         .unwrap_err();
 
-        let contract_addr = transactional(&mut wasm_storage, |cache, _| {
-            // we can register a new instance of this code
-            wasm_keeper.register_contract(
-                &api,
-                cache,
-                code_id,
-                user_addr.clone(),
-                admin_addr.clone(),
-                "label".to_owned(),
-                1000,
-                None,
-            )
-        })
+        let contract_addr = transactional(
+            &mut wasm_storage,
+            |cache, _| {
+                // we can register a new instance of this code
+                wasm_keeper.register_contract(
+                    &api,
+                    cache,
+                    code_id,
+                    user_addr.clone(),
+                    admin_addr.clone(),
+                    "label".to_owned(),
+                    1000,
+                    None,
+                )
+            },
+            || wasm_keeper.increment_transaction_index(),
+        )
         .unwrap();
 
         // verify contract data are as expected
@@ -1356,19 +1397,23 @@ mod test {
             }
         );
 
-        let err = transactional(&mut wasm_storage, |cache, _| {
-            // now, we call this contract and see the error message from the contract
-            let info = mock_info(user_addr.as_str(), &[]);
-            wasm_keeper.call_instantiate(
-                contract_addr.clone(),
-                &api,
-                cache,
-                &mock_router(),
-                &block,
-                info,
-                b"{}".to_vec(),
-            )
-        })
+        let err = transactional(
+            &mut wasm_storage,
+            |cache, _| {
+                // now, we call this contract and see the error message from the contract
+                let info = mock_info(user_addr.as_str(), &[]);
+                wasm_keeper.call_instantiate(
+                    contract_addr.clone(),
+                    &api,
+                    cache,
+                    &mock_router(),
+                    &block,
+                    info,
+                    b"{}".to_vec(),
+                )
+            },
+            || wasm_keeper.increment_transaction_index(),
+        )
         .unwrap_err();
 
         // StdError from contract_error auto-converted to string
@@ -1377,19 +1422,23 @@ mod test {
             err.downcast().unwrap()
         );
 
-        let err = transactional(&mut wasm_storage, |cache, _| {
-            // and the error for calling an unregistered contract
-            let info = mock_info(user_addr.as_str(), &[]);
-            wasm_keeper.call_instantiate(
-                unregistered_addr,
-                &api,
-                cache,
-                &mock_router(),
-                &block,
-                info,
-                b"{}".to_vec(),
-            )
-        })
+        let err = transactional(
+            &mut wasm_storage,
+            |cache, _| {
+                // and the error for calling an unregistered contract
+                let info = mock_info(user_addr.as_str(), &[]);
+                wasm_keeper.call_instantiate(
+                    unregistered_addr,
+                    &api,
+                    cache,
+                    &mock_router(),
+                    &block,
+                    info,
+                    b"{}".to_vec(),
+                )
+            },
+            || wasm_keeper.increment_transaction_index(),
+        )
         .unwrap_err();
 
         // Default error message from router when not found
@@ -1697,132 +1746,144 @@ mod test {
         let payout1 = coin(100, "TGD");
 
         // set contract 1 and commit (on router)
-        let contract1 = transactional(&mut wasm_storage, |cache, _| {
-            let contract = wasm_keeper
-                .register_contract(
-                    &api,
-                    cache,
-                    code_id,
-                    user_addr.clone(),
-                    None,
-                    "".to_string(),
-                    1000,
-                    None,
-                )
-                .unwrap();
-            let info = mock_info(user_addr.as_str(), &[]);
-            let init_msg = to_json_vec(&payout::InstantiateMessage {
-                payout: payout1.clone(),
-            })
-            .unwrap();
-            wasm_keeper
-                .call_instantiate(
-                    contract.clone(),
-                    &api,
-                    cache,
-                    &mock_router(),
-                    &block,
-                    info,
-                    init_msg,
-                )
-                .unwrap();
-
-            Ok(contract)
-        })
-        .unwrap();
-
-        let payout2 = coin(50, "BTC");
-        let payout3 = coin(1234, "ATOM");
-
-        // create a new cache and check we can use contract 1
-        let (contract2, contract3) = transactional(&mut wasm_storage, |cache, wasm_reader| {
-            assert_payout(&wasm_keeper, cache, &contract1, &payout1);
-
-            // create contract 2 and use it
-            let contract2 = wasm_keeper
-                .register_contract(
-                    &api,
-                    cache,
-                    code_id,
-                    user_addr.clone(),
-                    None,
-                    "".to_owned(),
-                    1000,
-                    None,
-                )
-                .unwrap();
-            let info = mock_info(user_addr.as_str(), &[]);
-            let init_msg = to_json_vec(&payout::InstantiateMessage {
-                payout: payout2.clone(),
-            })
-            .unwrap();
-            let _res = wasm_keeper
-                .call_instantiate(
-                    contract2.clone(),
-                    &api,
-                    cache,
-                    &mock_router(),
-                    &block,
-                    info,
-                    init_msg,
-                )
-                .unwrap();
-            assert_payout(&wasm_keeper, cache, &contract2, &payout2);
-
-            // create a level2 cache and check we can use contract 1 and contract 2
-            let contract3 = transactional(cache, |cache2, read| {
-                assert_payout(&wasm_keeper, cache2, &contract1, &payout1);
-                assert_payout(&wasm_keeper, cache2, &contract2, &payout2);
-
-                // create a contract on level 2
-                let contract3 = wasm_keeper
+        let contract1 = transactional(
+            &mut wasm_storage,
+            |cache, _| {
+                let contract = wasm_keeper
                     .register_contract(
                         &api,
-                        cache2,
+                        cache,
                         code_id,
-                        user_addr,
+                        user_addr.clone(),
                         None,
-                        "".to_owned(),
+                        "".to_string(),
                         1000,
                         None,
                     )
                     .unwrap();
-                let info = mock_info("johnny", &[]);
+                let info = mock_info(user_addr.as_str(), &[]);
                 let init_msg = to_json_vec(&payout::InstantiateMessage {
-                    payout: payout3.clone(),
+                    payout: payout1.clone(),
                 })
                 .unwrap();
-                let _res = wasm_keeper
+                wasm_keeper
                     .call_instantiate(
-                        contract3.clone(),
+                        contract.clone(),
                         &api,
-                        cache2,
+                        cache,
                         &mock_router(),
                         &block,
                         info,
                         init_msg,
                     )
                     .unwrap();
-                assert_payout(&wasm_keeper, cache2, &contract3, &payout3);
 
-                // ensure first cache still doesn't see this contract
-                assert_no_contract(read, &contract3);
-                Ok(contract3)
-            })
-            .unwrap();
+                Ok(contract)
+            },
+            || wasm_keeper.increment_transaction_index(),
+        )
+        .unwrap();
 
-            // after applying transaction, all contracts present on cache
-            assert_payout(&wasm_keeper, cache, &contract1, &payout1);
-            assert_payout(&wasm_keeper, cache, &contract2, &payout2);
-            assert_payout(&wasm_keeper, cache, &contract3, &payout3);
+        let payout2 = coin(50, "BTC");
+        let payout3 = coin(1234, "ATOM");
 
-            // but not yet the root router
-            assert_no_contract(wasm_reader, &contract1);
-            assert_no_contract(wasm_reader, &contract2);
-            assert_no_contract(wasm_reader, &contract3);
+        // create a new cache and check we can use contract 1
+        let (contract2, contract3) = transactional(
+            &mut wasm_storage,
+            |cache, wasm_reader| {
+                assert_payout(&wasm_keeper, cache, &contract1, &payout1);
 
-            Ok((contract2, contract3))
-        })
+                // create contract 2 and use it
+                let contract2 = wasm_keeper
+                    .register_contract(
+                        &api,
+                        cache,
+                        code_id,
+                        user_addr.clone(),
+                        None,
+                        "".to_owned(),
+                        1000,
+                        None,
+                    )
+                    .unwrap();
+                let info = mock_info(user_addr.as_str(), &[]);
+                let init_msg = to_json_vec(&payout::InstantiateMessage {
+                    payout: payout2.clone(),
+                })
+                .unwrap();
+                let _res = wasm_keeper
+                    .call_instantiate(
+                        contract2.clone(),
+                        &api,
+                        cache,
+                        &mock_router(),
+                        &block,
+                        info,
+                        init_msg,
+                    )
+                    .unwrap();
+                assert_payout(&wasm_keeper, cache, &contract2, &payout2);
+
+                // create a level2 cache and check we can use contract 1 and contract 2
+                let contract3 = transactional(
+                    cache,
+                    |cache2, read| {
+                        assert_payout(&wasm_keeper, cache2, &contract1, &payout1);
+                        assert_payout(&wasm_keeper, cache2, &contract2, &payout2);
+
+                        // create a contract on level 2
+                        let contract3 = wasm_keeper
+                            .register_contract(
+                                &api,
+                                cache2,
+                                code_id,
+                                user_addr,
+                                None,
+                                "".to_owned(),
+                                1000,
+                                None,
+                            )
+                            .unwrap();
+                        let info = mock_info("johnny", &[]);
+                        let init_msg = to_json_vec(&payout::InstantiateMessage {
+                            payout: payout3.clone(),
+                        })
+                        .unwrap();
+                        let _res = wasm_keeper
+                            .call_instantiate(
+                                contract3.clone(),
+                                &api,
+                                cache2,
+                                &mock_router(),
+                                &block,
+                                info,
+                                init_msg,
+                            )
+                            .unwrap();
+                        assert_payout(&wasm_keeper, cache2, &contract3, &payout3);
+
+                        // ensure first cache still doesn't see this contract
+                        assert_no_contract(read, &contract3);
+                        Ok(contract3)
+                    },
+                    || wasm_keeper.increment_transaction_index(),
+                )
+                .unwrap();
+
+                // after applying transaction, all contracts present on cache
+                assert_payout(&wasm_keeper, cache, &contract1, &payout1);
+                assert_payout(&wasm_keeper, cache, &contract2, &payout2);
+                assert_payout(&wasm_keeper, cache, &contract3, &payout3);
+
+                // but not yet the root router
+                assert_no_contract(wasm_reader, &contract1);
+                assert_no_contract(wasm_reader, &contract2);
+                assert_no_contract(wasm_reader, &contract3);
+
+                Ok((contract2, contract3))
+            },
+            || wasm_keeper.increment_transaction_index(),
+        )
         .unwrap();
 
         // ensure that it is now applied to the router

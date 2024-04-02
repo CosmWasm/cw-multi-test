@@ -143,22 +143,26 @@ fn multi_level_bank_cache() {
     assert_eq!(router_rcpt, vec![]);
 
     // now, second level cache
-    transactional(&mut cache, |cache2, read| {
-        let msg = BankMsg::Send {
-            to_address: recipient_addr.clone().into(),
-            amount: coins(12, "eth"),
-        };
-        app.router()
-            .execute(app.api(), cache2, &app.block_info(), owner_addr, msg.into())
-            .unwrap();
+    transactional(
+        &mut cache,
+        |cache2, read| {
+            let msg = BankMsg::Send {
+                to_address: recipient_addr.clone().into(),
+                amount: coins(12, "eth"),
+            };
+            app.router()
+                .execute(app.api(), cache2, &app.block_info(), owner_addr, msg.into())
+                .unwrap();
 
-        // shows up in 2nd cache
-        let cached_rcpt = query_router(app.router(), app.api(), read, &recipient_addr);
-        assert_eq!(coins(25, "eth"), cached_rcpt);
-        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &recipient_addr);
-        assert_eq!(coins(37, "eth"), cached2_rcpt);
-        Ok(())
-    })
+            // shows up in 2nd cache
+            let cached_rcpt = query_router(app.router(), app.api(), read, &recipient_addr);
+            assert_eq!(coins(25, "eth"), cached_rcpt);
+            let cached2_rcpt = query_router(app.router(), app.api(), cache2, &recipient_addr);
+            assert_eq!(coins(37, "eth"), cached2_rcpt);
+            Ok(())
+        },
+        || app.router.wasm.increment_transaction_index(),
+    )
     .unwrap();
 
     // apply first to router
