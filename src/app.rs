@@ -17,7 +17,7 @@ use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
     from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomMsg,
     CustomQuery, Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage,
-    SystemError, SystemResult,
+    SystemError, SystemResult, TransactionInfo,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
@@ -65,6 +65,7 @@ pub struct App<
     pub(crate) api: Api,
     pub(crate) storage: Storage,
     pub(crate) block: BlockInfo,
+    pub(crate) transaction: TransactionInfo,
 }
 
 /// No-op application initialization function.
@@ -420,11 +421,17 @@ where
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
         action(&mut self.block);
+        self.transaction.index = 0;
     }
 
-    /// Returns a copy of the current block_info
+    /// Returns a copy of the current [BlockInfo].
     pub fn block_info(&self) -> BlockInfo {
         self.block.clone()
+    }
+
+    /// Returns a copy of the current [TransactionInfo].
+    pub fn transaction_info(&self) -> TransactionInfo {
+        self.transaction.clone()
     }
 
     /// Simple helper so we get access to all the QuerierWrapper helpers,
@@ -447,6 +454,7 @@ where
 
         let Self {
             block,
+            transaction: _,
             router,
             api,
             storage,
@@ -474,6 +482,7 @@ where
 
         let Self {
             block,
+            transaction: _,
             router,
             api,
             storage,
@@ -493,6 +502,7 @@ where
         // returns a success do we flush it (otherwise drop it)
         let Self {
             block,
+            transaction: _,
             router,
             api,
             storage,

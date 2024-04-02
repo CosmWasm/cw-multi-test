@@ -6,7 +6,7 @@ use crate::{
     Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
+use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage, TransactionInfo};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
@@ -46,6 +46,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
 pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate> {
     api: Api,
     block: BlockInfo,
+    transaction: TransactionInfo,
     storage: Storage,
     bank: Bank,
     wasm: Wasm,
@@ -95,6 +96,7 @@ impl
         AppBuilder {
             api: MockApi::default(),
             block: mock_env().block,
+            transaction: mock_env().transaction.unwrap(),
             storage: MockStorage::new(),
             bank: BankKeeper::new(),
             wasm: WasmKeeper::new(),
@@ -131,6 +133,7 @@ where
         AppBuilder {
             api: MockApi::default(),
             block: mock_env().block,
+            transaction: mock_env().transaction.unwrap(),
             storage: MockStorage::new(),
             bank: BankKeeper::new(),
             wasm: WasmKeeper::new(),
@@ -166,6 +169,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             distribution,
             ibc,
@@ -177,6 +181,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -201,6 +206,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             distribution,
             ibc,
@@ -212,6 +218,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -236,6 +243,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             distribution,
             ibc,
@@ -247,6 +255,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -271,6 +280,7 @@ where
             bank,
             custom,
             block,
+            transaction,
             staking,
             distribution,
             ibc,
@@ -282,6 +292,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -310,6 +321,7 @@ where
             api,
             storage,
             block,
+            transaction,
             staking,
             distribution,
             ibc,
@@ -321,6 +333,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -345,6 +358,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             bank,
             distribution,
             ibc,
@@ -356,6 +370,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -390,6 +405,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             bank,
             ibc,
@@ -401,6 +417,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -431,6 +448,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             bank,
             distribution,
@@ -442,6 +460,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -466,6 +485,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             bank,
             distribution,
@@ -477,6 +497,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -501,6 +522,7 @@ where
             storage,
             custom,
             block,
+            transaction,
             staking,
             bank,
             distribution,
@@ -512,6 +534,7 @@ where
         AppBuilder {
             api,
             block,
+            transaction,
             storage,
             bank,
             wasm,
@@ -568,8 +591,9 @@ where
         let mut app = App {
             router,
             api: self.api,
-            block: self.block,
             storage: self.storage,
+            block: self.block,
+            transaction: self.transaction,
         };
         app.init_modules(init_fn);
         app
