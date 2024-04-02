@@ -6,6 +6,7 @@ mod test_app_builder;
 mod test_contract_storage;
 mod test_module;
 mod test_prefixed_storage;
+mod test_transaction_info;
 mod test_wasm;
 
 mod test_contracts {
@@ -13,7 +14,6 @@ mod test_contracts {
     pub mod counter {
         use cosmwasm_std::{
             to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
-            WasmMsg,
         };
         use cw_multi_test::{Contract, ContractWrapper};
         use cw_storage_plus::Item;
@@ -46,7 +46,7 @@ mod test_contracts {
             deps: DepsMut,
             _env: Env,
             _info: MessageInfo,
-            _msg: WasmMsg,
+            _msg: Empty,
         ) -> Result<Response, StdError> {
             if let Some(mut counter) = COUNTER.may_load(deps.storage).unwrap() {
                 counter += 1;
