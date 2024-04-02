@@ -1,7 +1,8 @@
-use crate::test_app_builder::MyKeeper;
+use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use crate::test_contracts;
 use cosmwasm_std::{
-    Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, WasmMsg, WasmQuery,
+    Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, TransactionInfo, WasmMsg,
+    WasmQuery,
 };
 use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{
@@ -164,4 +165,15 @@ fn compiling_with_wasm_keeper_should_work() {
     // while our WasmKeeper does not implement Module
     let app_builder = AppBuilder::default();
     let _ = app_builder.with_wasm(WasmKeeper::default()).build(no_init);
+}
+
+#[test]
+fn default_transaction_info_should_work() {
+    let wasm_keeper: Box<dyn Wasm<Empty, Empty>> =
+        Box::new(MyWasmKeeper::new(NO_MESSAGE, NO_MESSAGE, NO_MESSAGE));
+    assert_eq!(0, wasm_keeper.transaction_info().index);
+    wasm_keeper.inc_transaction_index();
+    assert_eq!(0, wasm_keeper.transaction_info().index);
+    wasm_keeper.set_transaction_info(TransactionInfo { index: 15 });
+    assert_eq!(0, wasm_keeper.transaction_info().index);
 }
