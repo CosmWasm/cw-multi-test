@@ -459,8 +459,6 @@ where
             storage,
         } = self;
 
-        router.wasm.increment_transaction_index();
-
         transactional(
             &mut *storage,
             |write_cache, _| {
@@ -492,8 +490,6 @@ where
             storage,
         } = self;
 
-        router.wasm.increment_transaction_index();
-
         transactional(
             &mut *storage,
             |write_cache, _| router.wasm.sudo(&*api, write_cache, router, block, msg),
@@ -514,8 +510,6 @@ where
             api,
             storage,
         } = self;
-
-        router.wasm.increment_transaction_index();
 
         transactional(
             &mut *storage,
