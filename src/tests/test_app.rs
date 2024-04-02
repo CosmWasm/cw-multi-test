@@ -161,7 +161,7 @@ fn multi_level_bank_cache() {
             assert_eq!(coins(37, "eth"), cached2_rcpt);
             Ok(())
         },
-        || app.router.wasm.increment_transaction_index(),
+        || app.router.wasm.inc_transaction_index(),
     )
     .unwrap();
 

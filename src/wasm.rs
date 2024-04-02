@@ -170,10 +170,10 @@ pub trait Wasm<ExecC, QueryC> {
     }
 
     /// Increments transaction index.
-    fn increment_transaction_index(&self) {}
+    fn inc_transaction_index(&self) {}
 
-    /// Resets transaction index to zero.
-    fn reset_transaction_index(&self) {}
+    /// Sets custom transaction info.
+    fn set_transaction_info(&self, _transaction: TransactionInfo) {}
 
     /// Returns a copy of the current transaction info.
     fn transaction_info(&self) -> TransactionInfo {
@@ -352,12 +352,12 @@ where
         storage.range(None, None, Order::Ascending).collect()
     }
 
-    fn increment_transaction_index(&self) {
+    fn inc_transaction_index(&self) {
         self.transaction.borrow_mut().index += 1;
     }
 
-    fn reset_transaction_index(&self) {
-        self.transaction.borrow_mut().index = 0;
+    fn set_transaction_info(&self, transaction: TransactionInfo) {
+        self.transaction.borrow_mut().index = transaction.index;
     }
 
     fn transaction_info(&self) -> TransactionInfo {
@@ -847,7 +847,7 @@ where
         let res = transactional(
             storage,
             |write_cache, _| router.execute(api, write_cache, block, contract.clone(), msg),
-            || self.increment_transaction_index(),
+            || self.inc_transaction_index(),
         );
 
         // call reply if meaningful
@@ -1358,7 +1358,7 @@ mod test {
                     None,
                 )
             },
-            || wasm_keeper.increment_transaction_index(),
+            || wasm_keeper.inc_transaction_index(),
         )
         .unwrap_err();
 
@@ -1377,7 +1377,7 @@ mod test {
                     None,
                 )
             },
-            || wasm_keeper.increment_transaction_index(),
+            || wasm_keeper.inc_transaction_index(),
         )
         .unwrap();
 
@@ -1412,7 +1412,7 @@ mod test {
                     b"{}".to_vec(),
                 )
             },
-            || wasm_keeper.increment_transaction_index(),
+            || wasm_keeper.inc_transaction_index(),
         )
         .unwrap_err();
 
@@ -1437,7 +1437,7 @@ mod test {
                     b"{}".to_vec(),
                 )
             },
-            || wasm_keeper.increment_transaction_index(),
+            || wasm_keeper.inc_transaction_index(),
         )
         .unwrap_err();
 
@@ -1780,7 +1780,7 @@ mod test {
 
                 Ok(contract)
             },
-            || wasm_keeper.increment_transaction_index(),
+            || wasm_keeper.inc_transaction_index(),
         )
         .unwrap();
 
@@ -1866,7 +1866,7 @@ mod test {
                         assert_no_contract(read, &contract3);
                         Ok(contract3)
                     },
-                    || wasm_keeper.increment_transaction_index(),
+                    || wasm_keeper.inc_transaction_index(),
                 )
                 .unwrap();
 
@@ -1882,7 +1882,7 @@ mod test {
 
                 Ok((contract2, contract3))
             },
-            || wasm_keeper.increment_transaction_index(),
+            || wasm_keeper.inc_transaction_index(),
         )
         .unwrap();
 

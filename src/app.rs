@@ -410,7 +410,9 @@ where
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
-        self.router.wasm.reset_transaction_index();
+        self.router
+            .wasm
+            .set_transaction_info(TransactionInfo { index: 0 });
         self.block = block;
     }
 
@@ -420,7 +422,9 @@ where
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
-        self.router.wasm.reset_transaction_index();
+        self.router
+            .wasm
+            .set_transaction_info(TransactionInfo { index: 0 });
         action(&mut self.block);
     }
 
@@ -466,7 +470,7 @@ where
                     .map(|msg| router.execute(&*api, write_cache, block, sender.clone(), msg))
                     .collect()
             },
-            || router.wasm.increment_transaction_index(),
+            || router.wasm.inc_transaction_index(),
         )
     }
 
@@ -493,7 +497,7 @@ where
         transactional(
             &mut *storage,
             |write_cache, _| router.wasm.sudo(&*api, write_cache, router, block, msg),
-            || router.wasm.increment_transaction_index(),
+            || router.wasm.inc_transaction_index(),
         )
     }
 
@@ -514,7 +518,7 @@ where
         transactional(
             &mut *storage,
             |write_cache, _| router.sudo(&*api, write_cache, block, msg),
-            || router.wasm.increment_transaction_index(),
+            || router.wasm.inc_transaction_index(),
         )
     }
 }

@@ -6,7 +6,7 @@ use crate::{
     Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
-use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
+use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage, TransactionInfo};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
@@ -527,6 +527,12 @@ where
     /// Overwrites the initial block.
     pub fn with_block(mut self, block: BlockInfo) -> Self {
         self.block = block;
+        self
+    }
+
+    /// Overwrites the initial transaction.
+    pub fn with_transaction(self, transaction: TransactionInfo) -> Self {
+        self.wasm.set_transaction_info(transaction);
         self
     }
 
