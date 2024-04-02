@@ -568,8 +568,8 @@ where
         let mut app = App {
             router,
             api: self.api,
-            storage: self.storage,
             block: self.block,
+            storage: self.storage,
         };
         app.init_modules(init_fn);
         app
