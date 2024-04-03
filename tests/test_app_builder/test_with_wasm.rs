@@ -171,9 +171,9 @@ fn compiling_with_wasm_keeper_should_work() {
 fn default_transaction_info_should_work() {
     let wasm_keeper: Box<dyn Wasm<Empty, Empty>> =
         Box::new(MyWasmKeeper::new(NO_MESSAGE, NO_MESSAGE, NO_MESSAGE));
-    assert_eq!(0, wasm_keeper.transaction_info().index);
+    assert_eq!(None, wasm_keeper.transaction_info());
     wasm_keeper.inc_transaction_index();
-    assert_eq!(0, wasm_keeper.transaction_info().index);
-    wasm_keeper.set_transaction_info(TransactionInfo { index: 15 });
-    assert_eq!(0, wasm_keeper.transaction_info().index);
+    assert_eq!(None, wasm_keeper.transaction_info());
+    wasm_keeper.set_transaction_info(Some(TransactionInfo { index: 15 }));
+    assert_eq!(None, wasm_keeper.transaction_info());
 }

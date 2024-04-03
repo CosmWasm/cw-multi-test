@@ -173,11 +173,11 @@ pub trait Wasm<ExecC, QueryC> {
     fn inc_transaction_index(&self) {}
 
     /// Sets custom transaction info.
-    fn set_transaction_info(&self, _transaction: TransactionInfo) {}
+    fn set_transaction_info(&self, _transaction: Option<TransactionInfo>) {}
 
     /// Returns a copy of the current transaction info.
-    fn transaction_info(&self) -> TransactionInfo {
-        TransactionInfo { index: 0 }
+    fn transaction_info(&self) -> Option<TransactionInfo> {
+        None
     }
 }
 
@@ -191,8 +191,8 @@ pub struct WasmKeeper<ExecC, QueryC> {
     address_generator: Box<dyn AddressGenerator>,
     /// Contract's code checksum generator.
     checksum_generator: Box<dyn ChecksumGenerator>,
-    /// Transaction info.
-    transaction: RefCell<TransactionInfo>,
+    /// Optional transaction info, filled when some transaction was already executed.
+    transaction: RefCell<Option<TransactionInfo>>,
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
 }
@@ -205,8 +205,8 @@ impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
             code_data: BTreeMap::default(),
             address_generator: Box::new(SimpleAddressGenerator),
             checksum_generator: Box::new(SimpleChecksumGenerator),
+            transaction: RefCell::new(None),
             _p: std::marker::PhantomData,
-            transaction: RefCell::new(TransactionInfo { index: 0 }),
         }
     }
 }
@@ -353,14 +353,19 @@ where
     }
 
     fn inc_transaction_index(&self) {
-        self.transaction.borrow_mut().index += 1;
+        let mut transaction_ref = self.transaction.borrow_mut();
+        let Some(transaction) = transaction_ref.as_mut() else {
+            *transaction_ref = Some(TransactionInfo { index: 0 });
+            return;
+        };
+        transaction.index += 1;
     }
 
-    fn set_transaction_info(&self, transaction: TransactionInfo) {
-        self.transaction.borrow_mut().index = transaction.index;
+    fn set_transaction_info(&self, transaction: Option<TransactionInfo>) {
+        *self.transaction.borrow_mut() = transaction;
     }
 
-    fn transaction_info(&self) -> TransactionInfo {
+    fn transaction_info(&self) -> Option<TransactionInfo> {
         self.transaction.borrow().clone()
     }
 }

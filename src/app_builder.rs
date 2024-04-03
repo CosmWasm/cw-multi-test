@@ -531,7 +531,7 @@ where
     }
 
     /// Overwrites the initial transaction.
-    pub fn with_transaction(self, transaction: TransactionInfo) -> Self {
+    pub fn with_transaction(self, transaction: Option<TransactionInfo>) -> Self {
         self.wasm.set_transaction_info(transaction);
         self
     }

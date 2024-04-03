@@ -9,9 +9,9 @@ fn building_app_with_custom_transaction_info_should_work() {
     // build the application with custom transaction info
     let app_builder = AppBuilder::default();
     let app = app_builder
-        .with_transaction(transaction_info)
+        .with_transaction(Some(transaction_info))
         .build(no_init);
 
     // index should be the same value as provided during initialization
-    assert_eq!(21, app.transaction_info().index);
+    assert_eq!(21, app.transaction_info().unwrap().index);
 }

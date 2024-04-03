@@ -410,9 +410,7 @@ where
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
-        self.router
-            .wasm
-            .set_transaction_info(TransactionInfo { index: 0 });
+        self.router.wasm.set_transaction_info(None);
         self.block = block;
     }
 
@@ -422,9 +420,7 @@ where
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
-        self.router
-            .wasm
-            .set_transaction_info(TransactionInfo { index: 0 });
+        self.router.wasm.set_transaction_info(None);
         action(&mut self.block);
     }
 
@@ -434,7 +430,7 @@ where
     }
 
     /// Returns a copy of the current [TransactionInfo].
-    pub fn transaction_info(&self) -> TransactionInfo {
+    pub fn transaction_info(&self) -> Option<TransactionInfo> {
         self.router.wasm.transaction_info()
     }
 
