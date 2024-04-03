@@ -1,7 +1,9 @@
 use crate::app::CosmosRouter;
 use crate::error::{bail, AnyResult};
 use crate::AppResponse;
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, Storage};
+use cosmwasm_std::{
+    to_json_binary, Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, Querier, Storage,
+};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -182,7 +184,7 @@ where
         _block: &BlockInfo,
         _request: Self::QueryT,
     ) -> AnyResult<Binary> {
-        Ok(Binary::default())
+        to_json_binary(&Empty {}).map_err(Into::into)
     }
 
     /// Runs any [SudoT](Self::SudoT) privileged action, always returns a default response.

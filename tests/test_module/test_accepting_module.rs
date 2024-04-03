@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::MockStorage;
-use cosmwasm_std::{Binary, Empty};
+use cosmwasm_std::{to_json_binary, Empty};
 use cw_multi_test::{AcceptingModule, App, AppResponse, Module};
 
 /// Utility function for comparing responses.
@@ -28,7 +28,7 @@ fn assert_results(accepting_module: AcceptingModule<Empty, Empty, Empty>) {
             .unwrap(),
     );
     assert_eq!(
-        Binary::default(),
+        to_json_binary(&empty_msg).unwrap(),
         accepting_module
             .query(
                 app.api(),

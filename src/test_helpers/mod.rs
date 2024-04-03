@@ -5,6 +5,7 @@ use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub mod any;
 pub mod caller;
 pub mod echo;
 pub mod error;

@@ -12,9 +12,9 @@ use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
-    from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomMsg,
-    CustomQuery, Empty, Querier, QuerierResult, QuerierWrapper, QueryRequest, Record, Storage,
-    SystemError, SystemResult,
+    from_json, to_json_binary, Addr, AnyMsg, Api, Binary, BlockInfo, ContractResult, CosmosMsg,
+    CustomMsg, CustomQuery, Empty, GrpcQuery, Querier, QuerierResult, QuerierWrapper, QueryRequest,
+    Record, Storage, SystemError, SystemResult,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::fmt::Debug;
@@ -622,6 +622,15 @@ where
             CosmosMsg::Any(msg) => self
                 .stargate
                 .execute(api, storage, self, block, sender, msg),
+            #[allow(deprecated)]
+            CosmosMsg::Stargate { type_url, value } => self.stargate.execute(
+                api,
+                storage,
+                self,
+                block,
+                sender,
+                AnyMsg { type_url, value },
+            ),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
@@ -644,6 +653,15 @@ where
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
             QueryRequest::Grpc(req) => self.stargate.query(api, storage, &querier, block, req),
+            #[allow(deprecated)]
+            QueryRequest::Stargate { path, data } => {
+                println!("DDD: query");
+                let a =
+                    self.stargate
+                        .query(api, storage, &querier, block, GrpcQuery { path, data });
+                println!("DDD: query: {:?}", a);
+                a
+            }
             _ => unimplemented!(),
         }
     }

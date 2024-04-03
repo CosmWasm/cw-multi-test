@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+mod test_any;
 mod test_app;
 mod test_custom_handler;
 mod test_error;
