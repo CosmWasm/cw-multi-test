@@ -491,12 +491,8 @@ where
     ///
     /// [query]: Contract::query
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
-        println!("DDD: contracts query before");
         let msg: T3 = from_json(msg)?;
-        println!("DDD: contracts query after");
-        let a = (self.query_fn)(deps, env, msg);
-        println!("DDD: contracts query after: {:?}", a);
-        a.map_err(|err: E3| anyhow!(err))
+        (self.query_fn)(deps, env, msg).map_err(|err: E3| anyhow!(err))
     }
 
     /// Calls [sudo] on wrapped [Contract] trait implementor.

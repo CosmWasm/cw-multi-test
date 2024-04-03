@@ -655,12 +655,8 @@ where
             QueryRequest::Grpc(req) => self.stargate.query(api, storage, &querier, block, req),
             #[allow(deprecated)]
             QueryRequest::Stargate { path, data } => {
-                println!("DDD: query");
-                let a =
-                    self.stargate
-                        .query(api, storage, &querier, block, GrpcQuery { path, data });
-                println!("DDD: query: {:?}", a);
-                a
+                self.stargate
+                    .query(api, storage, &querier, block, GrpcQuery { path, data })
             }
             _ => unimplemented!(),
         }
