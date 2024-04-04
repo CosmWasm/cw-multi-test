@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.0.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.0.1) (2024-04-04)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.0.0...v2.0.1)
+
+**Closed issues:**
+
+- Restore support for `Stargate` messages [\#159](https://github.com/CosmWasm/cw-multi-test/issues/159)
+
 ## [v2.0.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.0.0) (2024-03-22)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v1.0.0...v2.0.0)
