@@ -17,8 +17,8 @@ fn failing_stargate_module_should_work_with_stargate() {
         .unwrap();
 
     // execute empty message on the contract, this contract returns 'stargate' message
-    // which is rejected by default failing stargate keeper
-    // source error message comes from failing stargate keeper 'execute' entry-point
+    // which is rejected by always failing keeper (default one)
+    // source error message comes from 'execute' entry-point of always failing keeper
     assert!(app
         .execute_contract(owner_addr, contract_addr.clone(), &Empty {}, &[])
         .unwrap_err()
@@ -27,7 +27,7 @@ fn failing_stargate_module_should_work_with_stargate() {
         .to_string()
         .starts_with("Unexpected exec msg AnyMsg"));
 
-    // error message comes from failing stargate keeper 'query' entry-point
+    // error message comes from 'query' entry-point of always failing keeper
     assert!(app
         .wrap()
         .query_wasm_smart::<Binary>(contract_addr, &Empty {})
@@ -53,12 +53,12 @@ fn accepting_stargate_module_should_work_with_stargate() {
         .unwrap();
 
     // execute empty message on the contract, this contract returns 'stargate' message
-    // which is just silently processed by accepting stargate keeper
+    // which is just silently processed by always accepting keeper
     assert!(app
         .execute_contract(owner_addr, contract_addr.clone(), &Empty {}, &[])
         .is_ok());
 
-    // query with empty message, which is just silently processed by accepting stargate keeper
+    // query with empty message, which is just silently processed by always accepting keeper
     assert!(app
         .wrap()
         .query_wasm_smart::<Empty>(contract_addr, &Empty {})
