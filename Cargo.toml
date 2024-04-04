@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>", "Dariusz Depta <DariuszDepta@users.noreply.github.com>"]
 description = "Testing tools for multi-contract interactions"
 repository = "https://github.com/CosmWasm/cw-multi-test"
