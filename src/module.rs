@@ -184,7 +184,7 @@ where
         _block: &BlockInfo,
         _request: Self::QueryT,
     ) -> AnyResult<Binary> {
-        to_json_binary(&Empty {}).map_err(Into::into)
+        to_json_binary(&to_json_binary(&Empty {}).unwrap()).map_err(Into::into)
     }
 
     /// Runs any [SudoT](Self::SudoT) privileged action, always returns a default response.

@@ -25,7 +25,7 @@ fn failing_stargate_module_should_work_with_stargate() {
         .source()
         .unwrap()
         .to_string()
-        .starts_with("Unexpected exec msg AnyMsg"));
+        .starts_with("Unexpected exec msg StargateMsg"));
 
     // error message comes from 'query' entry-point of always failing keeper
     assert!(app
@@ -33,7 +33,7 @@ fn failing_stargate_module_should_work_with_stargate() {
         .query_wasm_smart::<Binary>(contract_addr, &Empty {})
         .unwrap_err()
         .to_string()
-        .contains("Unexpected custom query GrpcQuery"));
+        .contains("Unexpected custom query StargateQuery"));
 }
 
 #[test]

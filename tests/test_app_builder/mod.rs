@@ -5,6 +5,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+mod test_with_anygate;
 mod test_with_api;
 mod test_with_bank;
 mod test_with_block;
@@ -57,6 +58,17 @@ where
         bail!(self.1);
     }
 
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: Self::QueryT,
+    ) -> AnyResult<Binary> {
+        bail!(self.2);
+    }
+
     fn sudo<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -70,16 +82,5 @@ where
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         bail!(self.3);
-    }
-
-    fn query(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: Self::QueryT,
-    ) -> AnyResult<Binary> {
-        bail!(self.2);
     }
 }

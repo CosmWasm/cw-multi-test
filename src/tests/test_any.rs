@@ -1,5 +1,5 @@
 use crate::test_helpers::any;
-use crate::{no_init, App, AppBuilder, Executor, StargateAcceptingModule};
+use crate::{no_init, AnygateAcceptingModule, App, AppBuilder, Executor};
 use cosmwasm_std::{Binary, Empty};
 
 #[test]
@@ -39,7 +39,7 @@ fn failing_stargate_module_should_work_with_any() {
 #[test]
 fn accepting_stargate_module_should_work_with_any() {
     let mut app = AppBuilder::default()
-        .with_stargate(StargateAcceptingModule::new())
+        .with_anygate(AnygateAcceptingModule::new())
         .build(no_init);
 
     // store the contract

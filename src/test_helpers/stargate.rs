@@ -23,9 +23,7 @@ fn query(deps: Deps, _env: Env, _msg: Empty) -> StdResult<Binary> {
         path: "/this.is.stargate.query.test.helper".to_string(),
         data: Binary::from(HexBinary::from_hex("abc2").unwrap()),
     };
-    deps.querier
-        .query::<Empty>(&request)
-        .map(|result| to_json_binary(&result).unwrap())
+    deps.querier.query(&request)
 }
 
 pub fn contract() -> Box<dyn Contract<Empty>> {
