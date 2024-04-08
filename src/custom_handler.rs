@@ -39,7 +39,7 @@ impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC> {
 
 /// Custom handler that stores all received messages and queries.
 ///
-/// State is thin shared state, so it can be hold after mock is passed to [App](crate::App) to read state.
+/// State is thin shared state, so it can be held after mock is passed to [App](crate::App) to read state.
 #[derive(Clone, Derivative)]
 #[derivative(Default(bound = "", new = "true"))]
 pub struct CachingCustomHandler<ExecC, QueryC> {

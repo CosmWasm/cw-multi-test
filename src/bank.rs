@@ -27,7 +27,7 @@ const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
 #[cfg(feature = "cosmwasm_1_3")]
 const DENOM_METADATA: Map<String, DenomMetadata> = Map::new("metadata");
 
-/// Default namespace for bank module.
+/// Default storage namespace for bank module.
 pub const NAMESPACE_BANK: &[u8] = b"bank";
 pub const IBC_LOCK_MODULE_ADDRESS: &str = "ibc_bank_lock_module";
 
@@ -234,7 +234,7 @@ impl Module for BankKeeper {
             BankQuery::AllBalances { address } => {
                 let address = api.addr_validate(&address)?;
                 let amount = self.get_balance(&bank_storage, &address)?;
-                let res = AllBalanceResponse { amount };
+                let res = AllBalanceResponse::new(amount);
                 to_json_binary(&res).map_err(Into::into)
             }
 
@@ -245,7 +245,7 @@ impl Module for BankKeeper {
                     .into_iter()
                     .find(|c| c.denom == denom)
                     .unwrap_or_else(|| coin(0, denom));
-                let res = BalanceResponse { amount };
+                let res = BalanceResponse::new(amount);
                 to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_1")]
@@ -445,8 +445,8 @@ mod test {
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("receiver");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("receiver");
         let init_funds = vec![coin(100, "eth"), coin(20, "btc")];
         let norm = vec![coin(20, "btc"), coin(100, "eth")];
 
@@ -545,8 +545,8 @@ mod test {
         let block = mock_env().block;
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("receiver");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("receiver");
         let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
         let rcpt_funds = vec![coin(5, "btc")];
 
@@ -598,8 +598,8 @@ mod test {
         let block = mock_env().block;
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("recipient");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("recipient");
         let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
 
         // set money
@@ -709,8 +709,8 @@ mod test {
         let block = mock_env().block;
         let router = MockRouter::default();
 
-        let owner = Addr::unchecked("owner");
-        let rcpt = Addr::unchecked("recipient");
+        let owner = api.addr_make("owner");
+        let rcpt = api.addr_make("recipient");
         let init_funds = vec![coin(5000, "atom"), coin(100, "eth")];
 
         // set money

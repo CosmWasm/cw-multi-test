@@ -5,9 +5,9 @@ use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
-    Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomQuery, Decimal, Delegation,
-    DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier, StakingMsg,
-    StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
+    Delegation, DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier,
+    StakingMsg, StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -130,7 +130,7 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
     /// This is called from the end blocker (`update_block` / `set_block`) to process the
     /// staking queue. Needed because unbonding has a waiting time.
     /// If you're implementing a dummy staking module, this can be a no-op.
-    fn process_queue<ExecC, QueryC: CustomQuery>(
+    fn process_queue<ExecC: CustomMsg, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
@@ -256,7 +256,7 @@ impl StakeKeeper {
 
         Ok(Coin {
             denom: staking_info.bonded_denom,
-            amount: Uint128::new(1) * delegator_rewards, // multiplying by 1 to convert Decimal to Uint128
+            amount: Uint128::new(1).mul_floor(delegator_rewards), // multiplying by 1 to convert Decimal to Uint128
         })
     }
 
@@ -282,7 +282,7 @@ impl StakeKeeper {
     }
 
     /// Updates the staking reward for the given validator and their stakers
-    /// It saves the validator info and it's stakers, so make sure not to overwrite that.
+    /// It saves the validator info and stakers, so make sure not to overwrite that.
     /// Always call this to update rewards before changing anything that influences future rewards.
     fn update_rewards(
         api: &dyn Api,
@@ -362,7 +362,7 @@ impl StakeKeeper {
         Ok(shares.map(|shares| {
             Coin {
                 denom: staking_info.bonded_denom,
-                amount: Uint128::new(1) * shares.stake, // multiplying by 1 to convert Decimal to Uint128
+                amount: Uint128::new(1).mul_floor(shares.stake), // multiplying by 1 to convert Decimal to Uint128
             }
         }))
     }
@@ -482,7 +482,7 @@ impl StakeKeeper {
             .unwrap();
 
         let remaining_percentage = Decimal::one() - percentage;
-        validator_info.stake = validator_info.stake * remaining_percentage;
+        validator_info.stake = validator_info.stake.mul_floor(remaining_percentage);
 
         // if the stake is completely gone, we clear all stakers and reinitialize the validator
         if validator_info.stake.is_zero() {
@@ -515,7 +515,7 @@ impl StakeKeeper {
             .iter_mut()
             .filter(|ub| &ub.validator == validator)
             .for_each(|ub| {
-                ub.amount = ub.amount * remaining_percentage;
+                ub.amount = ub.amount.mul_floor(remaining_percentage);
             });
         UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
 
@@ -544,7 +544,7 @@ impl StakeKeeper {
         Ok(())
     }
 
-    fn process_queue<ExecC, QueryC: CustomQuery>(
+    fn process_queue<ExecC: CustomMsg, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
@@ -613,7 +613,7 @@ impl StakeKeeper {
 }
 
 impl Staking for StakeKeeper {
-    fn process_queue<ExecC, QueryC: CustomQuery>(
+    fn process_queue<ExecC: CustomMsg, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
@@ -629,7 +629,7 @@ impl Module for StakeKeeper {
     type QueryT = StakingQuery;
     type SudoT = StakingSudo;
 
-    fn execute<ExecC, QueryC: CustomQuery>(
+    fn execute<ExecC: CustomMsg, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
@@ -747,32 +747,6 @@ impl Module for StakeKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC: CustomQuery>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        msg: StakingSudo,
-    ) -> AnyResult<AppResponse> {
-        match msg {
-            StakingSudo::Slash {
-                validator,
-                percentage,
-            } => {
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                let validator = api.addr_validate(&validator)?;
-                self.validate_percentage(percentage)?;
-
-                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
-
-                Ok(AppResponse::default())
-            }
-            #[allow(deprecated)]
-            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
-        }
-    }
-
     fn query(
         &self,
         api: &dyn Api,
@@ -783,9 +757,9 @@ impl Module for StakeKeeper {
     ) -> AnyResult<Binary> {
         let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
         match request {
-            StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse {
-                denom: Self::get_staking_info(&staking_storage)?.bonded_denom,
-            })?),
+            StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse::new(
+                Self::get_staking_info(&staking_storage)?.bonded_denom,
+            ))?),
             StakingQuery::AllDelegations { delegator } => {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
@@ -810,9 +784,7 @@ impl Module for StakeKeeper {
                     })
                     .collect();
 
-                Ok(to_json_binary(&AllDelegationsResponse {
-                    delegations: res?,
-                })?)
+                Ok(to_json_binary(&AllDelegationsResponse::new(res?))?)
             }
             StakingQuery::Delegation {
                 delegator,
@@ -840,39 +812,61 @@ impl Module for StakeKeeper {
                 let staking_info = Self::get_staking_info(&staking_storage)?;
 
                 let amount = coin(
-                    (shares.stake * Uint128::new(1)).u128(),
+                    Uint128::new(1).mul_floor(shares.stake).u128(),
                     staking_info.bonded_denom,
                 );
 
                 let full_delegation_response = if amount.amount.is_zero() {
                     // no delegation
-                    DelegationResponse { delegation: None }
+                    DelegationResponse::new(None)
                 } else {
-                    DelegationResponse {
-                        delegation: Some(FullDelegation {
-                            delegator,
-                            validator,
-                            amount: amount.clone(),
-                            can_redelegate: amount, // TODO: not implemented right now
-                            accumulated_rewards: if reward.amount.is_zero() {
-                                vec![]
-                            } else {
-                                vec![reward]
-                            },
-                        }),
-                    }
+                    DelegationResponse::new(Some(FullDelegation {
+                        delegator,
+                        validator,
+                        amount: amount.clone(),
+                        can_redelegate: amount, // TODO: not implemented right now
+                        accumulated_rewards: if reward.amount.is_zero() {
+                            vec![]
+                        } else {
+                            vec![reward]
+                        },
+                    }))
                 };
 
                 let res = to_json_binary(&full_delegation_response)?;
                 Ok(res)
             }
-            StakingQuery::AllValidators {} => Ok(to_json_binary(&AllValidatorsResponse {
-                validators: self.get_validators(&staking_storage)?,
-            })?),
-            StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse {
-                validator: self.get_validator(&staking_storage, &Addr::unchecked(address))?,
-            })?),
+            StakingQuery::AllValidators {} => Ok(to_json_binary(&AllValidatorsResponse::new(
+                self.get_validators(&staking_storage)?,
+            ))?),
+            StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(
+                self.get_validator(&staking_storage, &Addr::unchecked(address))?,
+            ))?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
+        }
+    }
+
+    fn sudo<ExecC: CustomMsg, QueryC: CustomQuery>(
+        &self,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: StakingSudo,
+    ) -> AnyResult<AppResponse> {
+        match msg {
+            StakingSudo::Slash {
+                validator,
+                percentage,
+            } => {
+                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                let validator = api.addr_validate(&validator)?;
+                self.validate_percentage(percentage)?;
+                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
+                Ok(AppResponse::default())
+            }
+            #[allow(deprecated)]
+            StakingSudo::ProcessQueue {} => self.process_queue(api, storage, router, block),
         }
     }
 }
@@ -906,7 +900,7 @@ impl DistributionKeeper {
 
         // load updated rewards for delegator
         let mut shares = STAKES.load(&staking_storage, (delegator, validator))?;
-        let rewards = Uint128::new(1) * shares.rewards; // convert to Uint128
+        let rewards = Uint128::new(1).mul_floor(shares.rewards); // convert to Uint128
 
         // remove rewards from delegator
         shares.rewards = Decimal::zero();
@@ -915,7 +909,7 @@ impl DistributionKeeper {
         Ok(rewards)
     }
 
-    /// Returns the withdraw address for specified delegator.
+    /// Returns the withdrawal address for specified delegator.
     pub fn get_withdraw_address(storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
         Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator)? {
             Some(a) => a,
@@ -951,7 +945,7 @@ impl Module for DistributionKeeper {
     type QueryT = Empty;
     type SudoT = Empty;
 
-    fn execute<ExecC, QueryC: CustomQuery>(
+    fn execute<ExecC: CustomMsg, QueryC: CustomQuery>(
         &self,
         api: &dyn Api,
         storage: &mut dyn Storage,
@@ -1010,17 +1004,6 @@ impl Module for DistributionKeeper {
         }
     }
 
-    fn sudo<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        _msg: Empty,
-    ) -> AnyResult<AppResponse> {
-        bail!("Something went wrong - Distribution doesn't have sudo messages")
-    }
-
     fn query(
         &self,
         _api: &dyn Api,
@@ -1031,12 +1014,23 @@ impl Module for DistributionKeeper {
     ) -> AnyResult<Binary> {
         bail!("Something went wrong - Distribution doesn't have query messages")
     }
+
+    fn sudo<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _msg: Empty,
+    ) -> AnyResult<AppResponse> {
+        bail!("Something went wrong - Distribution doesn't have sudo messages")
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::stargate::StargateFailing;
+    use crate::stargate::StargateFailingModule;
     use crate::{
         app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, Router,
         WasmKeeper,
@@ -1056,7 +1050,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailing,
+        StargateFailingModule,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -1068,7 +1062,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailingModule::new(),
         }
     }
 
@@ -1170,12 +1164,12 @@ mod test {
         let stake = StakeKeeper::new();
         let block = mock_env().block;
 
-        let delegator = Addr::unchecked("delegator");
-        let validator = api.addr_validate("testvaloper1").unwrap();
+        let delegator = api.addr_make("delegator");
+        let validator = api.addr_make("testvaloper1");
 
         // add validator
         let valoper1 = Validator {
-            address: "testvaloper1".to_string(),
+            address: validator.to_string(),
             commission: Decimal::percent(10),
             max_commission: Decimal::percent(20),
             max_change_rate: Decimal::percent(1),
@@ -1205,7 +1199,7 @@ mod test {
                 &router,
                 &block,
                 StakingSudo::Slash {
-                    validator: "testvaloper1".to_string(),
+                    validator: validator.to_string(),
                     percentage: Decimal::percent(50),
                 },
             )
@@ -1230,7 +1224,7 @@ mod test {
                 &router,
                 &block,
                 StakingSudo::Slash {
-                    validator: "testvaloper1".to_string(),
+                    validator: validator.to_string(),
                     percentage: Decimal::percent(100),
                 },
             )
@@ -1250,7 +1244,7 @@ mod test {
             setup_test_env(Decimal::percent(10), Decimal::percent(10));
         let stake = &router.staking;
         let distr = &router.distribution;
-        let delegator = Addr::unchecked("delegator");
+        let delegator = api.addr_make("delegator");
 
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
         // stake 200 tokens
@@ -1313,8 +1307,8 @@ mod test {
         let stake = &router.staking;
         let distr = &router.distribution;
         let bank = &router.bank;
-        let delegator1 = Addr::unchecked("delegator1");
-        let delegator2 = Addr::unchecked("delegator2");
+        let delegator1 = api.addr_make("delegator1");
+        let delegator2 = api.addr_make("delegator2");
 
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
 
@@ -1462,9 +1456,7 @@ mod test {
     }
 
     mod msg {
-        use cosmwasm_std::{
-            coins, Addr, BondedDenomResponse, Decimal, QuerierWrapper, StakingQuery,
-        };
+        use cosmwasm_std::{coins, QuerierWrapper};
         use serde::de::DeserializeOwned;
 
         use super::*;
@@ -1561,8 +1553,8 @@ mod test {
             let (mut test_env, validator1) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = Addr::unchecked("delegator1");
-            let reward_receiver = Addr::unchecked("rewardreceiver");
+            let delegator1 = test_env.api.addr_make("delegator1");
+            let reward_receiver = test_env.api.addr_make("rewardreceiver");
 
             // fund delegator1 account
             test_env
@@ -1572,7 +1564,7 @@ mod test {
                 .unwrap();
 
             // add second validator
-            let validator2 = Addr::unchecked("validator2");
+            let validator2 = test_env.api.addr_make("validator2");
             test_env
                 .router
                 .staking
@@ -1699,8 +1691,8 @@ mod test {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator = Addr::unchecked("delegator");
-            let reward_receiver = Addr::unchecked("rewardreceiver");
+            let delegator = test_env.api.addr_make("delegator");
+            let reward_receiver = test_env.api.addr_make("rewardreceiver");
 
             test_env
                 .router
@@ -1779,7 +1771,7 @@ mod test {
             let (mut test_env, validator1) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = Addr::unchecked("delegator1");
+            let delegator1 = test_env.api.addr_make("delegator1");
 
             // fund delegator1 account
             test_env
@@ -1813,7 +1805,7 @@ mod test {
             assert_eq!(e.to_string(), "invalid shares amount");
 
             // add second validator
-            let validator2 = Addr::unchecked("validator2");
+            let validator2 = test_env.api.addr_make("validator2");
             test_env
                 .router
                 .staking
@@ -1864,7 +1856,7 @@ mod test {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = Addr::unchecked("delegator1");
+            let delegator1 = test_env.api.addr_make("delegator1");
 
             // fund delegator1 account
             test_env
@@ -1895,7 +1887,7 @@ mod test {
             let (mut test_env, _) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator1 = Addr::unchecked("delegator1");
+            let delegator1 = test_env.api.addr_make("delegator1");
 
             // fund delegator1 account
             test_env
@@ -1927,8 +1919,8 @@ mod test {
             let (mut test_env, _) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator = Addr::unchecked("delegator1");
-            let validator = "testvaloper2";
+            let delegator = test_env.api.addr_make("delegator1");
+            let validator = test_env.api.addr_make("testvaloper2");
 
             // init balances
             test_env
@@ -1967,7 +1959,7 @@ mod test {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
-            let delegator = Addr::unchecked("delegator1");
+            let delegator = test_env.api.addr_make("delegator1");
 
             // delegate 0
             let err = execute_stake(
@@ -1999,8 +1991,8 @@ mod test {
             // run all staking queries
             let (mut test_env, validator1) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
-            let delegator1 = Addr::unchecked("delegator1");
-            let delegator2 = Addr::unchecked("delegator2");
+            let delegator1 = test_env.api.addr_make("delegator1");
+            let delegator2 = test_env.api.addr_make("delegator2");
 
             // init balances
             test_env
@@ -2158,8 +2150,8 @@ mod test {
             // run all staking queries
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
-            let delegator1 = Addr::unchecked("delegator1");
-            let delegator2 = Addr::unchecked("delegator2");
+            let delegator1 = test_env.api.addr_make("delegator1");
+            let delegator2 = test_env.api.addr_make("delegator2");
 
             // init balances
             test_env
@@ -2287,7 +2279,7 @@ mod test {
         fn partial_unbonding_reduces_stake() {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
-            let delegator = Addr::unchecked("delegator1");
+            let delegator = test_env.api.addr_make("delegator1");
 
             // init balance
             test_env
@@ -2411,7 +2403,7 @@ mod test {
             // run all staking queries
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
-            let delegator = Addr::unchecked("delegator");
+            let delegator = test_env.api.addr_make("delegator");
 
             // init balance
             test_env
@@ -2500,7 +2492,7 @@ mod test {
         fn rewards_initial_wait() {
             let (mut test_env, validator) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::zero()));
-            let delegator = Addr::unchecked("delegator");
+            let delegator = test_env.api.addr_make("delegator");
 
             // init balance
             test_env

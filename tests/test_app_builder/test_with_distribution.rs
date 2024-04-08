@@ -1,5 +1,5 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
-use cosmwasm_std::{Addr, DistributionMsg, Empty};
+use cosmwasm_std::{DistributionMsg, Empty};
 use cw_multi_test::{no_init, AppBuilder, Distribution, Executor};
 
 type MyDistributionKeeper = MyKeeper<DistributionMsg, Empty, Empty>;
@@ -7,13 +7,11 @@ type MyDistributionKeeper = MyKeeper<DistributionMsg, Empty, Empty>;
 impl Distribution for MyDistributionKeeper {}
 
 const EXECUTE_MSG: &str = "distribution execute called";
-/// Manages the distribution aspects within tests, simulating scenarios ]
-/// like reward distribution or token allocation. This trait is important
-/// for contracts that involve distributing assets in a certain way.
+
 #[test]
 fn building_app_with_custom_distribution_should_work() {
     // build custom distribution keeper
-    // distribution keeper has no query or sudo messages
+    // which has no query or sudo messages
     let distribution_keeper = MyDistributionKeeper::new(EXECUTE_MSG, NO_MESSAGE, NO_MESSAGE);
 
     // build the application with custom distribution keeper
@@ -23,13 +21,13 @@ fn building_app_with_custom_distribution_should_work() {
         .build(no_init);
 
     // prepare additional input data
-    let recipient = Addr::unchecked("recipient");
+    let recipient = app.api().addr_make("recipient");
 
     // executing distribution message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            Addr::unchecked("sender"),
+            app.api().addr_make("sender"),
             DistributionMsg::SetWithdrawAddress {
                 address: recipient.into(),
             }

@@ -9,7 +9,7 @@ use crate::ibc::{
 use crate::ibc::{Ibc, IbcSimpleModule};
 use crate::module::{FailingModule, Module};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{Stargate, StargateFailing};
+use crate::stargate::{Stargate, StargateFailingModule, StargateMsg, StargateQuery};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{AppBuilder, GovFailingModule};
@@ -42,7 +42,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     DistributionKeeper,
     IbcSimpleModule,
     GovFailingModule,
-    StargateFailing,
+    StargateFailingModule,
 >;
 
 /// # Blockchain application simulator
@@ -59,7 +59,7 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = IbcSimpleModule,
     Gov = GovFailingModule,
-    Stargate = StargateFailing,
+    Stargate = StargateFailingModule,
 > {
     pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate>,
     pub(crate) api: Api,
@@ -95,7 +95,7 @@ impl BasicApp {
                 DistributionKeeper,
                 IbcSimpleModule,
                 GovFailingModule,
-                StargateFailing,
+                StargateFailingModule,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -106,7 +106,7 @@ impl BasicApp {
 }
 
 /// Creates new default `App` implementation working with customized exec and query messages.
-/// Outside of `App` implementation to make type elision better.
+/// Outside the `App` implementation to make type elision better.
 pub fn custom_app<ExecC, QueryC, F>(init_fn: F) -> BasicApp<ExecC, QueryC>
 where
     ExecC: CustomMsg + DeserializeOwned + 'static,
@@ -120,7 +120,7 @@ where
             DistributionKeeper,
             IbcSimpleModule,
             GovFailingModule,
-            StargateFailing,
+            StargateFailingModule,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -261,7 +261,7 @@ where
         self.init_modules(|router, _, _| {
             router
                 .wasm
-                .store_code(Addr::unchecked("code-creator"), code)
+                .store_code(MockApi::default().addr_make("creator"), code)
         })
     }
 
@@ -273,6 +273,17 @@ where
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> u64 {
         self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
+    }
+
+    /// Registers contract code (like [store_code_with_creator](Self::store_code_with_creator)),
+    /// but takes the code identifier as an additional argument.
+    pub fn store_code_with_id(
+        &mut self,
+        creator: Addr,
+        code_id: u64,
+        code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
+    ) -> AnyResult<u64> {
+        self.init_modules(|router, _, _| router.wasm.store_code_with_id(creator, code_id, code))
     }
 
     /// Duplicates the contract code identified by `code_id` and returns
@@ -379,7 +390,7 @@ where
     }
 
     /// Simple helper so we get access to all the QuerierWrapper helpers,
-    /// eg. wrap().query_wasm_smart, query_all_balances, ...
+    /// e.g. wrap().query_wasm_smart, query_all_balances, ...
     pub fn wrap(&self) -> QuerierWrapper<CustomT::QueryT> {
         QuerierWrapper::new(self)
     }
@@ -418,7 +429,10 @@ where
         contract_addr: U,
         msg: &T,
     ) -> AnyResult<AppResponse> {
-        let msg = to_json_binary(msg)?;
+        let msg = WasmSudo {
+            contract_addr: contract_addr.into(),
+            message: to_json_binary(msg)?,
+        };
 
         let Self {
             block,
@@ -428,9 +442,7 @@ where
         } = self;
 
         transactional(&mut *storage, |write_cache, _| {
-            router
-                .wasm
-                .sudo(&*api, contract_addr.into(), write_cache, router, block, msg)
+            router.wasm.sudo(&*api, write_cache, router, block, msg)
         })
     }
 
@@ -568,11 +580,11 @@ pub enum IbcModule {
 /// A trait representing the Cosmos based chain's router.
 ///
 /// This trait is designed for routing messages within the Cosmos ecosystem.
-/// It is key to ensuring that transactions and contract calls are directed to the
+/// It is key to ensure that transactions and contract calls are directed to the
 /// correct destinations during testing, simulating real-world blockchain operations.
 pub trait CosmosRouter {
     /// Type of the executed custom message.
-    type ExecC;
+    type ExecC: CustomMsg;
     /// Type of the query custom message.
     type QueryC: CustomQuery;
 
@@ -649,14 +661,19 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
-            CosmosMsg::Stargate { type_url, value } => self
-                .stargate
-                .execute(api, storage, self, block, sender, type_url, value),
+            CosmosMsg::Stargate { type_url, value } => self.stargate.execute(
+                api,
+                storage,
+                self,
+                block,
+                sender,
+                StargateMsg { type_url, value },
+            ),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
 
-    /// this is used by `RouterQuerier` to actual implement the `Querier` interface.
+    /// This is used by `RouterQuerier` to actual implement the `Querier` interface.
     /// you most likely want to use `router.querier(storage, block).wrap()` to get a
     /// QuerierWrapper to interact with
     fn query(
@@ -673,9 +690,10 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req.into()),
-            QueryRequest::Stargate { path, data } => self
-                .stargate
-                .query(api, storage, &querier, block, path, data),
+            QueryRequest::Stargate { path, data } => {
+                self.stargate
+                    .query(api, storage, &querier, block, StargateQuery { path, data })
+            }
             _ => unimplemented!(),
         }
     }
@@ -688,10 +706,7 @@ where
         msg: SudoMsg,
     ) -> AnyResult<AppResponse> {
         match msg {
-            SudoMsg::Wasm(msg) => {
-                self.wasm
-                    .sudo(api, msg.contract_addr, storage, self, block, msg.msg)
-            }
+            SudoMsg::Wasm(msg) => self.wasm.sudo(api, storage, self, block, msg),
             SudoMsg::Bank(msg) => self.bank.sudo(api, storage, self, block, msg),
             SudoMsg::Staking(msg) => self.staking.sudo(api, storage, self, block, msg),
             SudoMsg::Custom(_) => unimplemented!(),
@@ -808,6 +823,7 @@ impl<ExecC, QueryC> MockRouter<ExecC, QueryC> {
 
 impl<ExecC, QueryC> CosmosRouter for MockRouter<ExecC, QueryC>
 where
+    ExecC: CustomMsg,
     QueryC: CustomQuery,
 {
     type ExecC = ExecC;

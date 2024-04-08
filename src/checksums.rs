@@ -1,4 +1,4 @@
-//! # Implementation of the interface to custom checksum generator
+//! # Implementation of checksum generator
 
 use cosmwasm_std::{Addr, HexBinary};
 use sha2::{Digest, Sha256};

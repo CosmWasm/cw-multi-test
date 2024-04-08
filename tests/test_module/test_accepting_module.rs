@@ -1,5 +1,5 @@
 use cosmwasm_std::testing::MockStorage;
-use cosmwasm_std::{Addr, Binary, Empty};
+use cosmwasm_std::{Binary, Empty};
 use cw_multi_test::{AcceptingModule, App, AppResponse, Module};
 
 /// Utility function for comparing responses.
@@ -20,7 +20,7 @@ fn assert_results(accepting_module: AcceptingModule<Empty, Empty, Empty>) {
                 &mut storage,
                 app.router(),
                 &app.block_info(),
-                Addr::unchecked("sender"),
+                app.api().addr_make("sender"),
                 Empty {},
             )
             .unwrap(),

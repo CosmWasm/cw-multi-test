@@ -1,9 +1,9 @@
 use crate::test_helpers::stargate;
-use crate::{no_init, App, AppBuilder, Executor, StargateAccepting};
+use crate::{no_init, App, AppBuilder, Executor, StargateAcceptingModule};
 use cosmwasm_std::Empty;
 
 #[test]
-fn default_stargate() {
+fn default_failing_stargate_module_should_work() {
     let mut app = App::default();
 
     // store the contract
@@ -27,13 +27,13 @@ fn default_stargate() {
         .source()
         .unwrap()
         .to_string()
-        .starts_with("Unexpected stargate message"));
+        .starts_with("Unexpected exec msg StargateMsg"));
 }
 
 #[test]
-fn accepting_stargate() {
+fn accepting_stargate_module_should_work() {
     let mut app = AppBuilder::default()
-        .with_stargate(StargateAccepting)
+        .with_stargate(StargateAcceptingModule::new())
         .build(no_init);
 
     // store the contract

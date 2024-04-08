@@ -4,6 +4,8 @@ pub extern crate abstract_cw_multi_test as cw_multi_test;
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
+mod test_api;
+mod test_app;
 mod test_app_builder;
 mod test_module;
 mod test_wasm;

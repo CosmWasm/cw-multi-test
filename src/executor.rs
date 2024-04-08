@@ -29,7 +29,7 @@ impl AppResponse {
 
     /// Checks if there is an Event that is a super-set of this.
     ///
-    /// It has the same type, and all compare.attributes are included in it as well.
+    /// It has the same type, and all compared attributes are included in it as well.
     /// You don't need to specify them all.
     pub fn has_event(&self, expected: &Event) -> bool {
         self.events.iter().any(|ev| {
@@ -53,7 +53,7 @@ impl AppResponse {
     }
 }
 
-/// They have the same shape, SubMsgExecutionResponse is what is returned in reply.
+/// They have the same shape, SubMsgResponse is what is returned in reply.
 /// This is just to make some test cases easier.
 impl From<SubMsgResponse> for AppResponse {
     fn from(reply: SubMsgResponse) -> Self {

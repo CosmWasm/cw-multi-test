@@ -25,17 +25,6 @@ static WASM_RAW: Lazy<Vec<Record>> = Lazy::new(|| vec![(vec![154u8], vec![155u8]
 type MyWasmKeeper = MyKeeper<Empty, Empty, Empty>;
 
 impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
-    fn query(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: WasmQuery,
-    ) -> AnyResult<Binary> {
-        bail!(self.2);
-    }
-
     fn execute(
         &self,
         _api: &dyn Api,
@@ -48,20 +37,39 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         bail!(self.1);
     }
 
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: WasmQuery,
+    ) -> AnyResult<Binary> {
+        bail!(self.2);
+    }
+
     fn sudo(
         &self,
         _api: &dyn Api,
-        _contract_addr: Addr,
         _storage: &mut dyn Storage,
         _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
         _block: &BlockInfo,
-        _msg: Binary,
+        _msg: WasmSudo,
     ) -> AnyResult<AppResponse> {
         bail!(self.3);
     }
 
     fn store_code(&mut self, _creator: Addr, _code: Box<dyn Contract<ExecT, QueryT>>) -> u64 {
         CODE_ID
+    }
+
+    fn store_code_with_id(
+        &mut self,
+        _creator: Addr,
+        code_id: u64,
+        _code: Box<dyn Contract<ExecT, QueryT>>,
+    ) -> AnyResult<u64> {
+        Ok(code_id)
     }
 
     fn duplicate_code(&mut self, _code_id: u64) -> AnyResult<u64> {
@@ -87,7 +95,7 @@ fn building_app_with_custom_wasm_should_work() {
     let mut app = app_builder.with_wasm(wasm_keeper).build(no_init);
 
     // prepare additional input data
-    let contract_addr = Addr::unchecked("contract");
+    let contract_addr = app.api().addr_make("contract");
 
     // calling store_code should return value defined in custom keeper
     assert_eq!(CODE_ID, app.store_code(test_contracts::counter::contract()));
@@ -111,7 +119,7 @@ fn building_app_with_custom_wasm_should_work() {
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            Addr::unchecked("sender"),
+            app.api().addr_make("sender"),
             WasmMsg::Instantiate {
                 admin: None,
                 code_id: 0,
@@ -131,7 +139,7 @@ fn building_app_with_custom_wasm_should_work() {
         app.sudo(
             WasmSudo {
                 contract_addr,
-                msg: Default::default()
+                message: Default::default()
             }
             .into()
         )

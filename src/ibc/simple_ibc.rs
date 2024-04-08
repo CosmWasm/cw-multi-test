@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail};
 use cosmwasm_std::{
-    ensure_eq, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, Event,
+    ensure_eq, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, CustomMsg, Event,
     IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
     IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg,
     IbcPacketTimeoutMsg, IbcQuery, IbcTimeout, IbcTimeoutBlock, ListChannelsResponse, Order,
@@ -129,12 +129,7 @@ impl IbcSimpleModule {
         counterparty_version: Option<String>,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
@@ -260,12 +255,7 @@ impl IbcSimpleModule {
         counterparty_version: Option<String>,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
@@ -388,12 +378,7 @@ impl IbcSimpleModule {
         init: bool,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
@@ -550,12 +535,7 @@ impl IbcSimpleModule {
         packet: IbcPacketData,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
@@ -781,12 +761,7 @@ impl IbcSimpleModule {
         ack: Binary,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
@@ -902,12 +877,7 @@ impl IbcSimpleModule {
         packet: IbcPacketData,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
@@ -1030,12 +1000,7 @@ impl IbcSimpleModule {
         timeout: IbcTimeout,
     ) -> AnyResult<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         // Transfer is  :
@@ -1084,12 +1049,7 @@ impl Module for IbcSimpleModule {
         msg: Self::ExecT,
     ) -> anyhow::Result<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         match msg {
@@ -1129,12 +1089,7 @@ impl Module for IbcSimpleModule {
         msg: Self::SudoT,
     ) -> anyhow::Result<crate::AppResponse>
     where
-        ExecC: std::fmt::Debug
-            + Clone
-            + PartialEq
-            + schemars::JsonSchema
-            + serde::de::DeserializeOwned
-            + 'static,
+        ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
     {
         let response = match msg {
