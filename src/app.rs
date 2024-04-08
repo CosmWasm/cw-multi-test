@@ -293,7 +293,7 @@ where
     ///
     /// ```
     /// use cosmwasm_std::Addr;
-    /// use abstract_cw_multi_test::App;
+    /// use cw_multi_test::App;
     ///
     /// // contract implementation
     /// mod echo {
@@ -301,7 +301,7 @@ where
     /// #  use std::todo;
     /// #  use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, SubMsg, WasmMsg};
     /// #  use serde::{Deserialize, Serialize};
-    /// #  use  abstract_cw_multi_test::{Contract, ContractWrapper};
+    /// #  use cw_multi_test::{Contract, ContractWrapper};
     /// #
     /// #  fn instantiate(_: DepsMut, _: Env, _: MessageInfo, _: Empty) -> Result<Response, StdError> {
     /// #    todo!()
