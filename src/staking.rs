@@ -1026,8 +1026,8 @@ mod test {
     use super::*;
     use crate::stargate::StargateFailingModule;
     use crate::{
-        app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, Router,
-        WasmKeeper,
+        app::MockRouter, BankKeeper, FailingAnygate, FailingModule, GovFailingModule,
+        IbcFailingModule, Router, WasmKeeper,
     };
     use cosmwasm_std::{
         from_json,
@@ -1045,6 +1045,7 @@ mod test {
         IbcFailingModule,
         GovFailingModule,
         StargateFailingModule,
+        FailingAnygate,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -1057,6 +1058,7 @@ mod test {
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
             stargate: StargateFailingModule::new(),
+            anygate: FailingAnygate,
         }
     }
 

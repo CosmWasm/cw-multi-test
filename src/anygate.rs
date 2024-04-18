@@ -10,7 +10,7 @@ use serde::de::DeserializeOwned;
 
 /// Interface of handlers for processing `Stargate`/`Any` message variants
 /// and `Stargate`/`Grpc` queries.
-pub trait AnyGate {
+pub trait Anygate {
     /// Processes `CosmosMsg::Stargate` message variant.
     fn execute_stargate<ExecC, QueryC>(
         &self,
@@ -83,6 +83,6 @@ pub trait AnyGate {
 
 /// Always failing handler for `Stargate`/`Any` message variants
 /// and `Stargate`/`Grpc` queries.
-pub struct FailingAnyGate;
+pub struct FailingAnygate;
 
-impl AnyGate for FailingAnyGate {}
+impl Anygate for FailingAnygate {}
