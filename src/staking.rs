@@ -1025,8 +1025,8 @@ impl Module for DistributionKeeper {
 mod test {
     use super::*;
     use crate::{
-        app::MockRouter, BankKeeper, FailingAnygate, FailingModule, GovFailingModule,
-        IbcFailingModule, Router, WasmKeeper,
+        app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, Router,
+        StargateFailing, WasmKeeper,
     };
     use cosmwasm_std::{
         from_json,
@@ -1043,7 +1043,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        FailingAnygate,
+        StargateFailing,
     >;
 
     fn mock_router() -> BasicRouter {
@@ -1055,7 +1055,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            anygate: FailingAnygate,
+            stargate: StargateFailing,
         }
     }
 

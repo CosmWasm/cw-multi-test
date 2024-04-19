@@ -125,7 +125,6 @@
 #![deny(rustdoc::missing_crate_level_docs)]
 
 mod addresses;
-mod anygate;
 mod api;
 mod app;
 mod app_builder;
@@ -149,7 +148,6 @@ mod wasm;
 pub use crate::addresses::{
     AddressGenerator, IntoAddr, IntoBech32, IntoBech32m, SimpleAddressGenerator,
 };
-pub use crate::anygate::{AcceptingAnygate, Anygate, FailingAnygate};
 pub use crate::api::{MockApiBech32, MockApiBech32m};
 pub use crate::app::{
     custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
@@ -165,5 +163,5 @@ pub use crate::module::{AcceptingModule, FailingModule, Module};
 pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
-pub use crate::stargate::{Stargate, StargateAcceptingModule, StargateFailingModule};
+pub use crate::stargate::{Stargate, StargateAccepting, StargateFailing};
 pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};

@@ -5,8 +5,8 @@ use cosmwasm_std::{
 };
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::{
-    no_init, AcceptingAnygate, Anygate, AppBuilder, AppResponse, CosmosRouter, Executor,
-    FailingAnygate,
+    no_init, AppBuilder, AppResponse, CosmosRouter, Executor, Stargate, StargateAccepting,
+    StargateFailing,
 };
 use serde::de::DeserializeOwned;
 
@@ -17,7 +17,7 @@ const MSG_GRPC_QUERY: &str = "grpc query called";
 
 struct StargateKeeper;
 
-impl Anygate for StargateKeeper {
+impl Stargate for StargateKeeper {
     fn execute_stargate<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -136,7 +136,7 @@ fn building_app_with_custom_stargate_should_work() {
 #[test]
 fn building_app_with_accepting_stargate_should_work() {
     let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_anygate(AcceptingAnygate).build(no_init);
+    let mut app = app_builder.with_stargate(StargateAccepting).build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");
@@ -185,7 +185,7 @@ fn building_app_with_accepting_stargate_should_work() {
 #[test]
 fn default_failing_stargate_should_work() {
     let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_stargate(FailingAnygate).build(no_init);
+    let mut app = app_builder.with_stargate(StargateFailing).build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");
