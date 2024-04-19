@@ -1,7 +1,7 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{to_json_vec, AnyMsg, CosmosMsg, Empty, GrpcQuery, QueryRequest};
 use cw_multi_test::{
-    no_init, AppBuilder, Executor, Stargate, StargateAcceptingModule, StargateFailingModule,
+    no_init, AcceptingAnygate, AppBuilder, Executor, Stargate, StargateFailingModule,
 };
 
 type MyStargateKeeper = MyKeeper<AnyMsg, GrpcQuery, Empty>;
@@ -56,9 +56,7 @@ fn building_app_with_custom_stargate_should_work() {
 #[test]
 fn building_app_with_accepting_stargate_should_work() {
     let app_builder = AppBuilder::default();
-    let mut app = app_builder
-        .with_stargate(StargateAcceptingModule::new())
-        .build(no_init);
+    let mut app = app_builder.with_anygate(AcceptingAnygate).build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");

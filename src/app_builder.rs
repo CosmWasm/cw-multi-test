@@ -664,6 +664,54 @@ where
         }
     }
 
+    /// Overwrites the default anygate interface.
+    pub fn with_anygate<NewAnygate: Anygate>(
+        self,
+        anygate: NewAnygate,
+    ) -> AppBuilder<
+        BankT,
+        ApiT,
+        StorageT,
+        CustomT,
+        WasmT,
+        StakingT,
+        DistrT,
+        IbcT,
+        GovT,
+        StargateT,
+        NewAnygate,
+    > {
+        let AppBuilder {
+            wasm,
+            api,
+            storage,
+            custom,
+            block,
+            staking,
+            bank,
+            distribution,
+            ibc,
+            gov,
+            stargate,
+            ..
+        } = self;
+
+        AppBuilder {
+            api,
+            block,
+            storage,
+            bank,
+            wasm,
+            custom,
+            staking,
+            distribution,
+            ibc,
+            gov,
+            stargate,
+            anygate,
+        }
+    }
+
     /// Overwrites the initial block.
     pub fn with_block(mut self, block: BlockInfo) -> Self {
         self.block = block;

@@ -149,7 +149,7 @@ mod wasm;
 pub use crate::addresses::{
     AddressGenerator, IntoAddr, IntoBech32, IntoBech32m, SimpleAddressGenerator,
 };
-pub use crate::anygate::{Anygate, FailingAnygate};
+pub use crate::anygate::{AcceptingAnygate, Anygate, FailingAnygate};
 pub use crate::api::{MockApiBech32, MockApiBech32m};
 pub use crate::app::{
     custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
