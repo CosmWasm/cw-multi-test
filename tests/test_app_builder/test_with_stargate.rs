@@ -183,27 +183,54 @@ fn building_app_with_accepting_stargate_should_work() {
 }
 
 #[test]
-fn building_app_with_failing_stargate_should_work() {
+fn default_failing_stargate_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_stargate(FailingAnygate).build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");
 
-    app.execute(
-        sender_addr,
-        CosmosMsg::Any(AnyMsg {
-            type_url: "test".to_string(),
-            value: Default::default(),
-        }),
-    )
-    .unwrap_err();
+    #[allow(deprecated)]
+    let msg = CosmosMsg::Stargate {
+        type_url: "test".to_string(),
+        value: Default::default(),
+    };
+    assert!(app
+        .execute(sender_addr.clone(), msg)
+        .unwrap_err()
+        .to_string()
+        .starts_with("Unexpected stargate execute"));
 
-    let _ = app
+    #[allow(deprecated)]
+    let request: QueryRequest<Empty> = QueryRequest::Stargate {
+        path: "test".to_string(),
+        data: Default::default(),
+    };
+    assert!(app
         .wrap()
-        .query::<Empty>(&QueryRequest::Grpc(GrpcQuery {
-            path: "test".to_string(),
-            data: Default::default(),
-        }))
-        .unwrap_err();
+        .query::<Empty>(&request)
+        .unwrap_err()
+        .to_string()
+        .contains("Unexpected stargate query"));
+
+    let msg = CosmosMsg::Any(AnyMsg {
+        type_url: "test".to_string(),
+        value: Default::default(),
+    });
+    assert!(app
+        .execute(sender_addr, msg)
+        .unwrap_err()
+        .to_string()
+        .starts_with("Unexpected any execute"));
+
+    let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
+        path: "test".to_string(),
+        data: Default::default(),
+    });
+    assert!(app
+        .wrap()
+        .raw_query(to_json_vec(&request).unwrap().as_slice())
+        .unwrap()
+        .unwrap_err()
+        .starts_with("Unexpected grpc query"));
 }
