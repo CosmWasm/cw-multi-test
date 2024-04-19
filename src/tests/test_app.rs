@@ -40,8 +40,8 @@ where
     app.wrap().query_all_balances(addr).unwrap()
 }
 
-fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>(
-    router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>,
+fn query_router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>(
+    router: &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>,
     api: &dyn Api,
     storage: &dyn Storage,
     rcpt: &Addr,

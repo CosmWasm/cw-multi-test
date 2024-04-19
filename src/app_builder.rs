@@ -3,7 +3,7 @@
 use crate::{
     Anygate, App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingAnygate,
     FailingModule, Gov, GovFailingModule, Ibc, IbcFailingModule, Module, Router, StakeKeeper,
-    Staking, Stargate, StargateFailingModule, Wasm, WasmKeeper,
+    Staking, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
@@ -38,14 +38,12 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    StargateFailingModule,
     FailingAnygate,
 >;
 
 /// Utility to build [App] in stages.
 /// When particular properties are not explicitly set, then default values are used.
-pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate, Anygate>
-{
+pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov, Anygate> {
     api: Api,
     block: BlockInfo,
     storage: Storage,
@@ -56,7 +54,6 @@ pub struct AppBuilder<Bank, Api, Storage, Custom, Wasm, Staking, Distr, Ibc, Gov
     distribution: Distr,
     ibc: Ibc,
     gov: Gov,
-    stargate: Stargate,
     anygate: Anygate,
 }
 
@@ -71,7 +68,6 @@ impl Default
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailingModule,
         FailingAnygate,
     >
 {
@@ -91,7 +87,6 @@ impl
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailingModule,
         FailingAnygate,
     >
 {
@@ -108,7 +103,6 @@ impl
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailingModule::new(),
             anygate: FailingAnygate,
         }
     }
@@ -125,7 +119,6 @@ impl<ExecC, QueryC>
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailingModule,
         FailingAnygate,
     >
 where
@@ -146,26 +139,13 @@ where
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailingModule::new(),
             anygate: FailingAnygate,
         }
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
-    AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    >
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     CustomT: Module,
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
@@ -178,19 +158,8 @@ where
     pub fn with_wasm<NewWasm: Wasm<CustomT::ExecT, CustomT::QueryT>>(
         self,
         wasm: NewWasm,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        NewWasm,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, NewWasm, StakingT, DistrT, IbcT, GovT, AnygateT>
+    {
         let AppBuilder {
             bank,
             api,
@@ -201,7 +170,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -217,7 +185,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -226,19 +193,8 @@ where
     pub fn with_bank<NewBank: Bank>(
         self,
         bank: NewBank,
-    ) -> AppBuilder<
-        NewBank,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<NewBank, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -249,7 +205,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -265,7 +220,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -274,19 +228,8 @@ where
     pub fn with_api<NewApi: Api>(
         self,
         api: NewApi,
-    ) -> AppBuilder<
-        BankT,
-        NewApi,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, NewApi, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    {
         let AppBuilder {
             wasm,
             bank,
@@ -297,7 +240,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -313,7 +255,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -322,19 +263,8 @@ where
     pub fn with_storage<NewStorage: Storage>(
         self,
         storage: NewStorage,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        NewStorage,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, ApiT, NewStorage, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -345,7 +275,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -361,7 +290,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -374,19 +302,8 @@ where
     pub fn with_custom<NewCustom: Module>(
         self,
         custom: NewCustom,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        NewCustom,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, ApiT, StorageT, NewCustom, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    {
         let AppBuilder {
             wasm,
             bank,
@@ -397,7 +314,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -413,7 +329,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -422,19 +337,8 @@ where
     pub fn with_staking<NewStaking: Staking>(
         self,
         staking: NewStaking,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        NewStaking,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, NewStaking, DistrT, IbcT, GovT, AnygateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -445,7 +349,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -461,7 +364,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -480,7 +382,6 @@ where
         NewDistribution,
         IbcT,
         GovT,
-        StargateT,
         AnygateT,
     > {
         let AppBuilder {
@@ -493,7 +394,6 @@ where
             bank,
             ibc,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -509,7 +409,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -524,19 +423,8 @@ where
     pub fn with_ibc<NewIbc: Ibc>(
         self,
         ibc: NewIbc,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        NewIbc,
-        GovT,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, NewIbc, GovT, AnygateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -547,7 +435,6 @@ where
             bank,
             distribution,
             gov,
-            stargate,
             anygate,
             ..
         } = self;
@@ -564,7 +451,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
         }
     }
 
@@ -572,19 +458,8 @@ where
     pub fn with_gov<NewGov: Gov>(
         self,
         gov: NewGov,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        NewGov,
-        StargateT,
-        AnygateT,
-    > {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, NewGov, AnygateT>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -595,7 +470,6 @@ where
             bank,
             distribution,
             ibc,
-            stargate,
             anygate,
             ..
         } = self;
@@ -611,28 +485,16 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
 
     /// Overwrites the default stargate interface.
-    pub fn with_stargate<NewStargate: Stargate>(
+    pub fn with_stargate<NewStargate: Anygate>(
         self,
-        stargate: NewStargate,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        NewStargate,
-        AnygateT,
-    > {
+        anygate: NewStargate,
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, NewStargate>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -644,7 +506,6 @@ where
             distribution,
             ibc,
             gov,
-            anygate,
             ..
         } = self;
 
@@ -659,7 +520,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -668,19 +528,8 @@ where
     pub fn with_anygate<NewAnygate: Anygate>(
         self,
         anygate: NewAnygate,
-    ) -> AppBuilder<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        NewAnygate,
-    > {
+    ) -> AppBuilder<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, NewAnygate>
+    {
         let AppBuilder {
             wasm,
             api,
@@ -692,7 +541,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             ..
         } = self;
 
@@ -707,7 +555,6 @@ where
             distribution,
             ibc,
             gov,
-            stargate,
             anygate,
         }
     }
@@ -724,7 +571,7 @@ where
     pub fn build<F>(
         self,
         init_fn: F,
-    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
     where
         BankT: Bank,
         ApiT: Api,
@@ -735,10 +582,9 @@ where
         DistrT: Distribution,
         IbcT: Ibc,
         GovT: Gov,
-        StargateT: Stargate,
         AnygateT: Anygate,
         F: FnOnce(
-            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>,
+            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>,
             &dyn Api,
             &mut dyn Storage,
         ),
@@ -751,7 +597,6 @@ where
             distribution: self.distribution,
             ibc: self.ibc,
             gov: self.gov,
-            stargate: self.stargate,
             anygate: self.anygate,
         };
 

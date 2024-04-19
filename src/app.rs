@@ -9,7 +9,6 @@ use crate::prefixed_storage::{
     prefixed, prefixed_multilevel, prefixed_multilevel_read, prefixed_read,
 };
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{Stargate, StargateFailingModule};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
 use crate::{Anygate, AppBuilder, FailingAnygate, GovFailingModule, IbcFailingModule};
@@ -42,7 +41,6 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    StargateFailingModule,
     FailingAnygate,
 >;
 
@@ -60,18 +58,17 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = IbcFailingModule,
     Gov = GovFailingModule,
-    Stargate = StargateFailingModule,
     Anygate = FailingAnygate,
 > {
-    pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate, Anygate>,
+    pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Anygate>,
     pub(crate) api: Api,
     pub(crate) storage: Storage,
     pub(crate) block: BlockInfo,
 }
 
 /// No-op application initialization function.
-pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>(
-    router: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>,
+pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>(
+    router: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>,
     api: &dyn Api,
     storage: &mut dyn Storage,
 ) {
@@ -97,7 +94,6 @@ impl BasicApp {
                 DistributionKeeper,
                 IbcFailingModule,
                 GovFailingModule,
-                StargateFailingModule,
                 FailingAnygate,
             >,
             &dyn Api,
@@ -123,7 +119,6 @@ where
             DistributionKeeper,
             IbcFailingModule,
             GovFailingModule,
-            StargateFailingModule,
             FailingAnygate,
         >,
         &dyn Api,
@@ -133,21 +128,8 @@ where
     AppBuilder::new_custom().build(init_fn)
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
-    Querier
-    for App<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    >
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT> Querier
+    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -160,7 +142,6 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
 {
     fn raw_query(&self, bin_request: &[u8]) -> QuerierResult {
@@ -170,21 +151,9 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
     Executor<CustomT::ExecT>
-    for App<
-        BankT,
-        ApiT,
-        StorageT,
-        CustomT,
-        WasmT,
-        StakingT,
-        DistrT,
-        IbcT,
-        GovT,
-        StargateT,
-        AnygateT,
-    >
+    for App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -197,7 +166,6 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
 {
     fn execute(&mut self, sender: Addr, msg: CosmosMsg<CustomT::ExecT>) -> AnyResult<AppResponse> {
@@ -207,8 +175,8 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
-    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
     BankT: Bank,
@@ -219,13 +187,10 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
 {
     /// Returns a shared reference to application's router.
-    pub fn router(
-        &self,
-    ) -> &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT> {
+    pub fn router(&self) -> &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT> {
         &self.router
     }
 
@@ -248,7 +213,7 @@ where
     pub fn init_modules<F, T>(&mut self, init_fn: F) -> T
     where
         F: FnOnce(
-            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>,
+            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>,
             &dyn Api,
             &mut dyn Storage,
         ) -> T,
@@ -260,7 +225,7 @@ where
     pub fn read_module<F, T>(&self, query_fn: F) -> T
     where
         F: FnOnce(
-            &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>,
+            &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>,
             &dyn Api,
             &dyn Storage,
         ) -> T,
@@ -271,8 +236,8 @@ where
 
 // Helper functions to call some custom WasmKeeper logic.
 // They show how we can easily add such calls to other custom keepers (CustomT, StakingT, etc)
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
-    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     BankT: Bank,
     ApiT: Api,
@@ -283,7 +248,6 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
     CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -421,8 +385,8 @@ where
     }
 }
 
-impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
-    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -435,7 +399,6 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
 {
     /// Sets the initial block properties.
@@ -540,7 +503,7 @@ where
 /// The Router plays a critical role in managing and directing
 /// transactions within the Cosmos blockchain.
 #[derive(Clone)]
-pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate, Anygate> {
+pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Anygate> {
     /// Wasm module instance to be used in this [Router].
     pub(crate) wasm: Wasm,
     /// Bank module instance to be used in this [Router].
@@ -555,14 +518,12 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate, Anygat
     pub ibc: Ibc,
     /// Governance module instance to be used in this [Router].
     pub gov: Gov,
-    /// Stargate module instance to be used in this [Router].
-    pub stargate: Stargate,
     /// AnyGate handler instance to be used in this [Router].
     pub anygate: Anygate,
 }
 
-impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
-    Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
+    Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -573,7 +534,6 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
 {
     /// Returns a querier populated with the instance of this [Router].
@@ -662,8 +622,8 @@ pub trait CosmosRouter {
     ) -> AnyResult<AppResponse>;
 }
 
-impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT> CosmosRouter
-    for Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT, AnygateT>
+impl<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT> CosmosRouter
+    for Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, AnygateT>
 where
     CustomT::ExecT: CustomMsg + DeserializeOwned + 'static,
     CustomT::QueryT: CustomQuery + DeserializeOwned + 'static,
@@ -674,7 +634,6 @@ where
     DistrT: Distribution,
     IbcT: Ibc,
     GovT: Gov,
-    StargateT: Stargate,
     AnygateT: Anygate,
 {
     type ExecC = CustomT::ExecT;

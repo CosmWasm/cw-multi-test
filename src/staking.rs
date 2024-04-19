@@ -1024,7 +1024,6 @@ impl Module for DistributionKeeper {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::stargate::StargateFailingModule;
     use crate::{
         app::MockRouter, BankKeeper, FailingAnygate, FailingModule, GovFailingModule,
         IbcFailingModule, Router, WasmKeeper,
@@ -1044,7 +1043,6 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailingModule,
         FailingAnygate,
     >;
 
@@ -1057,7 +1055,6 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailingModule::new(),
             anygate: FailingAnygate,
         }
     }

@@ -4,7 +4,8 @@ use crate::error::AnyResult;
 use crate::{AppResponse, CosmosRouter};
 use anyhow::bail;
 use cosmwasm_std::{
-    Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, GrpcQuery, Querier, Storage,
+    to_json_binary, Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, GrpcQuery,
+    Querier, Storage,
 };
 use serde::de::DeserializeOwned;
 
@@ -14,10 +15,10 @@ pub trait Anygate {
     /// Processes `CosmosMsg::Stargate` message variant.
     fn execute_stargate<ExecC, QueryC>(
         &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
         sender: Addr,
         type_url: String,
         value: Binary,
@@ -26,7 +27,6 @@ pub trait Anygate {
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        let _ = (api, storage, router, block);
         bail!(
             "Unexpected stargate execute: type_url={}, value={} from {}",
             type_url,
@@ -35,13 +35,26 @@ pub trait Anygate {
         )
     }
 
+    /// Processes `QueryRequest::Stargate` query.
+    fn query_stargate(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        path: String,
+        data: Binary,
+    ) -> AnyResult<Binary> {
+        bail!("Unexpected stargate query: path={}, data={}", path, data)
+    }
+
     /// Processes `CosmosMsg::Any` message variant.
     fn execute_any<ExecC, QueryC>(
         &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
         sender: Addr,
         msg: AnyMsg,
     ) -> AnyResult<AppResponse>
@@ -49,34 +62,18 @@ pub trait Anygate {
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        let _ = (api, storage, router, block);
         bail!("Unexpected any execute: msg={:?} from {}", msg, sender)
-    }
-
-    /// Processes `QueryRequest::Stargate` query.
-    fn query_stargate(
-        &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        path: String,
-        data: Binary,
-    ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block);
-        bail!("Unexpected stargate query: path={}, data={}", path, data)
     }
 
     /// Processes `QueryRequest::Grpc` query.
     fn query_grpc(
         &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
         request: GrpcQuery,
     ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block);
         bail!("Unexpected grpc query: request={:?}", request)
     }
 }
@@ -92,62 +89,57 @@ pub struct AcceptingAnygate;
 impl Anygate for AcceptingAnygate {
     fn execute_stargate<ExecC, QueryC>(
         &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        sender: Addr,
-        type_url: String,
-        value: Binary,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _type_url: String,
+        _value: Binary,
     ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        let _ = (api, storage, router, block, sender, type_url, value);
-        Ok(AppResponse::default())
-    }
-
-    fn execute_any<ExecC, QueryC>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-        sender: Addr,
-        msg: AnyMsg,
-    ) -> AnyResult<AppResponse>
-    where
-        ExecC: CustomMsg + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static,
-    {
-        let _ = (api, storage, router, block, sender, msg);
         Ok(AppResponse::default())
     }
 
     fn query_stargate(
         &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        path: String,
-        data: Binary,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _path: String,
+        _data: Binary,
     ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block, path, data);
-        Ok(Binary::default())
+        to_json_binary(&Empty {}).map_err(Into::into)
+    }
+
+    fn execute_any<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _msg: AnyMsg,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: CustomMsg + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        Ok(AppResponse::default())
     }
 
     fn query_grpc(
         &self,
-        api: &dyn Api,
-        storage: &dyn Storage,
-        querier: &dyn Querier,
-        block: &BlockInfo,
-        request: GrpcQuery,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: GrpcQuery,
     ) -> AnyResult<Binary> {
-        let _ = (api, storage, querier, block, request);
-        //TODO this must be fixed
         Ok(Binary::default())
     }
 }
