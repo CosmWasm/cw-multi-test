@@ -9,10 +9,9 @@ use crate::prefixed_storage::{
     prefixed, prefixed_multilevel, prefixed_multilevel_read, prefixed_read,
 };
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{Stargate, StargateFailingModule};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
-use crate::{AppBuilder, GovFailingModule, IbcFailingModule};
+use crate::{AppBuilder, GovFailingModule, IbcFailingModule, Stargate, StargateFailing};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
     from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomMsg,
@@ -42,7 +41,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     DistributionKeeper,
     IbcFailingModule,
     GovFailingModule,
-    StargateFailingModule,
+    StargateFailing,
 >;
 
 /// # Blockchain application simulator
@@ -59,7 +58,7 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = IbcFailingModule,
     Gov = GovFailingModule,
-    Stargate = StargateFailingModule,
+    Stargate = StargateFailing,
 > {
     pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate>,
     pub(crate) api: Api,
@@ -95,7 +94,7 @@ impl BasicApp {
                 DistributionKeeper,
                 IbcFailingModule,
                 GovFailingModule,
-                StargateFailingModule,
+                StargateFailing,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -120,7 +119,7 @@ where
             DistributionKeeper,
             IbcFailingModule,
             GovFailingModule,
-            StargateFailingModule,
+            StargateFailing,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -521,7 +520,7 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate> {
     pub ibc: Ibc,
     /// Governance module instance to be used in this [Router].
     pub gov: Gov,
-    /// Stargate module instance to be used in this [Router].
+    /// Stargate handler instance to be used in this [Router].
     pub stargate: Stargate,
 }
 
@@ -660,9 +659,13 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
+            #[allow(deprecated)]
+            CosmosMsg::Stargate { type_url, value } => self
+                .stargate
+                .execute_stargate(api, storage, self, block, sender, type_url, value),
             CosmosMsg::Any(msg) => self
                 .stargate
-                .execute(api, storage, self, block, sender, msg),
+                .execute_any(api, storage, self, block, sender, msg),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
@@ -684,7 +687,11 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
-            QueryRequest::Grpc(req) => self.stargate.query(api, storage, &querier, block, req),
+            #[allow(deprecated)]
+            QueryRequest::Stargate { path, data } => self
+                .stargate
+                .query_stargate(api, storage, &querier, block, path, data),
+            QueryRequest::Grpc(req) => self.stargate.query_grpc(api, storage, &querier, block, req),
             _ => unimplemented!(),
         }
     }

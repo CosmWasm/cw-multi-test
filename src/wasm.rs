@@ -1256,10 +1256,9 @@ mod test {
     use crate::bank::BankKeeper;
     use crate::module::FailingModule;
     use crate::staking::{DistributionKeeper, StakeKeeper};
-    use crate::stargate::StargateFailingModule;
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
-    use crate::{GovFailingModule, IbcFailingModule};
+    use crate::{GovFailingModule, IbcFailingModule, StargateFailing};
     use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
     use cosmwasm_std::{
         coin, from_json, to_json_vec, CanonicalAddr, CodeInfoResponse, CosmosMsg, Empty, HexBinary,
@@ -1275,7 +1274,7 @@ mod test {
         DistributionKeeper,
         IbcFailingModule,
         GovFailingModule,
-        StargateFailingModule,
+        StargateFailing,
     >;
 
     fn wasm_keeper() -> WasmKeeper<Empty, Empty> {
@@ -1291,7 +1290,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailingModule::new(),
+            stargate: StargateFailing,
         }
     }
 
