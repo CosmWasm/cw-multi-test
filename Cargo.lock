@@ -138,9 +138,9 @@ checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
 
 [[package]]
 name = "cosmwasm-crypto"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1cd7a367ebd007cb05fe17e9c449beeb3636b15160750f2c6226c7dfd46df37"
+checksum = "d8b08e6670ab9e13a1a8a9cfad8fdad48bf0aaf88a6e81f39f2d9b2fc79b1890"
 dependencies = [
  "digest 0.10.7",
  "ed25519-zebra",
@@ -151,18 +151,18 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-derive"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db01ae480b00f133b78830db3211ff63afe08093e78c77ee20e73f7134849a60"
+checksum = "b8b0918fc1a24b2ee08142c8d99d03f4c8e6d74244bdb304dbb29c0dab8e77e9"
 dependencies = [
  "syn 1.0.109",
 ]
 
 [[package]]
 name = "cosmwasm-schema"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de6e530d13452b4e9d882008193ab165032307a31f197b45d7b4e2aeff7577b5"
+checksum = "26dbdb5800ca67f2f2f938d67db59a7c5434af133c3e508779a4df7a9b5d533b"
 dependencies = [
  "cosmwasm-schema-derive",
  "schemars",
@@ -173,9 +173,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-schema-derive"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0ef0d7a8ae8807b8e8f5c94333d12aa9a11efc05f7b864f362582a2b167c663"
+checksum = "d8ee47cf29f7688ebfa6ade8ddabcf51fc153f1157a3b46f5b4b1ce7a0316fdf"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -184,9 +184,9 @@ dependencies = [
 
 [[package]]
 name = "cosmwasm-std"
-version = "2.0.1"
+version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6201969327d8fe5e9596e8c36e376ab595a885bdfcaa6a0bf57748f9ea2be2b"
+checksum = "88191bd0d4743613eb7a2f086acb0838404cb531bf658382effafc7ba91e8320"
 dependencies = [
  "base64",
  "bech32 0.9.1",
@@ -641,9 +641,9 @@ checksum = "e86697c916019a8588c99b5fac3cead74ec0b4b819707a682fd4d23fa0ce1ba1"
 
 [[package]]
 name = "schemars"
-version = "0.8.16"
+version = "0.8.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "45a28f4c49489add4ce10783f7911893516f15afe45d015608d41faca6bc4d29"
+checksum = "7f55c82c700538496bdc329bb4918a81f87cc8888811bd123cf325a0f2f8d309"
 dependencies = [
  "dyn-clone",
  "schemars_derive",
@@ -653,14 +653,14 @@ dependencies = [
 
 [[package]]
 name = "schemars_derive"
-version = "0.8.16"
+version = "0.8.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c767fd6fa65d9ccf9cf026122c1b555f2ef9a4f0cea69da4d7dbc3e258d30967"
+checksum = "83263746fe5e32097f06356968a077f96089739c927a61450efa069905eec108"
 dependencies = [
  "proc-macro2",
  "quote",
  "serde_derive_internals",
- "syn 1.0.109",
+ "syn 2.0.60",
 ]
 
 [[package]]
@@ -679,9 +679,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.198"
+version = "1.0.199"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9846a40c979031340571da2545a4e5b7c4163bdae79b301d5f86d03979451fcc"
+checksum = "0c9f6e76df036c77cd94996771fb40db98187f096dd0b9af39c6c6e452ba966a"
 dependencies = [
  "serde_derive",
 ]
@@ -697,9 +697,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.198"
+version = "1.0.199"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e88edab869b01783ba905e7d0153f9fc1a6505a96e4ad3018011eedb838566d9"
+checksum = "11bd257a6541e141e42ca6d24ae26f7714887b47e89aa739099104c7e4d3b7fc"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -708,13 +708,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive_internals"
-version = "0.26.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85bf8229e7920a9f636479437026331ce11aa132b4dde37d121944a44d6e5f3c"
+checksum = "330f01ce65a3a5fe59a60c82f3c9a024b573b8a6e875bd233fe5f934e71d54e3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.60",
 ]
 
 [[package]]
