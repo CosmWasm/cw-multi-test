@@ -1,7 +1,10 @@
 [package]
 name = "cw-multi-test"
 version = "2.0.1"
-authors = ["Ethan Frey <ethanfrey@users.noreply.github.com>", "Dariusz Depta <DariuszDepta@users.noreply.github.com>"]
+authors = [
+    "Ethan Frey <ethanfrey@users.noreply.github.com>",
+    "Dariusz Depta <DariuszDepta@users.noreply.github.com>"
+]
 description = "Testing tools for multi-contract interactions"
 repository = "https://github.com/CosmWasm/cw-multi-test"
 homepage = "https://cosmwasm.com"
@@ -16,14 +19,14 @@ cosmwasm_2_0 = ["cosmwasm-std/cosmwasm_2_0"]
 [dependencies]
 anyhow = "1.0.82"
 bech32 = "0.11.0"
-cosmwasm-std = { version = "2.0.1", features = ["iterator", "staking", "stargate"] }
+cosmwasm-std = { version = "2.0.2", features = ["iterator", "staking", "stargate"] }
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 derivative = "2.2.0"
 itertools = "0.12.1"
 prost = "0.12.4"
-schemars = "0.8.16"
-serde = "1.0.198"
+schemars = "0.8.17"
+serde = "1.0.199"
 sha2 = "0.10.8"
 thiserror = "1.0.59"
 
