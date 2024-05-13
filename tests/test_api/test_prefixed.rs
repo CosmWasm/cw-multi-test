@@ -1,18 +1,18 @@
 use super::*;
+use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::CanonicalAddr;
-use cw_multi_test::MockApiBech32;
 
 const HUMAN_ADDRESS: &str = "juno1h34lmpywh4upnjdg90cjf4j70aee6z8qqfspugamjp42e4q28kqsksmtyp";
 
-fn api_prefix(prefix: &'static str) -> MockApiBech32 {
-    MockApiBech32::new(prefix)
+fn api_prefix(prefix: &'static str) -> MockApi {
+    MockApi::default().with_prefix(prefix)
 }
 
-fn api_juno() -> MockApiBech32 {
+fn api_juno() -> MockApi {
     api_prefix("juno")
 }
 
-fn api_osmo() -> MockApiBech32 {
+fn api_osmo() -> MockApi {
     api_prefix("osmo")
 }
 
@@ -68,9 +68,7 @@ fn debug_should_not_panic() {
 }
 
 #[test]
-#[should_panic(
-    expected = "Generating address failed with reason: hrp is too long, found 85 characters, must be <= 126"
-)]
+#[should_panic(expected = "Generating address failed with reason: invalid length")]
 fn address_make_prefix_too_long() {
     api_prefix(
         "juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_",

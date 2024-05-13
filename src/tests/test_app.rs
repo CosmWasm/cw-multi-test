@@ -91,35 +91,39 @@ where
     val.amount
 }
 
+/// Utility function for generating user addresses.
+fn addr_make(addr: &str) -> Addr {
+    addr.into_addr()
+}
+
 #[test]
 fn update_block() {
     let mut app = App::default();
-
     let BlockInfo { time, height, .. } = app.block_info();
     app.update_block(next_block);
-
     assert_eq!(time.plus_seconds(5), app.block_info().time);
     assert_eq!(height + 1, app.block_info().height);
 }
 
 #[test]
 fn multi_level_bank_cache() {
-    // set personal balance
-    let owner = "owner".into_addr();
-    let recipient = "recipient".into_addr();
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let recipient_addr = addr_make("recipient");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
     // cache 1 - send some tokens
     let mut cache = StorageTransaction::new(app.storage());
     let msg = BankMsg::Send {
-        to_address: recipient.clone().into(),
+        to_address: recipient_addr.clone().into(),
         amount: coins(25, "eth"),
     };
     app.router()
@@ -127,31 +131,31 @@ fn multi_level_bank_cache() {
             app.api(),
             &mut cache,
             &app.block_info(),
-            owner.clone(),
+            owner_addr.clone(),
             msg.into(),
         )
         .unwrap();
 
     // shows up in cache
-    let cached_rcpt = query_router(app.router(), app.api(), &cache, &recipient);
+    let cached_rcpt = query_router(app.router(), app.api(), &cache, &recipient_addr);
     assert_eq!(coins(25, "eth"), cached_rcpt);
-    let router_rcpt = query_app(&app, &recipient);
+    let router_rcpt = query_app(&app, &recipient_addr);
     assert_eq!(router_rcpt, vec![]);
 
     // now, second level cache
     transactional(&mut cache, |cache2, read| {
         let msg = BankMsg::Send {
-            to_address: recipient.clone().into(),
+            to_address: recipient_addr.clone().into(),
             amount: coins(12, "eth"),
         };
         app.router()
-            .execute(app.api(), cache2, &app.block_info(), owner, msg.into())
+            .execute(app.api(), cache2, &app.block_info(), owner_addr, msg.into())
             .unwrap();
 
         // shows up in 2nd cache
-        let cached_rcpt = query_router(app.router(), app.api(), read, &recipient);
+        let cached_rcpt = query_router(app.router(), app.api(), read, &recipient_addr);
         assert_eq!(coins(25, "eth"), cached_rcpt);
-        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &recipient);
+        let cached2_rcpt = query_router(app.router(), app.api(), cache2, &recipient_addr);
         assert_eq!(coins(37, "eth"), cached2_rcpt);
         Ok(())
     })
@@ -160,12 +164,11 @@ fn multi_level_bank_cache() {
     // apply first to router
     cache.prepare().commit(app.storage_mut());
 
-    let committed = query_app(&app, &recipient);
+    let committed = query_app(&app, &recipient_addr);
     assert_eq!(coins(37, "eth"), committed);
 }
 
 #[test]
-#[cfg(feature = "cosmwasm_1_2")]
 fn duplicate_contract_code() {
     // set up the multi-test application
     let mut app = App::default();
@@ -187,61 +190,64 @@ fn duplicate_contract_code() {
 
 #[test]
 fn send_tokens() {
-    let owner = "owner".into_addr();
-    let recipient = "receiver".into_addr();
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let recipient_addr = addr_make("recipient");
+
+    // set personal balance
     let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let rcpt_funds = vec![coin(5, "btc")];
-
     let mut app = App::new(|router, _, storage| {
         // initialization moved to App construction
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
         router
             .bank
-            .init_balance(storage, &recipient, rcpt_funds)
+            .init_balance(storage, &recipient_addr, rcpt_funds)
             .unwrap();
     });
 
     // send both tokens
     let to_send = vec![coin(30, "eth"), coin(5, "btc")];
     let msg: CosmosMsg = BankMsg::Send {
-        to_address: recipient.clone().into(),
+        to_address: recipient_addr.clone().into(),
         amount: to_send,
     }
     .into();
-    app.execute(owner.clone(), msg.clone()).unwrap();
-    let rich = get_balance(&app, &owner);
+    app.execute(owner_addr.clone(), msg.clone()).unwrap();
+    let rich = get_balance(&app, &owner_addr);
     assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
-    let poor = get_balance(&app, &recipient);
+    let poor = get_balance(&app, &recipient_addr);
     assert_eq!(vec![coin(10, "btc"), coin(30, "eth")], poor);
 
     // can send from other account (but funds will be deducted from sender)
-    app.execute(recipient.clone(), msg).unwrap();
+    app.execute(recipient_addr.clone(), msg).unwrap();
 
     // cannot send too much
     let msg = BankMsg::Send {
-        to_address: recipient.into(),
+        to_address: recipient_addr.into(),
         amount: coins(20, "btc"),
     }
     .into();
-    app.execute(owner.clone(), msg).unwrap_err();
+    app.execute(owner_addr.clone(), msg).unwrap_err();
 
-    let rich = get_balance(&app, &owner);
+    let rich = get_balance(&app, &owner_addr);
     assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
 }
 
 #[test]
 fn simple_contract() {
-    // set personal balance
-    let owner = "owner".into_addr();
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -254,7 +260,7 @@ fn simple_contract() {
     let contract_addr = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &msg,
             &coins(23, "eth"),
             "Payout",
@@ -267,7 +273,7 @@ fn simple_contract() {
         contract_data,
         ContractData {
             code_id,
-            creator: owner.clone(),
+            creator: owner_addr.clone(),
             admin: None,
             label: "Payout".to_owned(),
             created: app.block_info().height
@@ -275,20 +281,20 @@ fn simple_contract() {
     );
 
     // sender funds deducted
-    let sender = get_balance(&app, &owner);
+    let sender = get_balance(&app, &owner_addr);
     assert_eq!(sender, vec![coin(20, "btc"), coin(77, "eth")]);
     // get contract address, has funds
     let funds = get_balance(&app, &contract_addr);
     assert_eq!(funds, coins(23, "eth"));
 
     // create empty account
-    let random = app.api().addr_make("random");
-    let funds = get_balance(&app, &random);
+    let random_addr = app.api().addr_make("random");
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, vec![]);
 
     // do one payout and see money coming in
     let res = app
-        .execute_contract(random.clone(), contract_addr.clone(), &Empty {}, &[])
+        .execute_contract(random_addr.clone(), contract_addr.clone(), &Empty {}, &[])
         .unwrap();
     assert_eq!(3, res.events.len());
 
@@ -306,13 +312,13 @@ fn simple_contract() {
 
     // then the transfer event
     let expected_transfer = Event::new("transfer")
-        .add_attribute("recipient", random.to_string())
+        .add_attribute("recipient", &random_addr)
         .add_attribute("sender", &contract_addr)
         .add_attribute("amount", "5eth");
     assert_eq!(&expected_transfer, &res.events[2]);
 
     // random got cash
-    let funds = get_balance(&app, &random);
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, coins(5, "eth"));
     // contract lost it
     let funds = get_balance(&app, &contract_addr);
@@ -321,14 +327,16 @@ fn simple_contract() {
 
 #[test]
 fn reflect_success() {
-    // set personal balance
-    let owner = "owner".into_addr();
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let random_addr = addr_make("random");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -341,7 +349,7 @@ fn reflect_success() {
     let payout_addr = app
         .instantiate_contract(
             payout_id,
-            owner.clone(),
+            owner_addr.clone(),
             &msg,
             &coins(23, "eth"),
             "Payout",
@@ -353,7 +361,7 @@ fn reflect_success() {
     let reflect_id = app.store_code(reflect::contract());
 
     let reflect_addr = app
-        .instantiate_contract(reflect_id, owner, &Empty {}, &[], "Reflect", None)
+        .instantiate_contract(reflect_id, owner_addr, &Empty {}, &[], "Reflect", None)
         .unwrap();
 
     // reflect account is empty
@@ -376,12 +384,7 @@ fn reflect_success() {
         messages: vec![msg],
     };
     let res = app
-        .execute_contract(
-            app.api().addr_make("random"),
-            reflect_addr.clone(),
-            &msgs,
-            &[],
-        )
+        .execute_contract(random_addr, reflect_addr.clone(), &msgs, &[])
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
@@ -432,10 +435,11 @@ fn reflect_success() {
 
 #[test]
 fn reflect_error() {
-    // set personal balance
-    let owner = "owner".into_addr();
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner = addr_make("owner");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
@@ -460,18 +464,18 @@ fn reflect_error() {
     // reflect has 40 eth
     let funds = get_balance(&app, &reflect_addr);
     assert_eq!(funds, coins(40, "eth"));
-    let random = app.api().addr_make("random");
+    let random_addr = app.api().addr_make("random");
 
     // sending 7 eth works
     let msg = SubMsg::new(BankMsg::Send {
-        to_address: random.clone().into(),
+        to_address: random_addr.clone().into(),
         amount: coins(7, "eth"),
     });
     let msgs = reflect::Message {
         messages: vec![msg],
     };
     let res = app
-        .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
     // no wasm events as no attributes
     assert_eq!(2, res.events.len());
@@ -484,7 +488,7 @@ fn reflect_error() {
     assert_eq!(transfer.ty.as_str(), "transfer");
 
     // ensure random got paid
-    let funds = get_balance(&app, &random);
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, coins(7, "eth"));
 
     // reflect count should be updated to 1
@@ -496,26 +500,26 @@ fn reflect_error() {
 
     // sending 8 eth, then 3 btc should fail both
     let msg = SubMsg::new(BankMsg::Send {
-        to_address: random.clone().into(),
+        to_address: random_addr.clone().into(),
         amount: coins(8, "eth"),
     });
     let msg2 = SubMsg::new(BankMsg::Send {
-        to_address: random.clone().into(),
+        to_address: random_addr.clone().into(),
         amount: coins(3, "btc"),
     });
     let msgs = reflect::Message {
         messages: vec![msg, msg2],
     };
     let err = app
-        .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
+        .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap_err();
     assert_eq!(
-        StdError::overflow(OverflowError::new(OverflowOperation::Sub, 0, 3)),
+        StdError::overflow(OverflowError::new(OverflowOperation::Sub)),
         err.downcast().unwrap()
     );
 
     // first one should have been rolled-back on error (no second payment)
-    let funds = get_balance(&app, &random);
+    let funds = get_balance(&app, &random_addr);
     assert_eq!(funds, coins(7, "eth"));
 
     // failure should not update reflect count
@@ -528,13 +532,15 @@ fn reflect_error() {
 
 #[test]
 fn sudo_works() {
-    let owner = "owner".into_addr();
-    let init_funds = vec![coin(100, "eth")];
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
 
+    // set personal balance
+    let init_funds = vec![coin(100, "eth")];
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -544,7 +550,14 @@ fn sudo_works() {
         payout: coin(5, "eth"),
     };
     let payout_addr = app
-        .instantiate_contract(payout_id, owner, &msg, &coins(23, "eth"), "Payout", None)
+        .instantiate_contract(
+            payout_id,
+            owner_addr,
+            &msg,
+            &coins(23, "eth"),
+            "Payout",
+            None,
+        )
         .unwrap();
 
     // count is 1
@@ -582,11 +595,12 @@ fn sudo_works() {
 
 #[test]
 fn reflect_sub_message_reply_works() {
-    // set personal balance
-    let owner = "owner".into_addr();
-    let random = "random".into_addr();
-    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
+    // prepare user addresses
+    let owner = addr_make("owner");
+    let random = addr_make("random");
 
+    // set personal balance
+    let init_funds = vec![coin(20, "btc"), coin(100, "eth")];
     let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
         router
             .bank
@@ -608,7 +622,7 @@ fn reflect_sub_message_reply_works() {
         )
         .unwrap();
 
-    // no reply writen beforehand
+    // no reply written beforehand
     let query = reflect::QueryMsg::Reply { id: 123 };
     let res: StdResult<Reply> = app.wrap().query_wasm_smart(&reflect_addr, &query);
     res.unwrap_err();
@@ -678,12 +692,11 @@ fn send_update_admin_works() {
     // update admin succeeds if admin
     // update admin fails if not (new) admin
     // check admin set properly
-
     let mut app = App::default();
 
-    let owner = app.api().addr_make("owner");
-    let owner2 = app.api().addr_make("owner2");
-    let beneficiary = app.api().addr_make("beneficiary");
+    let owner = addr_make("owner");
+    let owner2 = addr_make("owner2");
+    let beneficiary = addr_make("beneficiary");
 
     // create a hackatom contract with some funds
     let code_id = app.store_code(hackatom::contract());
@@ -743,14 +756,18 @@ fn sent_wasm_migration_works() {
     // migrate fails if not admin
     // migrate succeeds if admin
     // check beneficiary updated
-    let owner = "owner".into_addr();
-    let beneficiary = "beneficiary".into_addr();
-    let init_funds = coins(30, "btc");
 
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let beneficiary_addr = addr_make("beneficiary");
+    let random_addr = addr_make("random");
+
+    // set personal balance
+    let init_funds = coins(30, "btc");
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -760,40 +777,44 @@ fn sent_wasm_migration_works() {
     let contract = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &hackatom::InstantiateMsg {
-                beneficiary: beneficiary.as_str().to_owned(),
+                beneficiary: beneficiary_addr.as_str().to_owned(),
             },
             &coins(20, "btc"),
             "Hackatom",
-            Some(owner.to_string()),
+            Some(owner_addr.to_string()),
         )
         .unwrap();
 
     // check admin set properly
     let info = app.contract_data(&contract).unwrap();
-    assert_eq!(info.admin, Some(owner.clone()));
+    assert_eq!(info.admin, Some(owner_addr.clone()));
     // check beneficiary set properly
     let state: hackatom::InstantiateMsg = app
         .wrap()
         .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
         .unwrap();
-    assert_eq!(state.beneficiary, beneficiary);
+    assert_eq!(state.beneficiary, beneficiary_addr.to_string());
 
     // migrate fails if not admin
-    let random = app.api().addr_make("random");
     let migrate_msg = hackatom::MigrateMsg {
-        new_guy: random.to_string(),
+        new_guy: random_addr.to_string(),
     };
-    app.migrate_contract(beneficiary, contract.clone(), &migrate_msg, code_id)
+    app.migrate_contract(beneficiary_addr, contract.clone(), &migrate_msg, code_id)
         .unwrap_err();
 
     // migrate fails if unregistered code id
-    app.migrate_contract(owner.clone(), contract.clone(), &migrate_msg, code_id + 7)
-        .unwrap_err();
+    app.migrate_contract(
+        owner_addr.clone(),
+        contract.clone(),
+        &migrate_msg,
+        code_id + 7,
+    )
+    .unwrap_err();
 
     // migrate succeeds when the stars align
-    app.migrate_contract(owner, contract.clone(), &migrate_msg, code_id)
+    app.migrate_contract(owner_addr, contract.clone(), &migrate_msg, code_id)
         .unwrap();
 
     // check beneficiary updated
@@ -801,7 +822,7 @@ fn sent_wasm_migration_works() {
         .wrap()
         .query_wasm_smart(&contract, &hackatom::QueryMsg::Beneficiary {})
         .unwrap();
-    assert_eq!(state.beneficiary, random);
+    assert_eq!(state.beneficiary, random_addr.to_string());
 }
 
 #[test]
@@ -811,14 +832,17 @@ fn sent_funds_properly_visible_on_execution() {
     // additional 20btc. Then beneficiary balance is checked - expected value is 30btc. 10btc
     // would mean that sending tokens with message is not visible for this very message, and
     // 20btc means, that only such just send funds are visible.
-    let owner = "owner".into_addr();
-    let beneficiary = "beneficiary".into_addr();
-    let init_funds = coins(30, "btc");
 
+    // prepare user addresses
+    let owner_addr = addr_make("owner");
+    let beneficiary_addr = addr_make("beneficiary");
+
+    // set personal balance
+    let init_funds = coins(30, "btc");
     let mut app = App::new(|router, _, storage| {
         router
             .bank
-            .init_balance(storage, &owner, init_funds)
+            .init_balance(storage, &owner_addr, init_funds)
             .unwrap();
     });
 
@@ -827,9 +851,9 @@ fn sent_funds_properly_visible_on_execution() {
     let contract = app
         .instantiate_contract(
             code_id,
-            owner.clone(),
+            owner_addr.clone(),
             &hackatom::InstantiateMsg {
-                beneficiary: beneficiary.as_str().to_owned(),
+                beneficiary: beneficiary_addr.as_str().to_owned(),
             },
             &coins(10, "btc"),
             "Hackatom",
@@ -838,7 +862,7 @@ fn sent_funds_properly_visible_on_execution() {
         .unwrap();
 
     app.execute_contract(
-        owner.clone(),
+        owner_addr.clone(),
         contract.clone(),
         &Empty {},
         &coins(20, "btc"),
@@ -847,9 +871,9 @@ fn sent_funds_properly_visible_on_execution() {
 
     // Check balance of all accounts to ensure no tokens where burned or created, and they are
     // in correct places
-    assert_eq!(get_balance(&app, &owner), &[]);
+    assert_eq!(get_balance(&app, &owner_addr), &[]);
     assert_eq!(get_balance(&app, &contract), &[]);
-    assert_eq!(get_balance(&app, &beneficiary), coins(30, "btc"));
+    assert_eq!(get_balance(&app, &beneficiary_addr), coins(30, "btc"));
 }
 
 /// Demonstrates that we can mint tokens and send from other accounts
@@ -912,17 +936,6 @@ mod custom_handler {
             Ok(AppResponse::default())
         }
 
-        fn query(
-            &self,
-            _api: &dyn Api,
-            _storage: &dyn Storage,
-            _querier: &dyn Querier,
-            _block: &BlockInfo,
-            _request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            bail!("query not implemented for CustomHandler")
-        }
-
         fn sudo<ExecC, QueryC>(
             &self,
             _api: &dyn Api,
@@ -936,6 +949,17 @@ mod custom_handler {
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
             bail!("sudo not implemented for CustomHandler")
+        }
+
+        fn query(
+            &self,
+            _api: &dyn Api,
+            _storage: &dyn Storage,
+            _querier: &dyn Querier,
+            _block: &BlockInfo,
+            _request: Self::QueryT,
+        ) -> AnyResult<Binary> {
+            bail!("query not implemented for CustomHandler")
         }
     }
 
@@ -956,9 +980,6 @@ mod custom_handler {
     // let's call this custom handler
     #[test]
     fn dispatches_messages() {
-        let winner = "winner".to_string();
-        let second = "second".to_string();
-
         // payments. note 54321 - 12321 = 42000
         let denom = "tix";
         let lottery = coin(54321, denom);
@@ -973,16 +994,20 @@ mod custom_handler {
                     .unwrap();
             });
 
+        let winner = app.api().addr_make("winner");
+        let second = app.api().addr_make("second");
+
         // query that balances are empty
         let start = app.wrap().query_balance(&winner, denom).unwrap();
         assert_eq!(start, coin(0, denom));
 
         // trigger the custom module
         let msg = CosmosMsg::Custom(CustomLotteryMsg {
-            lucky_winner: winner.clone(),
-            runner_up: second.clone(),
+            lucky_winner: winner.to_string(),
+            runner_up: second.to_string(),
         });
-        app.execute(app.api().addr_make("anyone"), msg).unwrap();
+        let anyone = app.api().addr_make("anyone");
+        app.execute(anyone, msg).unwrap();
 
         // see if coins were properly added
         let big_win = app.wrap().query_balance(&winner, denom).unwrap();
@@ -1185,10 +1210,11 @@ mod reply_data_overwrite {
 
     #[test]
     fn single_submsg_reply_returns_none() {
-        // set personal balance
-        let owner = "owner".into_addr();
-        let init_funds = coins(100, "tgd");
+        // prepare user addresses
+        let owner = addr_make("owner");
 
+        // set personal balance
+        let init_funds = coins(100, "tgd");
         let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
             router
                 .bank
@@ -1210,7 +1236,8 @@ mod reply_data_overwrite {
             .instantiate_contract(echo_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        // reflect will call echo and then echo will set the data
+        // reflect will call echo
+        // echo will set the data
         // top-level app will not display the data
         let echo_msg = echo::Message::<Empty> {
             data: Some("my echo".into()),
@@ -1559,18 +1586,16 @@ mod response_validation {
 mod contract_instantiation {
 
     #[test]
-    #[cfg(feature = "cosmwasm_1_2")]
     fn instantiate2_works() {
         use super::*;
 
-        // prepare the application
+        // prepare application and actors
         let mut app = App::default();
-
-        let sender_addr = app.api().addr_make("sender");
-        let creator_addr = app.api().addr_make("creator");
+        let sender = app.api().addr_make("sender");
+        let creator = app.api().addr_make("creator");
 
         // store contract's code
-        let code_id = app.store_code_with_creator(creator_addr, echo::contract());
+        let code_id = app.store_code_with_creator(creator, echo::contract());
 
         // initialize the contract
         let init_msg = to_json_binary(&Empty {}).unwrap();
@@ -1581,9 +1606,9 @@ mod contract_instantiation {
             msg: init_msg,
             funds: vec![],
             label: "label".into(),
-            salt: salt.clone().into(),
+            salt: salt.into(),
         };
-        let res = app.execute(sender_addr.clone(), msg.into()).unwrap();
+        let res = app.execute(sender, msg.into()).unwrap();
 
         // assert a proper instantiate result
         let parsed = parse_instantiate_response_data(res.data.unwrap().as_slice()).unwrap();
@@ -1592,12 +1617,8 @@ mod contract_instantiation {
         // assert contract's address is exactly the predicted one,
         // in default address generator, this is like `contract` + salt in hex
         assert_eq!(
-            parsed.contract_address.as_str(),
-            format!(
-                "contract{}{}",
-                app.api().addr_canonicalize(sender_addr.as_str()).unwrap(),
-                salt.to_hex()
-            )
+            parsed.contract_address,
+            "cosmwasm167g7x7auj3l00lhdcevusncx565ytz6a6xvmx2f5xuy84re9ddrqczpzkm",
         );
     }
 }
@@ -1605,20 +1626,18 @@ mod contract_instantiation {
 mod wasm_queries {
 
     #[test]
-    #[cfg(feature = "cosmwasm_1_2")]
     fn query_existing_code_info() {
         use super::*;
         let mut app = App::default();
-        let creator_addr = app.api().addr_make("creator");
-        let code_id = app.store_code_with_creator(creator_addr.clone(), echo::contract());
+        let creator = app.api().addr_make("creator");
+        let code_id = app.store_code_with_creator(creator.clone(), echo::contract());
         let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
         assert_eq!(code_id, code_info_response.code_id);
-        assert_eq!(creator_addr.as_str(), code_info_response.creator.as_str());
-        assert!(!code_info_response.checksum.is_empty());
+        assert_eq!(creator.to_string(), code_info_response.creator.to_string());
+        assert_eq!(32, code_info_response.checksum.as_slice().len());
     }
 
     #[test]
-    #[cfg(feature = "cosmwasm_1_2")]
     fn query_non_existing_code_info() {
         use super::*;
         let app = App::default();
@@ -1645,8 +1664,8 @@ mod custom_messages {
             .with_custom(custom_handler)
             .build(no_init);
 
-        let sender = app.api().addr_validate("sender").unwrap();
-        let owner = app.api().addr_validate("owner").unwrap();
+        let sender = app.api().addr_make("sender");
+        let owner = app.api().addr_make("owner");
 
         let contract_id = app.store_code(echo::custom_contract());
 
@@ -1682,10 +1701,11 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_wrapped_properly() {
-        // set personal balance
-        let owner = "owner".into_addr();
-        let init_funds = vec![coin(20, "btc")];
+        // prepare user addresses
+        let owner = addr_make("owner");
 
+        // set personal balance
+        let init_funds = vec![coin(20, "btc")];
         let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
             router
                 .bank
@@ -1844,7 +1864,7 @@ mod errors {
 
         // we should be able to retrieve the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Init failed");
         } else {
             panic!("wrong StdError variant");
@@ -1860,6 +1880,7 @@ mod errors {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
 
         // set up contract
         let code_id = app.store_code(error::contract(true));
@@ -1871,12 +1892,12 @@ mod errors {
 
         // execute should error
         let err = app
-            .execute_contract(app.api().addr_make("random"), contract_addr, &msg, &[])
+            .execute_contract(random_addr, contract_addr, &msg, &[])
             .unwrap_err();
 
         // we should be able to retrieve the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Handle failed");
         } else {
             panic!("wrong StdError variant");
@@ -1892,6 +1913,7 @@ mod errors {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
 
         let error_code_id = app.store_code(error::contract(true));
         let caller_code_id = app.store_code(caller::contract());
@@ -1912,12 +1934,12 @@ mod errors {
             funds: vec![],
         };
         let err = app
-            .execute_contract(app.api().addr_make("random"), caller_addr, &msg, &[])
+            .execute_contract(random_addr, caller_addr, &msg, &[])
             .unwrap_err();
 
-        // we can downcast to get the original error
+        // we can get the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Handle failed");
         } else {
             panic!("wrong StdError variant");
@@ -1931,7 +1953,9 @@ mod errors {
     #[test]
     fn double_nested_call() {
         let mut app = App::default();
-        let owner = app.api().addr_make("owner");
+
+        let owner_addr = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
 
         let error_code_id = app.store_code(error::contract(true));
         let caller_code_id = app.store_code(caller::contract());
@@ -1939,13 +1963,27 @@ mod errors {
         // set up contract_helpers
         let msg = Empty {};
         let caller_addr1 = app
-            .instantiate_contract(caller_code_id, owner.clone(), &msg, &[], "caller", None)
+            .instantiate_contract(
+                caller_code_id,
+                owner_addr.clone(),
+                &msg,
+                &[],
+                "caller",
+                None,
+            )
             .unwrap();
         let caller_addr2 = app
-            .instantiate_contract(caller_code_id, owner.clone(), &msg, &[], "caller", None)
+            .instantiate_contract(
+                caller_code_id,
+                owner_addr.clone(),
+                &msg,
+                &[],
+                "caller",
+                None,
+            )
             .unwrap();
         let error_addr = app
-            .instantiate_contract(error_code_id, owner, &msg, &[], "error", None)
+            .instantiate_contract(error_code_id, owner_addr, &msg, &[], "error", None)
             .unwrap();
 
         // caller1 calls caller2, caller2 calls error
@@ -1960,15 +1998,15 @@ mod errors {
             funds: vec![],
         };
         let err = app
-            .execute_contract(app.api().addr_make("random"), caller_addr1, &msg, &[])
+            .execute_contract(random_addr, caller_addr1, &msg, &[])
             .unwrap_err();
 
         // uncomment to have the test fail and see how the error stringifies
         // panic!("{:?}", err);
 
-        // we can downcast to get the original error
+        // we can get the original error by downcasting
         let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg } = source {
+        if let StdError::GenericErr { msg, .. } = source {
             assert_eq!(msg, "Handle failed");
         } else {
             panic!("wrong StdError variant");
@@ -1977,31 +2015,5 @@ mod errors {
         // We're expecting exactly 4 nested error types
         // (the original error, 3 WasmMsg contexts)
         assert_eq!(err.chain().count(), 4);
-    }
-}
-
-mod api {
-    use super::*;
-
-    #[test]
-    fn api_addr_validate_should_work() {
-        let app = App::default();
-        let addr = app.api().addr_validate("creator").unwrap();
-        assert_eq!(addr.to_string(), "creator");
-    }
-
-    #[test]
-    #[cfg(not(feature = "cosmwasm_1_5"))]
-    fn api_addr_canonicalize_should_work() {
-        let app = App::default();
-        let canonical = app.api().addr_canonicalize("creator").unwrap();
-        assert_eq!(canonical.to_string(), "0000000000000000000000000000726F0000000000000000000000000000000000000000006572000000000000000000000000000000000000000000610000000000000000000000000000000000000000006374000000000000");
-    }
-
-    #[test]
-    fn api_addr_humanize_should_work() {
-        let app = App::default();
-        let canonical = app.api().addr_canonicalize("creator").unwrap();
-        assert_eq!(app.api().addr_humanize(&canonical).unwrap(), "creator");
     }
 }
