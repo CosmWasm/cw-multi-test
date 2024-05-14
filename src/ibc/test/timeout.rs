@@ -66,6 +66,7 @@ fn simple_transfer_timeout() -> anyhow::Result<()> {
                 revision: 1,
                 height: app2.block_info().height, // this will have the effect of a timeout when relaying the packets
             }),
+            memo: None,
         }),
     )?;
 
@@ -181,6 +182,7 @@ fn simple_transfer_timeout_closes_channel() -> anyhow::Result<()> {
                 revision: 1,
                 height: app2.block_info().height, // this will have the effect of a timeout when relaying the packets
             }),
+            memo: None,
         }),
     )?;
 

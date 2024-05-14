@@ -126,7 +126,7 @@ pub struct IbcPacketReceived {
 
 #[cosmwasm_schema::cw_serde]
 pub struct IbcPacketAck {
-    pub ack: Binary,
+    pub ack: Option<Binary>,
 }
 
 /// This is a custom msg that is used for executing actions on the IBC module

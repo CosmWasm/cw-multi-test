@@ -20,7 +20,7 @@ impl<'a> IndexList<Connection> for ConnectionIndexes<'a> {
     }
 }
 
-pub fn ibc_connections<'a>() -> IndexedMap<'a, &'a str, Connection, ConnectionIndexes<'a>> {
+pub fn ibc_connections<'a>() -> IndexedMap<&'a str, Connection, ConnectionIndexes<'a>> {
     let indexes = ConnectionIndexes {
         chain_id: MultiIndex::new(
             |_, d: &Connection| d.counterparty_chain_id.clone(),

@@ -64,21 +64,19 @@ fn channel_creation() -> anyhow::Result<()> {
 
     assert_eq!(
         channel,
-        ChannelResponse {
-            channel: Some(IbcChannel::new(
-                IbcEndpoint {
-                    port_id: src_port.clone(),
-                    channel_id: src_channel.clone()
-                },
-                IbcEndpoint {
-                    port_id: dst_port.clone(),
-                    channel_id: dst_channel.clone()
-                },
-                order.clone(),
-                version.clone(),
-                "connection-0"
-            ))
-        }
+        ChannelResponse::new(Some(IbcChannel::new(
+            IbcEndpoint {
+                port_id: src_port.clone(),
+                channel_id: src_channel.clone()
+            },
+            IbcEndpoint {
+                port_id: dst_port.clone(),
+                channel_id: dst_channel.clone()
+            },
+            order.clone(),
+            version.clone(),
+            "connection-0"
+        )))
     );
 
     let channel_query = app2
@@ -96,21 +94,19 @@ fn channel_creation() -> anyhow::Result<()> {
 
     assert_eq!(
         channel,
-        ChannelResponse {
-            channel: Some(IbcChannel::new(
-                IbcEndpoint {
-                    port_id: dst_port.clone(),
-                    channel_id: dst_channel.clone()
-                },
-                IbcEndpoint {
-                    port_id: src_port.clone(),
-                    channel_id: src_channel.clone()
-                },
-                order,
-                version,
-                "connection-0"
-            ))
-        }
+        ChannelResponse::new(Some(IbcChannel::new(
+            IbcEndpoint {
+                port_id: dst_port.clone(),
+                channel_id: dst_channel.clone()
+            },
+            IbcEndpoint {
+                port_id: src_port.clone(),
+                channel_id: src_channel.clone()
+            },
+            order,
+            version,
+            "connection-0"
+        )))
     );
 
     Ok(())

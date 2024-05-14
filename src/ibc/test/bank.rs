@@ -69,6 +69,7 @@ fn simple_transfer() -> anyhow::Result<()> {
                 revision: 1,
                 height: app2.block_info().height + 1,
             }),
+            memo: None,
         }),
     )?;
 
@@ -165,6 +166,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
                 revision: 1,
                 height: app2.block_info().height + 1,
             }),
+            memo: None,
         }),
     )?;
 
@@ -201,6 +203,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
                 revision: 1,
                 height: app2.block_info().height + 100,
             }),
+            memo: None,
         }),
     )?;
 

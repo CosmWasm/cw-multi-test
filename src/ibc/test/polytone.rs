@@ -8,7 +8,7 @@ use crate::{
         relayer::{create_channel, create_connection, get_event_attr_value, relay_packets_in_tx},
         simple_ibc::IbcSimpleModule,
     },
-    AppBuilder, ContractWrapper, Executor, FailingModule, MockAddressGenerator, MockApiBech32,
+    AppBuilder, ContractWrapper, Executor, FailingModule, MockApiBech32, SimpleAddressGenerator,
     WasmKeeper,
 };
 
@@ -195,9 +195,9 @@ fn polytone() -> anyhow::Result<()> {
 
     // prepare wasm module with custom address generator
     let wasm_keeper_1: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new().with_address_generator(MockAddressGenerator);
+        WasmKeeper::new().with_address_generator(SimpleAddressGenerator);
     let wasm_keeper_2: WasmKeeper<Empty, Empty> =
-        WasmKeeper::new().with_address_generator(MockAddressGenerator);
+        WasmKeeper::new().with_address_generator(SimpleAddressGenerator);
     // We mint some funds to the owner
     let mut app1 = AppBuilder::default()
         .with_ibc(IbcSimpleModule)

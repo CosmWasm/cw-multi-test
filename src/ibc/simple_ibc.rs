@@ -505,7 +505,7 @@ impl IbcSimpleModule {
                 "packet_data",
                 String::from_utf8_lossy(packet.data.as_slice()),
             )
-            .add_attribute("packet_data_hex", hex::encode(packet.data.0.clone()))
+            .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -625,7 +625,7 @@ impl IbcSimpleModule {
                     "packet_data",
                     String::from_utf8_lossy(packet.data.as_slice()),
                 )
-                .add_attribute("packet_data_hex", hex::encode(packet.data.0.clone()))
+                .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
                 .add_attribute(
                     "packet_timeout_height",
                     format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -652,9 +652,6 @@ impl IbcSimpleModule {
 
         let packet_msg = packet_from_data_and_channel(&packet, &channel_info);
 
-        #[cfg(not(feature = "cosmwasm_1_1"))]
-        let receive_msg = IbcPacketReceiveMsg::new(packet_msg);
-        #[cfg(feature = "cosmwasm_1_1")]
         let receive_msg = IbcPacketReceiveMsg::new(packet_msg, Addr::unchecked(RELAYER_ADDR));
 
         // First we send an ibc message on the corresponding module
@@ -706,7 +703,7 @@ impl IbcSimpleModule {
                 "packet_data",
                 String::from_utf8_lossy(packet.data.as_slice()),
             )
-            .add_attribute("packet_data_hex", hex::encode(packet.data.0.clone()))
+            .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -728,7 +725,7 @@ impl IbcSimpleModule {
                 "packet_data",
                 serde_json::to_value(&packet.data)?.to_string(),
             )
-            .add_attribute("packet_data_hex", hex::encode(packet.data.0))
+            .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -741,9 +738,18 @@ impl IbcSimpleModule {
             .add_attribute("packet_dst_channel", packet.dst_channel_id)
             .add_attribute(
                 "packet_ack",
-                String::from_utf8_lossy(acknowledgement.as_slice()),
+                acknowledgement
+                    .as_ref()
+                    .map(|a| String::from_utf8_lossy(a.as_slice()).to_string())
+                    .unwrap_or("".to_string()),
             )
-            .add_attribute("packet_ack_hex", hex::encode(acknowledgement.0));
+            .add_attribute(
+                "packet_ack_hex",
+                acknowledgement
+                    .as_ref()
+                    .map(|a| hex::encode(a.as_slice()))
+                    .unwrap_or("".to_string()),
+            );
 
         events.push(recv_event);
         events.push(ack_event);
@@ -811,9 +817,6 @@ impl IbcSimpleModule {
         let acknowledgement = IbcAcknowledgement::new(ack);
         let original_packet = packet_from_data_and_channel(&packet_data, &channel_info);
 
-        #[cfg(not(feature = "cosmwasm_1_1"))]
-        let ack_message = IbcPacketAckMsg::new(acknowledgement, original_packet);
-        #[cfg(feature = "cosmwasm_1_1")]
         let ack_message = IbcPacketAckMsg::new(
             acknowledgement,
             original_packet,
@@ -931,9 +934,6 @@ impl IbcSimpleModule {
 
         let original_packet = packet_from_data_and_channel(&packet_data, &channel_info);
 
-        #[cfg(not(feature = "cosmwasm_1_1"))]
-        let timeout_message = IbcPacketTimeoutMsg::new(original_packet);
-        #[cfg(feature = "cosmwasm_1_1")]
         let timeout_message =
             IbcPacketTimeoutMsg::new(original_packet, Addr::unchecked(RELAYER_ADDR));
 
@@ -1058,6 +1058,7 @@ impl Module for IbcSimpleModule {
                 to_address,
                 amount,
                 timeout,
+                memo,
             } => self.transfer(
                 api, storage, router, block, sender, channel_id, to_address, amount, timeout,
             ),
@@ -1186,9 +1187,9 @@ impl Module for IbcSimpleModule {
                         let channel_info =
                             CHANNEL_INFO.may_load(&ibc_storage, (port_id, channel_id.clone()))?;
 
-                        Ok(to_json_binary(&ChannelResponse {
-                            channel: channel_info.map(|c| c.info),
-                        })?)
+                        Ok(to_json_binary(&ChannelResponse::new(
+                            channel_info.map(|c| c.info),
+                        ))?)
                     }
                     IbcQuery::ListChannels { port_id } => {
                         // Port_id has to be specified here, unfortunately we can't access the contract address
@@ -1199,9 +1200,9 @@ impl Module for IbcSimpleModule {
                             .range(&ibc_storage, None, None, Order::Ascending)
                             .collect::<Result<Vec<_>, _>>()?;
 
-                        Ok(to_json_binary(&ListChannelsResponse {
-                            channels: channels.iter().map(|c| c.1.info.clone()).collect(),
-                        })?)
+                        Ok(to_json_binary(&ListChannelsResponse::new(
+                            channels.iter().map(|c| c.1.info.clone()).collect(),
+                        ))?)
                     }
                     _ => bail!("Query not available"),
                 }
