@@ -16,13 +16,16 @@ fn custom_handler_works() {
     // create custom handler
     let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::new();
 
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
     // run execute function
     let _ = custom_handler.execute(
         app.api(),
         &mut storage,
         app.router(),
         &app.block_info(),
-        app.api().addr_make("sender"),
+        sender_addr,
         CustomHelperMsg::SetAge { age: 32 },
     );
 

@@ -2,7 +2,8 @@
 
 use crate::error::AnyResult;
 use crate::{MockApiBech32, MockApiBech32m};
-use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, HexBinary, Storage};
+use cosmwasm_std::testing::MockApi;
+use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, Storage};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
@@ -23,12 +24,12 @@ pub trait IntoAddr {
 impl IntoAddr for &str {
     /// Converts [&str] into [Addr].
     fn into_addr(self) -> Addr {
-        MockApiBech32::new(DEFAULT_PREFIX).addr_make(self)
+        MockApi::default().addr_make(self)
     }
 
     /// Converts [&str] into [Addr] with custom prefix.
     fn into_addr_with_prefix(self, prefix: &'static str) -> Addr {
-        MockApiBech32::new(prefix).addr_make(self)
+        MockApi::default().with_prefix(prefix).addr_make(self)
     }
 }
 
@@ -86,7 +87,7 @@ pub trait AddressGenerator {
     /// `WasmMsg::Instantiate` message.
     ///
     /// The default implementation generates a contract address based
-    /// on contract's instance identifier only.
+    /// on contract's code and instance identifier.
     ///
     /// # Example
     ///
@@ -101,26 +102,18 @@ pub trait AddressGenerator {
     ///
     /// let my_address_generator = MyAddressGenerator{};
     ///
-    /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 0).unwrap();
-    /// assert_eq!(addr.as_str(), "contract0");
-    ///
     /// let addr = my_address_generator.contract_address(&api, &mut storage, 100, 1).unwrap();
-    /// assert_eq!(addr.as_str(), "contract1");
-    ///
-    /// let addr = my_address_generator.contract_address(&api, &mut storage, 200, 5).unwrap();
-    /// assert_eq!(addr.as_str(), "contract5");
-    ///
-    /// let addr = my_address_generator.contract_address(&api, &mut storage, 200, 6).unwrap();
-    /// assert_eq!(addr.as_str(), "contract6");
+    /// assert!(addr.as_str().starts_with("cosmwasm1"));
     /// ```
     fn contract_address(
         &self,
-        _api: &dyn Api,
+        api: &dyn Api,
         _storage: &mut dyn Storage,
-        _code_id: u64,
+        code_id: u64,
         instance_id: u64,
     ) -> AnyResult<Addr> {
-        Ok(Addr::unchecked(format!("contract{instance_id}")))
+        let canonical_addr = instantiate_address(code_id, instance_id);
+        Ok(api.addr_humanize(&canonical_addr)?)
     }
 
     /// Generates a _predictable_ contract address, just like the real-life chain
@@ -134,7 +127,7 @@ pub trait AddressGenerator {
     /// # Example
     ///
     /// ```
-    /// # use cosmwasm_std::Api;
+    /// # use cosmwasm_std::{Api, Checksum};
     /// # use cosmwasm_std::testing::{MockApi, MockStorage};
     /// # use cw_multi_test::{AddressGenerator, SimpleAddressGenerator};
     /// # let api = MockApi::default();
@@ -145,15 +138,16 @@ pub trait AddressGenerator {
     ///
     /// let my_address_generator = MyAddressGenerator{};
     ///
-    /// let creator1 = api.addr_canonicalize("creator1").unwrap();
-    /// let creator2 = api.addr_canonicalize("creator2").unwrap();
+    /// let creator1 = api.addr_canonicalize(&api.addr_make("creator1").to_string()).unwrap();
+    /// let creator2 = api.addr_canonicalize(&api.addr_make("creator2").to_string()).unwrap();
     /// let salt1 = [0xc0,0xff,0xee];
     /// let salt2 = [0xbe,0xef];
+    /// let chs = Checksum::generate(&[1]);
     ///
-    /// let addr11 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator1, &salt1).unwrap();
-    /// let addr12 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator1, &salt2).unwrap();
-    /// let addr21 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator2, &salt1).unwrap();
-    /// let addr22 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, &[1], &creator2, &salt2).unwrap();
+    /// let addr11 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator1, &salt1).unwrap();
+    /// let addr12 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator1, &salt2).unwrap();
+    /// let addr21 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator2, &salt1).unwrap();
+    /// let addr22 = my_address_generator.predictable_contract_address(&api, &mut storage, 1, 0, chs.as_slice(), &creator2, &salt2).unwrap();
     ///
     /// assert_ne!(addr11, addr12);
     /// assert_ne!(addr11, addr21);
@@ -164,146 +158,16 @@ pub trait AddressGenerator {
     /// ```
     fn predictable_contract_address(
         &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _code_id: u64,
-        _instance_id: u64,
-        _checksum: &[u8],
-        creator: &CanonicalAddr,
-        salt: &[u8],
-    ) -> AnyResult<Addr> {
-        Ok(Addr::unchecked(format!(
-            "contract{creator}{}",
-            HexBinary::from(salt).to_hex()
-        )))
-    }
-}
-
-/// Default contract address generator used in [WasmKeeper](crate::WasmKeeper).
-pub struct SimpleAddressGenerator;
-
-impl AddressGenerator for SimpleAddressGenerator {}
-
-/// Address generator that mimics the [wasmd](https://github.com/CosmWasm/wasmd) behavior.
-///
-/// [MockAddressGenerator] implements [AddressGenerator] trait in terms of
-/// [`contract_address`](AddressGenerator::contract_address) and
-/// [`predictable_contract_address`](AddressGenerator::predictable_contract_address) functions:
-/// - `contract_address` generates non-predictable addresses for contracts,
-///   using the same algorithm as `wasmd`, see: [`BuildContractAddressClassic`] for details.
-/// - `predictable_contract_address` generates predictable addresses for contracts using
-///   [`instantiate2_address`] function defined in `cosmwasm-std`.
-///
-/// [`BuildContractAddressClassic`]:https://github.com/CosmWasm/wasmd/blob/3b6512c9f154995188ead84ab3bd9e034b49a0f3/x/wasm/keeper/addresses.go#L35-L41
-/// [`instantiate2_address`]:https://github.com/CosmWasm/cosmwasm/blob/8a652d7cd8071f71139deca6be8194ed4a278b2c/packages/std/src/addresses.rs#L309-L318
-#[derive(Default)]
-pub struct MockAddressGenerator;
-
-impl AddressGenerator for MockAddressGenerator {
-    /// Generates a _non-predictable_ contract address, like `wasmd` does it in real-life chain.
-    ///
-    /// Note that addresses generated by `wasmd` may change and users **should not**
-    /// rely on this value in any extend.
-    ///
-    /// Returns the contract address after its instantiation.
-    /// Address generated by this function is returned as a result
-    /// of processing `WasmMsg::Instantiate` message.
-    ///
-    /// **NOTES**
-    /// > 👉 The canonical address generated by this function is humanized using the
-    /// > `Api::addr_humanize` function, so the resulting value depends on used `Api` implementation.
-    /// > The following example uses Bech32 format for humanizing canonical addresses.
-    ///
-    /// > 👉 Do NOT use this function **directly** to generate a contract address,
-    /// > pass this address generator to `WasmKeeper`:
-    /// > `WasmKeeper::new().with_address_generator(MockAddressGenerator::default());`
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use cosmwasm_std::testing::MockStorage;
-    /// # use cw_multi_test::AddressGenerator;
-    /// # use cw_multi_test::{MockAddressGenerator, MockApiBech32};
-    /// // use `Api` that implements Bech32 format
-    /// let api = MockApiBech32::new("juno");
-    /// // prepare mock storage
-    /// let mut storage = MockStorage::default();
-    /// // initialize the address generator
-    /// let address_generator = MockAddressGenerator::default();
-    /// // generate the address
-    /// let addr = address_generator.contract_address(&api, &mut storage, 1, 1).unwrap();
-    ///
-    /// assert_eq!(addr.to_string(),
-    ///            "juno14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9skjuwg8");
-    /// ```
-    fn contract_address(
-        &self,
-        api: &dyn Api,
-        _storage: &mut dyn Storage,
-        code_id: u64,
-        instance_id: u64,
-    ) -> AnyResult<Addr> {
-        let canonical_addr = instantiate_address(code_id, instance_id);
-        Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
-    }
-
-    /// Generates a _predictable_ contract address, like `wasmd` does it in real-life chain.
-    ///
-    /// Returns a contract address after its instantiation.
-    /// Address generated by this function is returned as a result
-    /// of processing `WasmMsg::Instantiate2` message.
-    ///
-    /// **NOTES**
-    /// > 👉 The canonical address generated by this function is humanized using the
-    /// > `Api::addr_humanize` function, so the resulting value depends on used `Api` implementation.
-    /// > The following example uses Bech32 format for humanizing canonical addresses.
-    ///
-    /// > 👉 Do NOT use this function **directly** to generate a contract address,
-    /// > pass this address generator to WasmKeeper:
-    /// > `WasmKeeper::new().with_address_generator(MockAddressGenerator::default());`
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use cosmwasm_std::Api;
-    /// # use cosmwasm_std::testing::MockStorage;
-    /// # use cw_multi_test::AddressGenerator;
-    /// # use cw_multi_test::{MockAddressGenerator, MockApiBech32};
-    /// // use `Api` that implements Bech32 format
-    /// let api = MockApiBech32::new("juno");
-    /// // prepare mock storage
-    /// let mut storage = MockStorage::default();
-    /// // initialize the address generator
-    /// let address_generator = MockAddressGenerator::default();
-    /// // checksum of the contract code base
-    /// let checksum = [0, 1 ,2 ,3 ,4 ,5 ,6 ,7 ,8 ,9 ,10,
-    ///                 11,12,13,14,15,16,17,18,19,20,21,
-    ///                 22,23,24,25,26,27,28,29,30,31];
-    /// // creator address
-    /// let creator = api.addr_canonicalize(api.addr_make("creator").as_str()).unwrap();
-    /// // salt
-    /// let salt = [10,11,12];
-    /// // generate the address
-    /// let addr = address_generator
-    ///     .predictable_contract_address(&api, &mut storage, 1, 1, &checksum, &creator, &salt)
-    ///     .unwrap();
-    ///
-    /// assert_eq!(addr.to_string(),
-    ///            "juno1sv3gjp85m3xxluxreruards8ruxk5ykys8qfljwrdj5tv8kqxuhsmlfyud");
-    /// ```
-    fn predictable_contract_address(
-        &self,
         api: &dyn Api,
         _storage: &mut dyn Storage,
         _code_id: u64,
         _instance_id: u64,
         checksum: &[u8],
-
         creator: &CanonicalAddr,
         salt: &[u8],
     ) -> AnyResult<Addr> {
         let canonical_addr = instantiate2_address(checksum, creator, salt)?;
-        Ok(Addr::unchecked(api.addr_humanize(&canonical_addr)?))
+        Ok(api.addr_humanize(&canonical_addr)?)
     }
 }
 
@@ -326,3 +190,8 @@ fn instantiate_address(code_id: u64, instance_id: u64) -> CanonicalAddr {
         .to_vec()
         .into()
 }
+
+/// Default contract address generator used in [WasmKeeper](crate::WasmKeeper).
+pub struct SimpleAddressGenerator;
+
+impl AddressGenerator for SimpleAddressGenerator {}

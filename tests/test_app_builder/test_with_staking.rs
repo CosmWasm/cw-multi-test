@@ -1,24 +1,10 @@
 use crate::test_app_builder::MyKeeper;
-use cosmwasm_std::{Api, BlockInfo, Coin, CustomQuery, StakingMsg, StakingQuery, Storage};
-use cw_multi_test::error::AnyResult;
-use cw_multi_test::{
-    no_init, AppBuilder, AppResponse, CosmosRouter, Executor, Staking, StakingSudo,
-};
+use cosmwasm_std::{Coin, StakingMsg, StakingQuery};
+use cw_multi_test::{no_init, AppBuilder, Executor, Staking, StakingSudo};
 
 type MyStakeKeeper = MyKeeper<StakingMsg, StakingQuery, StakingSudo>;
 
-impl Staking for MyStakeKeeper {
-    fn process_queue<ExecC, QueryC: CustomQuery>(
-        &self,
-        api: &dyn Api,
-        storage: &mut dyn Storage,
-        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        block: &BlockInfo,
-    ) -> AnyResult<AppResponse> {
-        let _ = (api, storage, router, block);
-        todo!()
-    }
-}
+impl Staking for MyStakeKeeper {}
 
 const EXECUTE_MSG: &str = "staking execute called";
 const QUERY_MSG: &str = "staking query called";
@@ -33,17 +19,18 @@ fn building_app_with_custom_staking_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_staking(stake_keeper).build(no_init);
 
-    // prepare additional input data
-    let validator = app.api().addr_make("recipient");
+    // prepare addresses
+    let validator_addr = app.api().addr_make("validator");
+    let sender_addr = app.api().addr_make("sender");
 
     // executing staking message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            app.api().addr_make("sender"),
+            sender_addr,
             StakingMsg::Delegate {
-                validator: validator.clone().into(),
-                amount: Coin::new(1, "eth"),
+                validator: validator_addr.clone().into(),
+                amount: Coin::new(1_u32, "eth"),
             }
             .into(),
         )
@@ -56,7 +43,7 @@ fn building_app_with_custom_staking_should_work() {
         SUDO_MSG,
         app.sudo(
             StakingSudo::Slash {
-                validator: validator.into(),
+                validator: validator_addr.into(),
                 percentage: Default::default(),
             }
             .into()

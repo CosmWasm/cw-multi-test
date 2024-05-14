@@ -94,8 +94,9 @@ fn building_app_with_custom_wasm_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_wasm(wasm_keeper).build(no_init);
 
-    // prepare additional input data
+    // prepare addresses
     let contract_addr = app.api().addr_make("contract");
+    let sender_addr = app.api().addr_make("sender");
 
     // calling store_code should return value defined in custom keeper
     assert_eq!(CODE_ID, app.store_code(test_contracts::counter::contract()));
@@ -119,7 +120,7 @@ fn building_app_with_custom_wasm_should_work() {
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            app.api().addr_make("sender"),
+            sender_addr,
             WasmMsg::Instantiate {
                 admin: None,
                 code_id: 0,
@@ -148,7 +149,6 @@ fn building_app_with_custom_wasm_should_work() {
     );
 
     // executing wasm query should return an error defined in custom keeper
-    #[cfg(feature = "cosmwasm_1_2")]
     assert_eq!(
         format!("Generic error: Querier contract error: {}", QUERY_MSG),
         app.wrap()

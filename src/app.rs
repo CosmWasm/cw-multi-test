@@ -8,11 +8,13 @@ use crate::ibc::{
 };
 use crate::ibc::{Ibc, IbcSimpleModule};
 use crate::module::{FailingModule, Module};
+use crate::prefixed_storage::{
+    prefixed, prefixed_multilevel, prefixed_multilevel_read, prefixed_read,
+};
 use crate::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo};
-use crate::stargate::{Stargate, StargateFailingModule, StargateMsg, StargateQuery};
 use crate::transactions::transactional;
 use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
-use crate::{AppBuilder, GovFailingModule};
+use crate::{AppBuilder, GovFailingModule, Stargate, StargateFailing};
 use cosmwasm_std::testing::{MockApi, MockStorage};
 use cosmwasm_std::{
     from_json, to_json_binary, Addr, Api, Binary, BlockInfo, ContractResult, CosmosMsg, CustomMsg,
@@ -42,7 +44,7 @@ pub type BasicApp<ExecC = Empty, QueryC = Empty> = App<
     DistributionKeeper,
     IbcSimpleModule,
     GovFailingModule,
-    StargateFailingModule,
+    StargateFailing,
 >;
 
 /// # Blockchain application simulator
@@ -59,7 +61,7 @@ pub struct App<
     Distr = DistributionKeeper,
     Ibc = IbcSimpleModule,
     Gov = GovFailingModule,
-    Stargate = StargateFailingModule,
+    Stargate = StargateFailing,
 > {
     pub(crate) router: Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate>,
     pub(crate) api: Api,
@@ -95,7 +97,7 @@ impl BasicApp {
                 DistributionKeeper,
                 IbcSimpleModule,
                 GovFailingModule,
-                StargateFailingModule,
+                StargateFailing,
             >,
             &dyn Api,
             &mut dyn Storage,
@@ -120,7 +122,7 @@ where
             DistributionKeeper,
             IbcSimpleModule,
             GovFailingModule,
-            StargateFailingModule,
+            StargateFailing,
         >,
         &dyn Api,
         &mut dyn Storage,
@@ -258,11 +260,9 @@ where
     /// Registers contract code (like uploading wasm bytecode on a chain),
     /// so it can later be used to instantiate a contract.
     pub fn store_code(&mut self, code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>) -> u64 {
-        self.init_modules(|router, _, _| {
-            router
-                .wasm
-                .store_code(MockApi::default().addr_make("creator"), code)
-        })
+        self.router
+            .wasm
+            .store_code(MockApi::default().addr_make("creator"), code)
     }
 
     /// Registers contract code (like [store_code](Self::store_code)),
@@ -272,7 +272,7 @@ where
         creator: Addr,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> u64 {
-        self.init_modules(|router, _, _| router.wasm.store_code(creator, code))
+        self.router.wasm.store_code(creator, code)
     }
 
     /// Registers contract code (like [store_code_with_creator](Self::store_code_with_creator)),
@@ -283,7 +283,7 @@ where
         code_id: u64,
         code: Box<dyn Contract<CustomT::ExecT, CustomT::QueryT>>,
     ) -> AnyResult<u64> {
-        self.init_modules(|router, _, _| router.wasm.store_code_with_id(creator, code_id, code))
+        self.router.wasm.store_code_with_id(creator, code_id, code)
     }
 
     /// Duplicates the contract code identified by `code_id` and returns
@@ -336,17 +336,57 @@ where
     /// assert_eq!("code id 100: no such code", app.duplicate_code(100).unwrap_err().to_string());
     /// ```
     pub fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
-        self.init_modules(|router, _, _| router.wasm.duplicate_code(code_id))
+        self.router.wasm.duplicate_code(code_id)
     }
 
     /// Returns `ContractData` for the contract with specified address.
     pub fn contract_data(&self, address: &Addr) -> AnyResult<ContractData> {
-        self.read_module(|router, _, storage| router.wasm.contract_data(storage, address))
+        self.router.wasm.contract_data(&self.storage, address)
     }
 
     /// Returns a raw state dump of all key-values held by a contract with specified address.
     pub fn dump_wasm_raw(&self, address: &Addr) -> Vec<Record> {
-        self.read_module(|router, _, storage| router.wasm.dump_wasm_raw(storage, address))
+        self.router.wasm.dump_wasm_raw(&self.storage, address)
+    }
+
+    /// Returns **read-only** storage for a contract with specified address.
+    pub fn contract_storage<'a>(&'a self, contract_addr: &Addr) -> Box<dyn Storage + 'a> {
+        self.router
+            .wasm
+            .contract_storage(&self.storage, contract_addr)
+    }
+
+    /// Returns **read-write** storage for a contract with specified address.
+    pub fn contract_storage_mut<'a>(&'a mut self, contract_addr: &Addr) -> Box<dyn Storage + 'a> {
+        self.router
+            .wasm
+            .contract_storage_mut(&mut self.storage, contract_addr)
+    }
+
+    /// Returns **read-only** prefixed storage with specified namespace.
+    pub fn prefixed_storage<'a>(&'a self, namespace: &[u8]) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed_read(&self.storage, namespace))
+    }
+
+    /// Returns **mutable** prefixed storage with specified namespace.
+    pub fn prefixed_storage_mut<'a>(&'a mut self, namespace: &[u8]) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed(&mut self.storage, namespace))
+    }
+
+    /// Returns **read-only** prefixed, multilevel storage with specified namespaces.
+    pub fn prefixed_multilevel_storage<'a>(
+        &'a self,
+        namespaces: &[&[u8]],
+    ) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed_multilevel_read(&self.storage, namespaces))
+    }
+
+    /// Returns **mutable** prefixed, multilevel storage with specified namespaces.
+    pub fn prefixed_multilevel_storage_mut<'a>(
+        &'a mut self,
+        namespaces: &[&[u8]],
+    ) -> Box<dyn Storage + 'a> {
+        Box::new(prefixed_multilevel(&mut self.storage, namespaces))
     }
 }
 
@@ -497,7 +537,7 @@ pub struct Router<Bank, Custom, Wasm, Staking, Distr, Ibc, Gov, Stargate> {
     pub ibc: Ibc,
     /// Governance module instance to be used in this [Router].
     pub gov: Gov,
-    /// Stargate module instance to be used in this [Router].
+    /// Stargate handler instance to be used in this [Router].
     pub stargate: Stargate,
 }
 
@@ -661,14 +701,13 @@ where
                 .execute(api, storage, self, block, sender, msg),
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
-            CosmosMsg::Stargate { type_url, value } => self.stargate.execute(
-                api,
-                storage,
-                self,
-                block,
-                sender,
-                StargateMsg { type_url, value },
-            ),
+            #[allow(deprecated)]
+            CosmosMsg::Stargate { type_url, value } => self
+                .stargate
+                .execute_stargate(api, storage, self, block, sender, type_url, value),
+            CosmosMsg::Any(msg) => self
+                .stargate
+                .execute_any(api, storage, self, block, sender, msg),
             _ => bail!("Cannot execute {:?}", msg),
         }
     }
@@ -690,10 +729,11 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req.into()),
-            QueryRequest::Stargate { path, data } => {
-                self.stargate
-                    .query(api, storage, &querier, block, StargateQuery { path, data })
-            }
+            #[allow(deprecated)]
+            QueryRequest::Stargate { path, data } => self
+                .stargate
+                .query_stargate(api, storage, &querier, block, path, data),
+            QueryRequest::Grpc(req) => self.stargate.query_grpc(api, storage, &querier, block, req),
             _ => unimplemented!(),
         }
     }

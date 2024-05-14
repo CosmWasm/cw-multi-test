@@ -87,7 +87,7 @@ fn query(_deps: Deps, _env: Env, msg: Empty) -> Result<Binary, StdError> {
     to_json_binary(&msg)
 }
 
-#[allow(clippy::unnecessary_wraps)]
+#[allow(clippy::unnecessary_wraps, deprecated)]
 fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<ExecC>, StdError>
 where
     ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
@@ -98,6 +98,7 @@ where
         result: SubMsgResult::Ok(SubMsgResponse {
             data: Some(data), ..
         }),
+        ..
     } = msg
     {
         // We parse out the WasmMsg::Execute wrapper...

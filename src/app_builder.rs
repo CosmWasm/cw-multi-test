@@ -1,9 +1,9 @@
-//!AppBuilder helps you set up your test blockchain environment step by step [App].
+//! AppBuilder helps you set up your test blockchain environment step by step [App].
 
 use crate::ibc::IbcSimpleModule;
 use crate::{
     App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
-    Ibc, Module, Router, StakeKeeper, Staking, Stargate, StargateFailingModule, Wasm, WasmKeeper,
+    Ibc, Module, Router, StakeKeeper, Staking, Stargate, StargateFailing, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
@@ -38,7 +38,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     DistributionKeeper,
     IbcSimpleModule,
     GovFailingModule,
-    StargateFailingModule,
+    StargateFailing,
 >;
 
 /// Utility to build [App] in stages.
@@ -68,7 +68,7 @@ impl Default
         DistributionKeeper,
         IbcSimpleModule,
         GovFailingModule,
-        StargateFailingModule,
+        StargateFailing,
     >
 {
     fn default() -> Self {
@@ -87,7 +87,7 @@ impl
         DistributionKeeper,
         IbcSimpleModule,
         GovFailingModule,
-        StargateFailingModule,
+        StargateFailing,
     >
 {
     /// Creates builder with default components working with empty exec and query messages.
@@ -103,7 +103,7 @@ impl
             distribution: DistributionKeeper::new(),
             ibc: IbcSimpleModule,
             gov: GovFailingModule::new(),
-            stargate: StargateFailingModule::new(),
+            stargate: StargateFailing,
         }
     }
 }
@@ -119,7 +119,7 @@ impl<ExecC, QueryC>
         DistributionKeeper,
         IbcSimpleModule,
         GovFailingModule,
-        StargateFailingModule,
+        StargateFailing,
     >
 where
     ExecC: CustomMsg + DeserializeOwned + 'static,
@@ -139,7 +139,7 @@ where
             distribution: DistributionKeeper::new(),
             ibc: IbcSimpleModule,
             gov: GovFailingModule::new(),
-            stargate: StargateFailingModule::new(),
+            stargate: StargateFailing,
         }
     }
 }
@@ -447,10 +447,10 @@ where
             wasm,
             custom,
             staking,
+            stargate,
             distribution,
             ibc,
             gov,
-            stargate,
         }
     }
 

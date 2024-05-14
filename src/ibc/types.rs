@@ -197,7 +197,7 @@ pub struct AppIbcBasicResponse {
 #[derive(Default)]
 pub struct AppIbcReceiveResponse {
     pub events: Vec<Event>,
-    pub acknowledgement: Binary,
+    pub acknowledgement: Option<Binary>,
 }
 
 impl From<IbcChannelOpenResponse> for IbcResponse {

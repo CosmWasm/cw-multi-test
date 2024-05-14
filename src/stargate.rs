@@ -1,39 +1,145 @@
-use crate::{AcceptingModule, FailingModule, Module};
-use cosmwasm_std::{Binary, Empty};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+//! # Handler for `CosmosMsg::Stargate`, `CosmosMsg::Any`, `QueryRequest::Stargate` and `QueryRequest::Grpc` messages
 
-/// Placeholder for stargate message attributes.
-#[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct StargateMsg {
-    /// Stargate message type.
-    pub type_url: String,
-    /// Stargate message body.
-    pub value: Binary,
+use crate::error::AnyResult;
+use crate::{AppResponse, CosmosRouter};
+use anyhow::bail;
+use cosmwasm_std::{
+    to_json_binary, Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, GrpcQuery,
+    Querier, Storage,
+};
+use serde::de::DeserializeOwned;
+
+/// Interface of handlers for processing `Stargate`/`Any` message variants
+/// and `Stargate`/`Grpc` queries.
+pub trait Stargate {
+    /// Processes `CosmosMsg::Stargate` message variant.
+    fn execute_stargate<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        sender: Addr,
+        type_url: String,
+        value: Binary,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: CustomMsg + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        bail!(
+            "Unexpected stargate execute: type_url={}, value={} from {}",
+            type_url,
+            value,
+            sender,
+        )
+    }
+
+    /// Processes `QueryRequest::Stargate` query.
+    fn query_stargate(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        path: String,
+        data: Binary,
+    ) -> AnyResult<Binary> {
+        bail!("Unexpected stargate query: path={}, data={}", path, data)
+    }
+
+    /// Processes `CosmosMsg::Any` message variant.
+    fn execute_any<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        sender: Addr,
+        msg: AnyMsg,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: CustomMsg + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        bail!("Unexpected any execute: msg={:?} from {}", msg, sender)
+    }
+
+    /// Processes `QueryRequest::Grpc` query.
+    fn query_grpc(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        request: GrpcQuery,
+    ) -> AnyResult<Binary> {
+        bail!("Unexpected grpc query: request={:?}", request)
+    }
 }
 
-/// Placeholder for stargate query attributes.
-#[non_exhaustive]
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct StargateQuery {
-    /// Fully qualified service path used for routing, e.g. custom/cosmos_sdk.x.bank.v1.Query/QueryBalance.
-    pub path: String,
-    /// Expected protobuf message type (not any), binary encoded.
-    pub data: Binary,
+/// Always failing handler for `Stargate`/`Any` message variants and `Stargate`/`Grpc` queries.
+pub struct StargateFailing;
+
+impl Stargate for StargateFailing {}
+
+/// Always accepting handler for `Stargate`/`Any` message variants and `Stargate`/`Grpc` queries.
+pub struct StargateAccepting;
+
+impl Stargate for StargateAccepting {
+    fn execute_stargate<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _type_url: String,
+        _value: Binary,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: CustomMsg + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        Ok(AppResponse::default())
+    }
+
+    fn query_stargate(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _path: String,
+        _data: Binary,
+    ) -> AnyResult<Binary> {
+        to_json_binary(&Empty {}).map_err(Into::into)
+    }
+
+    fn execute_any<ExecC, QueryC>(
+        &self,
+        _api: &dyn Api,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _sender: Addr,
+        _msg: AnyMsg,
+    ) -> AnyResult<AppResponse>
+    where
+        ExecC: CustomMsg + DeserializeOwned + 'static,
+        QueryC: CustomQuery + DeserializeOwned + 'static,
+    {
+        Ok(AppResponse::default())
+    }
+
+    fn query_grpc(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: GrpcQuery,
+    ) -> AnyResult<Binary> {
+        Ok(Binary::default())
+    }
 }
-
-/// Interface to module handling stargate messages and queries.
-pub trait Stargate: Module<ExecT = StargateMsg, QueryT = StargateQuery, SudoT = Empty> {}
-
-/// Always accepting stargate module.
-pub type StargateAcceptingModule = AcceptingModule<StargateMsg, StargateQuery, Empty>;
-
-impl Stargate for StargateAcceptingModule {}
-
-/// Always accepting stargate module.
-pub type StargateFailingModule = FailingModule<StargateMsg, StargateQuery, Empty>;
-
-impl Stargate for StargateFailingModule {}

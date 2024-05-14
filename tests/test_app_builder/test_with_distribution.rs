@@ -20,16 +20,17 @@ fn building_app_with_custom_distribution_should_work() {
         .with_distribution(distribution_keeper)
         .build(no_init);
 
-    // prepare additional input data
-    let recipient = app.api().addr_make("recipient");
+    // prepare addresses
+    let recipient_addr = app.api().addr_make("recipient");
+    let sender_addr = app.api().addr_make("sender");
 
     // executing distribution message should return an error defined in custom keeper
     assert_eq!(
         EXECUTE_MSG,
         app.execute(
-            app.api().addr_make("sender"),
+            sender_addr,
             DistributionMsg::SetWithdrawAddress {
-                address: recipient.into(),
+                address: recipient_addr.into(),
             }
             .into(),
         )

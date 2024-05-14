@@ -1,5 +1,37 @@
 # Changelog
 
+<<<<<<< HEAD
+=======
+## [v2.0.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.0.1) (2024-04-22)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.0.0...v2.0.1)
+
+**Closed issues:**
+
+- Restore support for `Stargate` messages [\#159](https://github.com/CosmWasm/cw-multi-test/issues/159)
+
+**Merged pull requests:**
+
+- Distinctive Stargate [\#163](https://github.com/CosmWasm/cw-multi-test/pull/163) ([DariuszDepta](https://github.com/DariuszDepta))
+- Expose contract storage [\#153](https://github.com/CosmWasm/cw-multi-test/pull/153) ([DariuszDepta](https://github.com/DariuszDepta))
+- Expose prefixed storage [\#154](https://github.com/CosmWasm/cw-multi-test/pull/154) ([DariuszDepta](https://github.com/DariuszDepta))
+- Upgraded dependencies [\#164](https://github.com/CosmWasm/cw-multi-test/pull/164) ([DariuszDepta](https://github.com/DariuszDepta))
+- Fixes typos [\#167](https://github.com/CosmWasm/cw-multi-test/pull/157) ([DariuszDepta](https://github.com/DariuszDepta))
+
+## [v2.0.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.0.0) (2024-03-22)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v1.0.0...v2.0.0)
+
+**Closed issues:**
+
+- Forward port: Fixing contract wrapper [\#146](https://github.com/CosmWasm/cw-multi-test/issues/146)
+- Forward port: `store_code_with_id` helper [#131](https://github.com/CosmWasm/cw-multi-test/issues/131)
+
+**Merged pull requests:**
+
+- V2: upgrading dependencies and refactoring [\#128](https://github.com/CosmWasm/cw-multi-test/pull/128) ([DariuszDepta](https://github.com/DariuszDepta))
+
+>>>>>>> cosmwasm/main
 ## [v1.0.0](https://github.com/CosmWasm/cw-multi-test/tree/v1.0.0) (2024-03-22)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v0.20.1...v1.0.0)

@@ -1,38 +1,37 @@
 #![cfg(test)]
 
 pub extern crate abstract_cw_multi_test as cw_multi_test;
-use cw_storage_plus::Item;
-use serde::{Deserialize, Serialize};
-
 mod test_api;
 mod test_app;
 mod test_app_builder;
+mod test_contract_storage;
 mod test_module;
+mod test_prefixed_storage;
 mod test_wasm;
 
-const COUNTER: Item<u64> = Item::new("count");
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum CounterQueryMsg {
-    Counter {},
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct CounterResponseMsg {
-    value: u64,
-}
-
 mod test_contracts {
-    use super::*;
 
     pub mod counter {
-        use super::*;
         use cosmwasm_std::{
             to_json_binary, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
             WasmMsg,
         };
         use cw_multi_test::{Contract, ContractWrapper};
+        use cw_storage_plus::Item;
+        use serde::{Deserialize, Serialize};
+
+        const COUNTER: Item<u64> = Item::new("counter");
+
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        pub enum CounterQueryMsg {
+            Counter {},
+        }
+
+        #[derive(Debug, Clone, Serialize, Deserialize)]
+        pub struct CounterResponseMsg {
+            pub value: u64,
+        }
 
         fn instantiate(
             deps: DepsMut,
