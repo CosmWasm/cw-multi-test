@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "cw-multi-test"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "anyhow",
  "bech32 0.11.0",

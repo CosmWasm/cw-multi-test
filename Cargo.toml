@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "2.0.1"
+version = "2.0.2"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <DariuszDepta@users.noreply.github.com>"
@@ -12,14 +12,13 @@ license = "Apache-2.0"
 edition = "2021"
 
 [features]
-default = ["cosmwasm_2_0"]
+default = []
 backtrace = ["anyhow/backtrace"]
-cosmwasm_2_0 = ["cosmwasm-std/cosmwasm_2_0"]
 
 [dependencies]
 anyhow = "1.0.86"
 bech32 = "0.11.0"
-cosmwasm-std = { version = "2.0.3", features = ["iterator", "staking", "stargate"] }
+cosmwasm-std = { version = "2.0.3", features = ["cosmwasm_2_0", "iterator", "staking", "stargate"] }
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 derivative = "2.2.0"
