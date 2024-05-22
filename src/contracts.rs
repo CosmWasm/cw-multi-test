@@ -433,6 +433,7 @@ where
             CosmosMsg::Staking(staking) => CosmosMsg::Staking(staking),
             CosmosMsg::Distribution(distribution) => CosmosMsg::Distribution(distribution),
             CosmosMsg::Custom(_) => unreachable!(),
+            #[cfg(feature = "stargate")]
             CosmosMsg::Ibc(ibc) => CosmosMsg::Ibc(ibc),
             #[cfg(feature = "cosmwasm_2_0")]
             CosmosMsg::Any(any) => CosmosMsg::Any(any),

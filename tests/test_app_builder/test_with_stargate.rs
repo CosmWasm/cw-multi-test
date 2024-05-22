@@ -1,4 +1,4 @@
-#![cfg(feature = "cosmwasm_2_0")]
+#![cfg(all(feature = "cosmwasm_2_0", feature = "stargate"))]
 
 use anyhow::bail;
 use cosmwasm_std::{
