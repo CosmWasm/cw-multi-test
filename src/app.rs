@@ -663,6 +663,7 @@ where
             CosmosMsg::Stargate { type_url, value } => self
                 .stargate
                 .execute_stargate(api, storage, self, block, sender, type_url, value),
+            #[cfg(feature = "cosmwasm_2_0")]
             CosmosMsg::Any(msg) => self
                 .stargate
                 .execute_any(api, storage, self, block, sender, msg),
@@ -691,6 +692,7 @@ where
             QueryRequest::Stargate { path, data } => self
                 .stargate
                 .query_stargate(api, storage, &querier, block, path, data),
+            #[cfg(feature = "cosmwasm_2_0")]
             QueryRequest::Grpc(req) => self.stargate.query_grpc(api, storage, &querier, block, req),
             _ => unimplemented!(),
         }

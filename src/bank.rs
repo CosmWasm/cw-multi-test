@@ -4,10 +4,13 @@ use crate::executor::AppResponse;
 use crate::module::Module;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, AllBalanceResponse, AllDenomMetadataResponse, Api, BalanceResponse,
-    BankMsg, BankQuery, Binary, BlockInfo, Coin, DenomMetadata, DenomMetadataResponse, Event,
-    Order, Querier, StdResult, Storage, SupplyResponse, Uint128,
+    coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
+    Binary, BlockInfo, Coin, DenomMetadata, Event, Querier, Storage,
 };
+#[cfg(feature = "cosmwasm_1_3")]
+use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
+#[cfg(feature = "cosmwasm_1_1")]
+use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint128};
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
 use itertools::Itertools;
@@ -98,6 +101,7 @@ impl BankKeeper {
         Ok(val.unwrap_or_default().into_vec())
     }
 
+    #[cfg(feature = "cosmwasm_1_1")]
     fn get_supply(&self, bank_storage: &dyn Storage, denom: String) -> AnyResult<Coin> {
         let supply: Uint128 = BALANCES
             .range(bank_storage, None, None, Order::Ascending)
@@ -236,16 +240,19 @@ impl Module for BankKeeper {
                 let res = BalanceResponse::new(amount);
                 to_json_binary(&res).map_err(Into::into)
             }
+            #[cfg(feature = "cosmwasm_1_1")]
             BankQuery::Supply { denom } => {
                 let amount = self.get_supply(&bank_storage, denom)?;
                 let res = SupplyResponse::new(amount);
                 to_json_binary(&res).map_err(Into::into)
             }
+            #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::DenomMetadata { denom } => {
                 let meta = DENOM_METADATA.may_load(storage, denom)?.unwrap_or_default();
                 let res = DenomMetadataResponse::new(meta);
                 to_json_binary(&res).map_err(Into::into)
             }
+            #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::AllDenomMetadata { pagination: _ } => {
                 let mut metadata = vec![];
                 for key in DENOM_METADATA.keys(storage, None, None, Order::Ascending) {
@@ -303,6 +310,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "cosmwasm_1_1")]
     fn get_set_balance() {
         let api = MockApi::default();
         let mut store = MockStorage::new();
@@ -496,6 +504,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "cosmwasm_1_3")]
     fn set_get_denom_metadata_should_work() {
         let api = MockApi::default();
         let mut store = MockStorage::new();
@@ -523,6 +532,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(feature = "cosmwasm_1_3")]
     fn set_get_all_denom_metadata_should_work() {
         let api = MockApi::default();
         let mut store = MockStorage::new();

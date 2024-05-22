@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "2.0.2"
+version = "2.1.0"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <DariuszDepta@users.noreply.github.com>"
@@ -14,11 +14,16 @@ edition = "2021"
 [features]
 default = []
 backtrace = ["anyhow/backtrace"]
+cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
+cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
+cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
+cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
+cosmwasm_2_0 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_2_0"]
 
 [dependencies]
 anyhow = "1.0.86"
 bech32 = "0.11.0"
-cosmwasm-std = { version = "2.0.3", features = ["cosmwasm_2_0", "iterator", "staking", "stargate"] }
+cosmwasm-std = { version = "2.0.3", features = ["staking", "stargate"] }
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 derivative = "2.2.0"

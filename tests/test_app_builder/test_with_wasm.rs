@@ -1,3 +1,5 @@
+#![cfg(feature = "cosmwasm_1_2")]
+
 use crate::test_app_builder::MyKeeper;
 use crate::test_contracts;
 use cosmwasm_std::{

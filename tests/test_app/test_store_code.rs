@@ -1,3 +1,5 @@
+#![cfg(feature = "cosmwasm_1_2")]
+
 use crate::test_contracts::counter;
 use cosmwasm_std::testing::MockApi;
 use cw_multi_test::App;

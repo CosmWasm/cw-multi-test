@@ -1,3 +1,5 @@
+#![cfg(feature = "cosmwasm_2_0")]
+
 use anyhow::bail;
 use cosmwasm_std::{
     to_json_vec, Addr, AnyMsg, Api, Binary, BlockInfo, CosmosMsg, CustomMsg, CustomQuery, Empty,

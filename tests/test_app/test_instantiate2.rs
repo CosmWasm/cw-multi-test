@@ -1,3 +1,5 @@
+#![cfg(feature = "cosmwasm_1_2")]
+
 use crate::test_contracts::counter;
 use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{instantiate2_address, to_json_binary, Api, Empty, WasmMsg};
