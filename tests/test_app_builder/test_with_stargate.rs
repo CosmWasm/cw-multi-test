@@ -91,9 +91,7 @@ fn building_app_with_custom_stargate_should_work() {
         value: Default::default(),
     };
     assert_eq!(
-        app.execute(sender_addr.clone(), msg)
-            .unwrap_err()
-            .to_string(),
+        app.execute(sender_addr, msg).unwrap_err().to_string(),
         MSG_STARGATE_EXECUTE,
     );
 
@@ -109,31 +107,39 @@ fn building_app_with_custom_stargate_should_work() {
         .unwrap_err()
         .to_string()
         .ends_with(MSG_STARGATE_QUERY));
+}
 
-    #[cfg(feature = "cosmwasm_2_0")]
-    {
-        // executing `any` message should return an error defined in custom stargate keeper
-        let msg = CosmosMsg::Any(AnyMsg {
-            type_url: "test".to_string(),
-            value: Default::default(),
-        });
-        assert_eq!(
-            app.execute(sender_addr, msg).unwrap_err().to_string(),
-            MSG_ANY_EXECUTE,
-        );
+#[test]
+#[cfg(feature = "cosmwasm_2_0")]
+fn building_app_with_custom_any_grpc_should_work() {
+    // build the application with custom stargate keeper
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder.with_stargate(StargateKeeper).build(no_init);
 
-        // executing `grpc` query should return an error defined in custom stargate keeper
-        let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
-            path: "test".to_string(),
-            data: Default::default(),
-        });
-        assert!(app
-            .wrap()
-            .query::<Empty>(&request)
-            .unwrap_err()
-            .to_string()
-            .ends_with(MSG_GRPC_QUERY));
-    }
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
+    // executing `any` message should return an error defined in custom stargate keeper
+    let msg = CosmosMsg::Any(AnyMsg {
+        type_url: "test".to_string(),
+        value: Default::default(),
+    });
+    assert_eq!(
+        app.execute(sender_addr, msg).unwrap_err().to_string(),
+        MSG_ANY_EXECUTE,
+    );
+
+    // executing `grpc` query should return an error defined in custom stargate keeper
+    let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
+        path: "test".to_string(),
+        data: Default::default(),
+    });
+    assert!(app
+        .wrap()
+        .query::<Empty>(&request)
+        .unwrap_err()
+        .to_string()
+        .ends_with(MSG_GRPC_QUERY));
 }
 
 #[test]
@@ -150,7 +156,7 @@ fn building_app_with_accepting_stargate_should_work() {
         type_url: "test".to_string(),
         value: Default::default(),
     };
-    let AppResponse { events, data } = app.execute(sender_addr.clone(), msg).unwrap();
+    let AppResponse { events, data } = app.execute(sender_addr, msg).unwrap();
     assert_eq!(events, Vec::<Event>::new());
     assert_eq!(data, None);
 
@@ -161,33 +167,40 @@ fn building_app_with_accepting_stargate_should_work() {
         data: Default::default(),
     };
     assert_eq!(app.wrap().query::<Empty>(&request).unwrap(), Empty {});
+}
 
-    #[cfg(feature = "cosmwasm_2_0")]
-    {
-        use cosmwasm_std::to_json_vec;
+#[test]
+#[cfg(feature = "cosmwasm_2_0")]
+fn building_app_with_accepting_any_grpc_should_work() {
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder.with_stargate(StargateAccepting).build(no_init);
 
-        // executing `any` message should success and return empty values
-        let msg = CosmosMsg::Any(AnyMsg {
-            type_url: "test".to_string(),
-            value: Default::default(),
-        });
-        let AppResponse { events, data } = app.execute(sender_addr, msg).unwrap();
-        assert_eq!(events, Vec::<Event>::new());
-        assert_eq!(data, None);
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
 
-        // executing `grpc` query should success and return empty binary
-        let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
-            path: "test".to_string(),
-            data: Default::default(),
-        });
-        assert_eq!(
-            app.wrap()
-                .raw_query(to_json_vec(&request).unwrap().as_slice())
-                .unwrap()
-                .unwrap(),
-            Binary::default()
-        );
-    }
+    use cosmwasm_std::to_json_vec;
+
+    // executing `any` message should success and return empty values
+    let msg = CosmosMsg::Any(AnyMsg {
+        type_url: "test".to_string(),
+        value: Default::default(),
+    });
+    let AppResponse { events, data } = app.execute(sender_addr, msg).unwrap();
+    assert_eq!(events, Vec::<Event>::new());
+    assert_eq!(data, None);
+
+    // executing `grpc` query should success and return empty binary
+    let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
+        path: "test".to_string(),
+        data: Default::default(),
+    });
+    assert_eq!(
+        app.wrap()
+            .raw_query(to_json_vec(&request).unwrap().as_slice())
+            .unwrap()
+            .unwrap(),
+        Binary::default()
+    );
 }
 
 #[test]
@@ -204,7 +217,7 @@ fn default_failing_stargate_should_work() {
         value: Default::default(),
     };
     assert!(app
-        .execute(sender_addr.clone(), msg)
+        .execute(sender_addr, msg)
         .unwrap_err()
         .to_string()
         .starts_with("Unexpected stargate execute"));
@@ -220,30 +233,37 @@ fn default_failing_stargate_should_work() {
         .unwrap_err()
         .to_string()
         .contains("Unexpected stargate query"));
+}
 
-    #[cfg(feature = "cosmwasm_2_0")]
-    {
-        use cosmwasm_std::to_json_vec;
+#[test]
+#[cfg(feature = "cosmwasm_2_0")]
+fn default_failing_any_grpc_should_work() {
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder.with_stargate(StargateFailing).build(no_init);
 
-        let msg = CosmosMsg::Any(AnyMsg {
-            type_url: "test".to_string(),
-            value: Default::default(),
-        });
-        assert!(app
-            .execute(sender_addr, msg)
-            .unwrap_err()
-            .to_string()
-            .starts_with("Unexpected any execute"));
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
 
-        let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
-            path: "test".to_string(),
-            data: Default::default(),
-        });
-        assert!(app
-            .wrap()
-            .raw_query(to_json_vec(&request).unwrap().as_slice())
-            .unwrap()
-            .unwrap_err()
-            .starts_with("Unexpected grpc query"));
-    }
+    use cosmwasm_std::to_json_vec;
+
+    let msg = CosmosMsg::Any(AnyMsg {
+        type_url: "test".to_string(),
+        value: Default::default(),
+    });
+    assert!(app
+        .execute(sender_addr, msg)
+        .unwrap_err()
+        .to_string()
+        .starts_with("Unexpected any execute"));
+
+    let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
+        path: "test".to_string(),
+        data: Default::default(),
+    });
+    assert!(app
+        .wrap()
+        .raw_query(to_json_vec(&request).unwrap().as_slice())
+        .unwrap()
+        .unwrap_err()
+        .starts_with("Unexpected grpc query"));
 }
