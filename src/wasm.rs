@@ -1261,7 +1261,7 @@ mod test {
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule, StargateFailing};
-    use cosmwasm_std::testing::{mock_env, mock_info, MockApi, MockQuerier, MockStorage};
+    use cosmwasm_std::testing::{message_info, mock_env, MockApi, MockQuerier, MockStorage};
     #[cfg(feature = "cosmwasm_1_2")]
     use cosmwasm_std::CodeInfoResponse;
     use cosmwasm_std::{
@@ -1360,7 +1360,7 @@ mod test {
 
         let err = transactional(&mut wasm_storage, |cache, _| {
             // now, we call this contract and see the error message from the contract
-            let info = mock_info(user_addr.as_str(), &[]);
+            let info = message_info(&user_addr, &[]);
             wasm_keeper.call_instantiate(
                 contract_addr.clone(),
                 &api,
@@ -1381,7 +1381,7 @@ mod test {
 
         let err = transactional(&mut wasm_storage, |cache, _| {
             // and the error for calling an unregistered contract
-            let info = mock_info(user_addr.as_str(), &[]);
+            let info = message_info(&user_addr, &[]);
             wasm_keeper.call_instantiate(
                 unregistered_addr,
                 &api,
@@ -1528,7 +1528,7 @@ mod test {
                 &api,
                 &mut wasm_storage,
                 code_id,
-                user_addr,
+                user_addr.clone(),
                 admin_addr,
                 "label".to_owned(),
                 1000,
@@ -1548,7 +1548,7 @@ mod test {
                 &mut wasm_storage,
                 &mock_router(),
                 &block,
-                mock_info("foobar", &[]),
+                message_info(&user_addr, &[]),
                 to_json_vec(&msg).unwrap(),
             )
             .unwrap();
@@ -1598,7 +1598,7 @@ mod test {
         let payout = coin(100, "TGD");
 
         // init the contract
-        let info = mock_info(user_addr.as_str(), &[]);
+        let info = message_info(&user_addr, &[]);
         let init_msg = to_json_vec(&payout::InstantiateMessage {
             payout: payout.clone(),
         })
@@ -1617,7 +1617,7 @@ mod test {
         assert_eq!(0, res.messages.len());
 
         // execute the contract
-        let info = mock_info(user_addr.as_str(), &[]);
+        let info = message_info(&user_addr, &[]);
         let res = wasm_keeper
             .call_execute(
                 &api,
@@ -1658,7 +1658,8 @@ mod test {
         payout: &Coin,
     ) {
         let api = MockApi::default();
-        let info = mock_info("silly", &[]);
+        let user_addr = api.addr_make("silly");
+        let info = message_info(&user_addr, &[]);
         let res = router
             .call_execute(
                 &api,
@@ -1673,7 +1674,7 @@ mod test {
         assert_eq!(1, res.messages.len());
         match &res.messages[0].msg {
             CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
-                assert_eq!(to_address.as_str(), "silly");
+                assert_eq!(to_address.as_str(), user_addr.as_str());
                 assert_eq!(amount.as_slice(), &[payout.clone()]);
             }
             m => panic!("Unexpected message {:?}", m),
@@ -1692,6 +1693,7 @@ mod test {
         // prepare user addresses
         let creator_addr = api.addr_make("creator");
         let user_addr = api.addr_make("foobar");
+        let user_addr_1 = api.addr_make("johnny");
 
         let mut wasm_keeper = wasm_keeper();
         let block = mock_env().block;
@@ -1715,7 +1717,7 @@ mod test {
                     None,
                 )
                 .unwrap();
-            let info = mock_info(user_addr.as_str(), &[]);
+            let info = message_info(&user_addr, &[]);
             let init_msg = to_json_vec(&payout::InstantiateMessage {
                 payout: payout1.clone(),
             })
@@ -1756,7 +1758,7 @@ mod test {
                     None,
                 )
                 .unwrap();
-            let info = mock_info(user_addr.as_str(), &[]);
+            let info = message_info(&user_addr, &[]);
             let init_msg = to_json_vec(&payout::InstantiateMessage {
                 payout: payout2.clone(),
             })
@@ -1792,7 +1794,7 @@ mod test {
                         None,
                     )
                     .unwrap();
-                let info = mock_info("johnny", &[]);
+                let info = message_info(&user_addr_1, &[]);
                 let init_msg = to_json_vec(&payout::InstantiateMessage {
                     payout: payout3.clone(),
                 })
@@ -1888,7 +1890,7 @@ mod test {
             .unwrap();
 
         // init the contract
-        let info = mock_info("admin", &[]);
+        let info = message_info(&admin, &[]);
         let init_msg = to_json_vec(&Empty {}).unwrap();
         let res = wasm_keeper
             .call_instantiate(

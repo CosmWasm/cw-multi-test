@@ -24,14 +24,14 @@ cosmwasm_2_0 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_2_0"]
 [dependencies]
 anyhow = "1.0.86"
 bech32 = "0.11.0"
-cosmwasm-std = { version = "2.0.3", features = ["staking"] }
+cosmwasm-std = { version = "2.0.4", features = ["staking"] }
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 derivative = "2.2.0"
 itertools = "0.13.0"
 prost = "0.12.6"
-schemars = "0.8.17"
-serde = "1.0.202"
+schemars = "0.8.21"
+serde = "1.0.203"
 sha2 = "0.10.8"
 thiserror = "1.0.61"
 
