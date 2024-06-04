@@ -1,5 +1,4 @@
 use crate::test_contracts::counter;
-use cosmwasm_std::testing::MockApi;
 use cw_multi_test::App;
 
 #[test]
@@ -14,7 +13,10 @@ fn storing_code_assigns_consecutive_identifiers() {
 }
 
 #[test]
+#[cfg(feature = "cosmwasm_1_2")]
 fn store_code_generates_default_address_for_creator() {
+    use cosmwasm_std::testing::MockApi;
+
     // prepare the application
     let mut app = App::default();
 

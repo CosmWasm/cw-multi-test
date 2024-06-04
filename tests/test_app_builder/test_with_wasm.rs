@@ -5,8 +5,8 @@ use cosmwasm_std::{
 };
 use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{
-    no_init, AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm,
-    WasmKeeper, WasmSudo,
+    no_init, AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Wasm, WasmKeeper,
+    WasmSudo,
 };
 use once_cell::sync::Lazy;
 
@@ -87,6 +87,8 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
 
 #[test]
 fn building_app_with_custom_wasm_should_work() {
+    use cw_multi_test::Executor;
+
     // build custom wasm keeper
     let wasm_keeper = MyWasmKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
@@ -139,7 +141,7 @@ fn building_app_with_custom_wasm_should_work() {
         SUDO_MSG,
         app.sudo(
             WasmSudo {
-                contract_addr,
+                contract_addr: contract_addr.clone(),
                 message: Default::default()
             }
             .into()
@@ -152,7 +154,7 @@ fn building_app_with_custom_wasm_should_work() {
     assert_eq!(
         format!("Generic error: Querier contract error: {}", QUERY_MSG),
         app.wrap()
-            .query_wasm_code_info(CODE_ID)
+            .query_wasm_contract_info(&contract_addr)
             .unwrap_err()
             .to_string()
     );

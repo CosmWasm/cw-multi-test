@@ -12,23 +12,27 @@ license = "Apache-2.0"
 edition = "2021"
 
 [features]
-default = ["cosmwasm_2_0"]
+default = []
 backtrace = ["anyhow/backtrace"]
-cosmwasm_2_0 = ["cosmwasm-std/cosmwasm_2_0"]
+cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
+cosmwasm_1_2 = ["cosmwasm_1_1", "cosmwasm-std/cosmwasm_1_2"]
+cosmwasm_1_3 = ["cosmwasm_1_2", "cosmwasm-std/cosmwasm_1_3"]
+cosmwasm_1_4 = ["cosmwasm_1_3", "cosmwasm-std/cosmwasm_1_4"]
+cosmwasm_2_0 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_2_0"]
 
 [dependencies]
-anyhow = "1.0.82"
+anyhow = "1.0.86"
 bech32 = "0.11.0"
-cosmwasm-std = { version = "2.0.2", features = ["iterator", "staking", "stargate"] }
+cosmwasm-std = { version = "2.0.4", features = ["staking", "stargate"] }
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 derivative = "2.2.0"
-itertools = "0.12.1"
-prost = "0.12.4"
-schemars = "0.8.17"
-serde = "1.0.199"
+itertools = "0.13.0"
+prost = "0.12.6"
+schemars = "0.8.21"
+serde = "1.0.203"
 sha2 = "0.10.8"
-thiserror = "1.0.59"
+thiserror = "1.0.61"
 
 [dev-dependencies]
 hex = "0.4.3"

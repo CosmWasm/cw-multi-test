@@ -88,6 +88,7 @@ fn custom_address_generator_should_work() {
 }
 
 #[test]
+#[cfg(feature = "cosmwasm_1_2")]
 fn predictable_contract_address_should_work() {
     // prepare application with custom api
     let mut app = AppBuilder::default()
@@ -140,6 +141,7 @@ fn predictable_contract_address_should_work() {
 }
 
 #[test]
+#[cfg(feature = "cosmwasm_1_2")]
 fn creating_contract_with_the_same_predictable_address_should_fail() {
     // prepare application with custom api
     let mut app = AppBuilder::default()
