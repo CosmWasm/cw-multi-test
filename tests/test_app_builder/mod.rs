@@ -14,6 +14,7 @@ mod test_with_ibc;
 mod test_with_staking;
 mod test_with_stargate;
 mod test_with_storage;
+#[cfg(feature = "cosmwasm_1_2")]
 mod test_with_wasm;
 
 const NO_MESSAGE: &str = "";
@@ -57,6 +58,17 @@ where
         bail!(self.1);
     }
 
+    fn query(
+        &self,
+        _api: &dyn Api,
+        _storage: &dyn Storage,
+        _querier: &dyn Querier,
+        _block: &BlockInfo,
+        _request: Self::QueryT,
+    ) -> AnyResult<Binary> {
+        bail!(self.2);
+    }
+
     fn sudo<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -70,16 +82,5 @@ where
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
         bail!(self.3);
-    }
-
-    fn query(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: Self::QueryT,
-    ) -> AnyResult<Binary> {
-        bail!(self.2);
     }
 }

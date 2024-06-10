@@ -1,7 +1,7 @@
 use anyhow::bail;
 use cosmwasm_std::{
-    to_json_vec, Addr, AnyMsg, Api, Binary, BlockInfo, CosmosMsg, CustomMsg, CustomQuery, Empty,
-    Event, GrpcQuery, Querier, QueryRequest, Storage,
+    Addr, AnyMsg, Api, Binary, BlockInfo, CosmosMsg, CustomMsg, CustomQuery, Empty, Event,
+    GrpcQuery, Querier, QueryRequest, Storage,
 };
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::{
@@ -91,9 +91,7 @@ fn building_app_with_custom_stargate_should_work() {
         value: Default::default(),
     };
     assert_eq!(
-        app.execute(sender_addr.clone(), msg)
-            .unwrap_err()
-            .to_string(),
+        app.execute(sender_addr, msg).unwrap_err().to_string(),
         MSG_STARGATE_EXECUTE,
     );
 
@@ -109,6 +107,17 @@ fn building_app_with_custom_stargate_should_work() {
         .unwrap_err()
         .to_string()
         .ends_with(MSG_STARGATE_QUERY));
+}
+
+#[test]
+#[cfg(feature = "cosmwasm_2_0")]
+fn building_app_with_custom_any_grpc_should_work() {
+    // build the application with custom stargate keeper
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder.with_stargate(StargateKeeper).build(no_init);
+
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
 
     // executing `any` message should return an error defined in custom stargate keeper
     let msg = CosmosMsg::Any(AnyMsg {
@@ -147,7 +156,7 @@ fn building_app_with_accepting_stargate_should_work() {
         type_url: "test".to_string(),
         value: Default::default(),
     };
-    let AppResponse { events, data } = app.execute(sender_addr.clone(), msg).unwrap();
+    let AppResponse { events, data } = app.execute(sender_addr, msg).unwrap();
     assert_eq!(events, Vec::<Event>::new());
     assert_eq!(data, None);
 
@@ -158,6 +167,18 @@ fn building_app_with_accepting_stargate_should_work() {
         data: Default::default(),
     };
     assert_eq!(app.wrap().query::<Empty>(&request).unwrap(), Empty {});
+}
+
+#[test]
+#[cfg(feature = "cosmwasm_2_0")]
+fn building_app_with_accepting_any_grpc_should_work() {
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder.with_stargate(StargateAccepting).build(no_init);
+
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
+    use cosmwasm_std::to_json_vec;
 
     // executing `any` message should success and return empty values
     let msg = CosmosMsg::Any(AnyMsg {
@@ -196,7 +217,7 @@ fn default_failing_stargate_should_work() {
         value: Default::default(),
     };
     assert!(app
-        .execute(sender_addr.clone(), msg)
+        .execute(sender_addr, msg)
         .unwrap_err()
         .to_string()
         .starts_with("Unexpected stargate execute"));
@@ -212,6 +233,18 @@ fn default_failing_stargate_should_work() {
         .unwrap_err()
         .to_string()
         .contains("Unexpected stargate query"));
+}
+
+#[test]
+#[cfg(feature = "cosmwasm_2_0")]
+fn default_failing_any_grpc_should_work() {
+    let app_builder = AppBuilder::default();
+    let mut app = app_builder.with_stargate(StargateFailing).build(no_init);
+
+    // prepare user addresses
+    let sender_addr = app.api().addr_make("sender");
+
+    use cosmwasm_std::to_json_vec;
 
     let msg = CosmosMsg::Any(AnyMsg {
         type_url: "test".to_string(),
