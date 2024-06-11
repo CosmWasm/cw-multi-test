@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::mock_env;
 use cosmwasm_std::{BlockInfo, Timestamp};
-use cw_multi_test::{App, next_block};
+use cw_multi_test::{next_block, App};
 
 #[test]
 fn default_block_info_should_work() {
