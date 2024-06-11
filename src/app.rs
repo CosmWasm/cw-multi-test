@@ -405,20 +405,20 @@ where
 {
     /// Sets the initial block properties.
     pub fn set_block(&mut self, block: BlockInfo) {
+        self.block = block;
         self.router
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
-        self.block = block;
     }
 
     /// Updates the current block applying the specified closure, usually [next_block].
     pub fn update_block<F: Fn(&mut BlockInfo)>(&mut self, action: F) {
+        action(&mut self.block);
         self.router
             .staking
             .process_queue(&self.api, &mut self.storage, &self.router, &self.block)
             .unwrap();
-        action(&mut self.block);
     }
 
     /// Returns a copy of the current block_info
