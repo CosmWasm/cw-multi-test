@@ -421,7 +421,7 @@ where
             .unwrap();
     }
 
-    /// Returns a copy of the current block_info
+    /// Returns a copy of the current block info.
     pub fn block_info(&self) -> BlockInfo {
         self.block.clone()
     }
