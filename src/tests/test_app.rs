@@ -1475,20 +1475,21 @@ mod response_validation {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        app.execute_contract(
-            owner,
-            contract,
-            &echo::Message::<Empty> {
-                data: None,
-                attributes: vec![
-                    Attribute::new("key", "   "),
-                    Attribute::new("proper", "proper_val"),
-                ],
-                ..echo::Message::default()
-            },
-            &[],
-        )
-        .unwrap();
+        assert!(app
+            .execute_contract(
+                owner,
+                contract,
+                &echo::Message::<Empty> {
+                    data: None,
+                    attributes: vec![
+                        Attribute::new("key", "   "),
+                        Attribute::new("proper", "proper_val"),
+                    ],
+                    ..echo::Message::default()
+                },
+                &[],
+            )
+            .is_ok());
     }
 
     #[test]
@@ -1522,7 +1523,7 @@ mod response_validation {
     }
 
     #[test]
-    fn empty_event_attribute_value() {
+    fn empty_event_attribute_value_should_work() {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
@@ -1532,19 +1533,20 @@ mod response_validation {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        app.execute_contract(
-            owner,
-            contract,
-            &echo::Message::<Empty> {
-                data: None,
-                events: vec![Event::new("event")
-                    .add_attribute("key", "   ")
-                    .add_attribute("proper", "proper_val")],
-                ..echo::Message::default()
-            },
-            &[],
-        )
-        .unwrap();
+        assert!(app
+            .execute_contract(
+                owner,
+                contract,
+                &echo::Message::<Empty> {
+                    data: None,
+                    events: vec![Event::new("event")
+                        .add_attribute("key", "   ")
+                        .add_attribute("proper", "proper_val")],
+                    ..echo::Message::default()
+                },
+                &[],
+            )
+            .is_ok());
     }
 
     #[test]
