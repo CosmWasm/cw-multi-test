@@ -1465,18 +1465,17 @@ mod response_validation {
     }
 
     #[test]
-    fn empty_attribute_value() {
+    fn empty_attribute_value_should_work() {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
-
         let code_id = app.store_code(echo::contract());
 
         let contract = app
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let err = app
+        assert!(app
             .execute_contract(
                 owner,
                 contract,
@@ -1490,9 +1489,7 @@ mod response_validation {
                 },
                 &[],
             )
-            .unwrap_err();
-
-        assert_eq!(Error::empty_attribute_value("key"), err.downcast().unwrap());
+            .is_ok());
     }
 
     #[test]
@@ -1526,18 +1523,17 @@ mod response_validation {
     }
 
     #[test]
-    fn empty_event_attribute_value() {
+    fn empty_event_attribute_value_should_work() {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
-
         let code_id = app.store_code(echo::contract());
 
         let contract = app
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let err = app
+        assert!(app
             .execute_contract(
                 owner,
                 contract,
@@ -1550,9 +1546,7 @@ mod response_validation {
                 },
                 &[],
             )
-            .unwrap_err();
-
-        assert_eq!(Error::empty_attribute_value("key"), err.downcast().unwrap());
+            .is_ok());
     }
 
     #[test]
