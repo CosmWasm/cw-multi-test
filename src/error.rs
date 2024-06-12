@@ -12,6 +12,7 @@ pub enum Error {
     EmptyAttributeKey(String),
 
     /// Error variant for reporting an empty attribute value.
+    #[deprecated(note = "This error is not reported anymore. Will be removed in next release.")]
     #[error("Empty attribute value. Key: {0}")]
     EmptyAttributeValue(String),
 
@@ -58,8 +59,10 @@ impl Error {
         Self::EmptyAttributeKey(value.into())
     }
 
+    #[deprecated(note = "This error is not reported anymore. Will be removed in next release.")]
     /// Creates an instance of the [Error](Self) for empty attribute value.
     pub fn empty_attribute_value(key: impl Into<String>) -> Self {
+        #[allow(deprecated)]
         Self::EmptyAttributeValue(key.into())
     }
 
