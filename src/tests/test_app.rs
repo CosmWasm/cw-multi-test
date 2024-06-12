@@ -1465,34 +1465,30 @@ mod response_validation {
     }
 
     #[test]
-    fn empty_attribute_value() {
+    fn empty_attribute_value_should_work() {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
-
         let code_id = app.store_code(echo::contract());
 
         let contract = app
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let err = app
-            .execute_contract(
-                owner,
-                contract,
-                &echo::Message::<Empty> {
-                    data: None,
-                    attributes: vec![
-                        Attribute::new("key", "   "),
-                        Attribute::new("proper", "proper_val"),
-                    ],
-                    ..echo::Message::default()
-                },
-                &[],
-            )
-            .unwrap_err();
-
-        assert_eq!(Error::empty_attribute_value("key"), err.downcast().unwrap());
+        app.execute_contract(
+            owner,
+            contract,
+            &echo::Message::<Empty> {
+                data: None,
+                attributes: vec![
+                    Attribute::new("key", "   "),
+                    Attribute::new("proper", "proper_val"),
+                ],
+                ..echo::Message::default()
+            },
+            &[],
+        )
+        .unwrap();
     }
 
     #[test]
@@ -1530,29 +1526,25 @@ mod response_validation {
         let mut app = App::default();
 
         let owner = app.api().addr_make("owner");
-
         let code_id = app.store_code(echo::contract());
 
         let contract = app
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let err = app
-            .execute_contract(
-                owner,
-                contract,
-                &echo::Message::<Empty> {
-                    data: None,
-                    events: vec![Event::new("event")
-                        .add_attribute("key", "   ")
-                        .add_attribute("proper", "proper_val")],
-                    ..echo::Message::default()
-                },
-                &[],
-            )
-            .unwrap_err();
-
-        assert_eq!(Error::empty_attribute_value("key"), err.downcast().unwrap());
+        app.execute_contract(
+            owner,
+            contract,
+            &echo::Message::<Empty> {
+                data: None,
+                events: vec![Event::new("event")
+                    .add_attribute("key", "   ")
+                    .add_attribute("proper", "proper_val")],
+                ..echo::Message::default()
+            },
+            &[],
+        )
+        .unwrap();
     }
 
     #[test]
