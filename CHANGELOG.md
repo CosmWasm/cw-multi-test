@@ -1,5 +1,13 @@
 # Changelog
 
+## [v1.2.0](https://github.com/CosmWasm/cw-multi-test/tree/v1.2.0) (2024-06-12)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v1.1.0...v1.2.0)
+
+**Merged pull requests:**
+
+- Backport: Removed validation of empty attribute value [\#181](https://github.com/CosmWasm/cw-multi-test/pull/181) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v1.1.0](https://github.com/CosmWasm/cw-multi-test/tree/v1.1.0) (2024-03-23)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v1.0.0...v1.1.0)
