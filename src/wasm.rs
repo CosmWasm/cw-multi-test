@@ -353,24 +353,22 @@ impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
             .ok_or_else(|| Error::unregistered_code_id(code_id))?)
     }
 
+    /// Validates all attributes.
+    ///
+    /// In `wasmd`, before version v0.45.0 empty attribute values were not allowed.
+    /// Since `wasmd` v0.45.0 empty attribute values are allowed,
+    /// so the value is not validated anymore.
     fn verify_attributes(attributes: &[Attribute]) -> AnyResult<()> {
         for attr in attributes {
             let key = attr.key.trim();
             let val = attr.value.trim();
-
             if key.is_empty() {
                 bail!(Error::empty_attribute_key(val));
             }
-
-            if val.is_empty() {
-                bail!(Error::empty_attribute_value(key));
-            }
-
             if key.starts_with('_') {
                 bail!(Error::reserved_attribute_key(key));
             }
         }
-
         Ok(())
     }
 

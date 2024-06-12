@@ -8,10 +8,6 @@ fn instantiating_error_should_work() {
         Error::empty_attribute_key("alpha").to_string()
     );
     assert_eq!(
-        "Empty attribute value. Key: beta",
-        Error::empty_attribute_value("beta").to_string()
-    );
-    assert_eq!(
         "Attribute key starts with reserved prefix _: gamma",
         Error::reserved_attribute_key("gamma").to_string()
     );
