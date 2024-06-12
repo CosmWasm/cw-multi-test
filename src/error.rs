@@ -11,6 +11,11 @@ pub enum Error {
     #[error("Empty attribute key. Value: {0}")]
     EmptyAttributeKey(String),
 
+    /// Error variant for reporting an empty attribute value.
+    #[deprecated(note = "This error is not reported anymore. Will be removed in next release.")]
+    #[error("Empty attribute value. Key: {0}")]
+    EmptyAttributeValue(String),
+
     /// Error variant for reporting a usage of reserved key prefix.
     #[error("Attribute key starts with reserved prefix _: {0}")]
     ReservedAttributeKey(String),
@@ -52,6 +57,13 @@ impl Error {
     /// Creates an instance of the [Error](Self) for empty attribute key.
     pub fn empty_attribute_key(value: impl Into<String>) -> Self {
         Self::EmptyAttributeKey(value.into())
+    }
+
+    #[deprecated(note = "This error is not reported anymore. Will be removed in next release.")]
+    /// Creates an instance of the [Error](Self) for empty attribute value.
+    pub fn empty_attribute_value(key: impl Into<String>) -> Self {
+        #[allow(deprecated)]
+        Self::EmptyAttributeValue(key.into())
     }
 
     /// Creates an instance of the [Error](Self) when reserved attribute key was used.
