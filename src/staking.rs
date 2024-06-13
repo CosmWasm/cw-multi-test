@@ -1067,8 +1067,8 @@ mod test {
     }
 
     fn setup_test_env(
-        apr: Decimal,
-        validator_commission: Decimal,
+        apr: u64,
+        validator_commission: u64,
     ) -> (MockApi, MockStorage, BasicRouter, BlockInfo, Addr) {
         let api = MockApi::default();
         let router = mock_router();
@@ -1084,7 +1084,7 @@ mod test {
                 StakingInfo {
                     bonded_denom: BONDED_DENOM.to_string(),
                     unbonding_time: 60,
-                    apr,
+                    apr: Decimal::percent(apr),
                 },
             )
             .unwrap();
@@ -1092,7 +1092,7 @@ mod test {
         // add validator
         let valoper1 = Validator::new(
             validator_addr.to_string(),
-            validator_commission,
+            Decimal::percent(validator_commission),
             Decimal::percent(100),
             Decimal::percent(1),
         );
@@ -1236,8 +1236,7 @@ mod test {
 
     #[test]
     fn rewards_work_for_single_delegator() {
-        let (api, mut store, router, mut block, validator_addr) =
-            setup_test_env(Decimal::percent(10), Decimal::percent(10));
+        let (api, mut store, router, mut block, validator_addr) = setup_test_env(10, 10);
         let stake = &router.staking;
         let distr = &router.distribution;
         let delegator_addr = api.addr_make("delegator");
@@ -1298,8 +1297,7 @@ mod test {
 
     #[test]
     fn rewards_work_for_multiple_delegators() {
-        let (api, mut store, router, mut block, validator) =
-            setup_test_env(Decimal::percent(10), Decimal::percent(10));
+        let (api, mut store, router, mut block, validator) = setup_test_env(10, 10);
         let stake = &router.staking;
         let distr = &router.distribution;
         let bank = &router.bank;
@@ -1546,8 +1544,7 @@ mod test {
         #[test]
         fn execute() {
             // test all execute msgs
-            let (mut test_env, validator1) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator1) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator1 = test_env.api.addr_make("delegator1");
             let reward_receiver = test_env.api.addr_make("rewardreceiver");
@@ -1688,8 +1685,7 @@ mod test {
 
         #[test]
         fn can_set_withdraw_address() {
-            let (mut test_env, validator) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator = test_env.api.addr_make("delegator");
             let reward_receiver = test_env.api.addr_make("rewardreceiver");
@@ -1768,8 +1764,7 @@ mod test {
 
         #[test]
         fn cannot_steal() {
-            let (mut test_env, validator1) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator1) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator1 = test_env.api.addr_make("delegator1");
 
@@ -1857,8 +1852,7 @@ mod test {
 
         #[test]
         fn denom_validation() {
-            let (mut test_env, validator_addr) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator_addr) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator_addr = test_env.api.addr_make("delegator");
 
@@ -1892,8 +1886,7 @@ mod test {
 
         #[test]
         fn cannot_slash_nonexistent() {
-            let (mut test_env, _) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, _) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator = test_env.api.addr_make("delegator");
             let non_existing_validator = test_env.api.addr_make("nonexistingvaloper");
@@ -1925,8 +1918,7 @@ mod test {
 
         #[test]
         fn non_existent_validator() {
-            let (mut test_env, _) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, _) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator = test_env.api.addr_make("delegator1");
             let validator = test_env.api.addr_make("testvaloper2");
@@ -1969,8 +1961,7 @@ mod test {
 
         #[test]
         fn zero_staking_forbidden() {
-            let (mut test_env, validator) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 10));
 
             let delegator_addr = test_env.api.addr_make("delegator");
 
@@ -2002,8 +1993,7 @@ mod test {
         #[test]
         fn query_staking() {
             // run all staking queries
-            let (mut test_env, validator1) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator1) = TestEnv::wrap(setup_test_env(10, 10));
             let delegator1 = test_env.api.addr_make("delegator1");
             let delegator2 = test_env.api.addr_make("delegator2");
             let validator2 = test_env.api.addr_make("testvaloper2");
@@ -2170,8 +2160,7 @@ mod test {
         #[test]
         fn delegation_queries_unbonding() {
             // run all staking queries
-            let (mut test_env, validator) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 10));
             let delegator1 = test_env.api.addr_make("delegator1");
             let delegator2 = test_env.api.addr_make("delegator2");
 
@@ -2307,8 +2296,7 @@ mod test {
 
         #[test]
         fn partial_unbonding_reduces_stake() {
-            let (mut test_env, validator) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 10));
             let delegator = test_env.api.addr_make("delegator1");
 
             // init balance
@@ -2435,8 +2423,7 @@ mod test {
         #[test]
         fn delegations_slashed() {
             // run all staking queries
-            let (mut test_env, validator) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
+            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 10));
             let delegator = test_env.api.addr_make("delegator");
 
             // init balance
@@ -2528,8 +2515,7 @@ mod test {
 
         #[test]
         fn rewards_initial_wait() {
-            let (mut test_env, validator) =
-                TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::zero()));
+            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 0));
             let delegator = test_env.api.addr_make("delegator");
 
             // init balance
