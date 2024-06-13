@@ -1114,13 +1114,9 @@ mod test {
         block: BlockInfo,
         validator_addr_1: Addr,
         validator_addr_2: Addr,
-        validator_addr_3: Addr,
         delegator_addr_1: Addr,
         delegator_addr_2: Addr,
-        delegator_addr_3: Addr,
         user_addr_1: Addr,
-        user_addr_2: Addr,
-        user_addr_3: Addr,
     }
 
     impl TestEnv {
@@ -1128,13 +1124,9 @@ mod test {
             let api = tuple.0;
             let validator_addr_1 = tuple.4;
             let validator_addr_2 = valoper_addr("validator2");
-            let validator_addr_3 = valoper_addr("validator3");
             let delegator_addr_1 = api.addr_make("delegator1");
             let delegator_addr_2 = api.addr_make("delegator2");
-            let delegator_addr_3 = api.addr_make("delegator3");
             let user_addr_1 = api.addr_make("user1");
-            let user_addr_2 = api.addr_make("user2");
-            let user_addr_3 = api.addr_make("user3");
             Self {
                 api,
                 store: tuple.1,
@@ -1142,13 +1134,9 @@ mod test {
                 block: tuple.3,
                 validator_addr_1,
                 validator_addr_2,
-                validator_addr_3,
                 delegator_addr_1,
                 delegator_addr_2,
-                delegator_addr_3,
                 user_addr_1,
-                user_addr_2,
-                user_addr_3,
             }
         }
     }
@@ -1160,7 +1148,7 @@ mod test {
         let stake = StakeKeeper::default();
         let block = mock_env().block;
 
-        let validator_addr = valoper_addr("alice");
+        let validator_addr = valoper_addr("validator");
 
         // add validator
         let validator = Validator::new(
@@ -1209,8 +1197,8 @@ mod test {
         let stake = StakeKeeper::new();
         let block = mock_env().block;
 
+        let validator_addr = valoper_addr("validator");
         let delegator_addr = api.addr_make("delegator");
-        let validator_addr = valoper_addr("alice");
 
         // add validator
         let valoper1 = Validator::new(
