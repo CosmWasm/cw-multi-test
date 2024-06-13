@@ -1552,7 +1552,11 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator_addr, vec![coin(1000, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator_addr,
+                    vec![coin(1000, "TOKEN")],
+                )
                 .unwrap();
 
             // add second validator
@@ -1680,23 +1684,23 @@ mod test {
 
         #[test]
         fn can_set_withdraw_address() {
-            let (mut test_env, validator) = TestEnv::wrap(setup_test_env(10, 10));
+            let (mut env, _) = TestEnv::wrap(setup_test_env(10, 10));
 
-            let delegator = test_env.api.addr_make("delegator");
-            let reward_receiver = test_env.api.addr_make("rewardreceiver");
+            let validator_addr = env.validator_addr.clone();
+            let delegator_addr = env.api.addr_make("delegator");
+            let reward_receiver_addr = env.api.addr_make("rewardreceiver");
 
-            test_env
-                .router
+            env.router
                 .bank
-                .init_balance(&mut test_env.store, &delegator, coins(100, "TOKEN"))
+                .init_balance(&mut env.store, &delegator_addr, coins(100, "TOKEN"))
                 .unwrap();
 
             // Stake 100 tokens to the validator.
             execute_stake(
-                &mut test_env,
-                delegator.clone(),
+                &mut env,
+                delegator_addr.clone(),
                 StakingMsg::Delegate {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                     amount: coin(100, "TOKEN"),
                 },
             )
@@ -1704,46 +1708,46 @@ mod test {
 
             // Change rewards receiver.
             execute_distr(
-                &mut test_env,
-                delegator.clone(),
+                &mut env,
+                delegator_addr.clone(),
                 DistributionMsg::SetWithdrawAddress {
-                    address: reward_receiver.to_string(),
+                    address: reward_receiver_addr.to_string(),
                 },
             )
             .unwrap();
 
             // A year passes.
-            test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+            env.block.time = env.block.time.plus_seconds(60 * 60 * 24 * 365);
 
             // Withdraw rewards to reward receiver.
             execute_distr(
-                &mut test_env,
-                delegator.clone(),
+                &mut env,
+                delegator_addr.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                 },
             )
             .unwrap();
 
             // Change reward receiver back to delegator.
             execute_distr(
-                &mut test_env,
-                delegator.clone(),
+                &mut env,
+                delegator_addr.clone(),
                 DistributionMsg::SetWithdrawAddress {
-                    address: delegator.to_string(),
+                    address: delegator_addr.to_string(),
                 },
             )
             .unwrap();
 
             // Another year passes.
-            test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+            env.block.time = env.block.time.plus_seconds(60 * 60 * 24 * 365);
 
             // Withdraw rewards to delegator.
             execute_distr(
-                &mut test_env,
-                delegator.clone(),
+                &mut env,
+                delegator_addr.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                 },
             )
             .unwrap();
@@ -1752,8 +1756,11 @@ mod test {
             let rewards_yr = 100 / 10 * 9 / 10;
 
             assert_balances(
-                &test_env,
-                vec![(reward_receiver, rewards_yr), (delegator, rewards_yr)],
+                &env,
+                vec![
+                    (reward_receiver_addr, rewards_yr),
+                    (delegator_addr, rewards_yr),
+                ],
             );
         }
 
