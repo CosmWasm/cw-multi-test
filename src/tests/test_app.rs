@@ -937,6 +937,17 @@ mod custom_handler {
             Ok(AppResponse::default())
         }
 
+        fn query(
+            &self,
+            _api: &dyn Api,
+            _storage: &dyn Storage,
+            _querier: &dyn Querier,
+            _block: &BlockInfo,
+            _request: Self::QueryT,
+        ) -> AnyResult<Binary> {
+            bail!("query not implemented for CustomHandler")
+        }
+
         fn sudo<ExecC, QueryC>(
             &self,
             _api: &dyn Api,
@@ -950,17 +961,6 @@ mod custom_handler {
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
             bail!("sudo not implemented for CustomHandler")
-        }
-
-        fn query(
-            &self,
-            _api: &dyn Api,
-            _storage: &dyn Storage,
-            _querier: &dyn Querier,
-            _block: &BlockInfo,
-            _request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            bail!("query not implemented for CustomHandler")
         }
     }
 
