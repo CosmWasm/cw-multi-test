@@ -380,7 +380,7 @@ where
             storage,
             router,
             block,
-            contract.clone(),
+            contract,
             |contract, deps, env| contract.ibc_channel_open(deps, env, request),
         )?;
 

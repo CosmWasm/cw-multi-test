@@ -178,7 +178,7 @@ where
     let ibc_try_msg = IbcPacketRelayingMsg::OpenChannel {
         local_connection_id: counterparty.counterparty_connection_id.unwrap(),
         local_port: dst_port.clone(),
-        version: version.clone(),
+        version,
         order,
         counterparty_version: Some(new_version),
         counterparty_endpoint: IbcEndpoint {
@@ -209,11 +209,11 @@ where
     log::debug!("Channel ack {:?}", ack_response);
 
     let ibc_ack_msg = IbcPacketRelayingMsg::ConnectChannel {
-        port_id: dst_port.clone(),
+        port_id: dst_port,
         channel_id: dst_channel.clone(),
         counterparty_version: Some(new_version),
         counterparty_endpoint: IbcEndpoint {
-            port_id: src_port.clone(),
+            port_id: src_port,
             channel_id: src_channel.clone(),
         },
     };

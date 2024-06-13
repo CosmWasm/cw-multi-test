@@ -171,7 +171,7 @@ impl IbcSimpleModule {
         let channel = IbcChannel::new(
             local_endpoint.clone(),
             counterparty_endpoint.clone(),
-            order.clone(),
+            order,
             version.clone(),
             local_connection_id.clone(),
         );
@@ -198,11 +198,8 @@ impl IbcSimpleModule {
         ibc_event = ibc_event
             .add_attribute("port_id", local_endpoint.port_id)
             .add_attribute("channel_id", local_endpoint.channel_id)
-            .add_attribute(
-                "counterparty_port_id",
-                counterparty_endpoint.clone().port_id,
-            )
-            .add_attribute("counterparty_channel_id", "".to_string())
+            .add_attribute("counterparty_port_id", counterparty_endpoint.port_id)
+            .add_attribute("counterparty_channel_id", "")
             .add_attribute("connection_id", local_connection_id);
 
         // First we send an ibc message on the wasm module in cache
@@ -326,8 +323,8 @@ impl IbcSimpleModule {
                 last_packet_relayed: 1,
                 info: IbcChannel::new(
                     IbcEndpoint {
-                        port_id: port_id.clone(),
-                        channel_id: channel_id.clone(),
+                        port_id,
+                        channel_id,
                     },
                     IbcEndpoint {
                         port_id: channel_handshake.remote_endpoint.port_id.clone(),
@@ -427,7 +424,7 @@ impl IbcSimpleModule {
                 "counterparty_channel_id",
                 channel_info.info.counterparty_endpoint.channel_id.clone(),
             )
-            .add_attribute("connection_id", channel_info.info.connection_id.clone());
+            .add_attribute("connection_id", channel_info.info.connection_id);
 
         // Then we send an ibc message on the corresponding module in cache
         let res = transactional(storage, |write_cache, _| {
@@ -486,7 +483,7 @@ impl IbcSimpleModule {
                 channel_id.clone(),
                 channel_info.next_packet_id,
             ),
-            &packet.clone(),
+            &packet,
         )?;
 
         // Incrementing the packet sequence
@@ -859,7 +856,7 @@ impl IbcSimpleModule {
             .add_attribute("packet_src_port", packet.src_port_id.clone())
             .add_attribute("packet_src_channel", packet.src_channel_id.clone())
             .add_attribute("packet_dst_port", packet.dst_port_id.clone())
-            .add_attribute("packet_dst_channel", packet.dst_channel_id.clone())
+            .add_attribute("packet_dst_channel", packet.dst_channel_id)
             .add_attribute(
                 "packet_channel_ordering",
                 serde_json::to_value(channel_info.info.order)?.to_string(),
@@ -975,7 +972,7 @@ impl IbcSimpleModule {
             .add_attribute("packet_src_port", packet.src_port_id.clone())
             .add_attribute("packet_src_channel", packet.src_channel_id.clone())
             .add_attribute("packet_dst_port", packet.dst_port_id.clone())
-            .add_attribute("packet_dst_channel", packet.dst_channel_id.clone())
+            .add_attribute("packet_dst_channel", packet.dst_channel_id)
             .add_attribute(
                 "packet_channel_ordering",
                 serde_json::to_value(channel_info.info.order)?.to_string(),
@@ -1186,7 +1183,7 @@ impl Module for IbcSimpleModule {
                         let port_id = port_id.unwrap();
                         // We load the channel of the port
                         let channel_info =
-                            CHANNEL_INFO.may_load(&ibc_storage, (port_id, channel_id.clone()))?;
+                            CHANNEL_INFO.may_load(&ibc_storage, (port_id, channel_id))?;
 
                         Ok(to_json_binary(&ChannelResponse::new(
                             channel_info.map(|c| c.info),
