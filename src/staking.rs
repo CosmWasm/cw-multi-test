@@ -1025,8 +1025,8 @@ impl Module for DistributionKeeper {
 mod test {
     use super::*;
     use crate::{
-        app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, Router,
-        StargateFailing, WasmKeeper,
+        app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, IntoBech32,
+        Router, StargateFailing, WasmKeeper,
     };
     use cosmwasm_std::{
         from_json,
@@ -1034,7 +1034,7 @@ mod test {
         BalanceResponse, BankQuery,
     };
 
-    /// Type alias for default build `Router` to make its reference in typical scenario
+    /// Type alias for default build of [Router], to make its reference in typical test scenario.
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
         BankKeeper,
         FailingModule<ExecC, QueryC, Empty>,
@@ -1059,6 +1059,10 @@ mod test {
         }
     }
 
+    fn valoper_addr(value: &str) -> Addr {
+        value.into_bech32_with_prefix("cosmwasmvaloper")
+    }
+
     fn setup_test_env(
         apr: Decimal,
         validator_commission: Decimal,
@@ -1068,7 +1072,7 @@ mod test {
         let mut store = MockStorage::new();
         let block = mock_env().block;
 
-        let validator_addr = api.addr_make("testvaloper1");
+        let validator_addr = valoper_addr("alice");
 
         router
             .staking
@@ -1104,7 +1108,7 @@ mod test {
         let stake = StakeKeeper::default();
         let block = mock_env().block;
 
-        let validator_addr = api.addr_make("test-validator");
+        let validator_addr = valoper_addr("alice");
 
         // add validator
         let validator = Validator::new(
@@ -1154,7 +1158,7 @@ mod test {
         let block = mock_env().block;
 
         let delegator_addr = api.addr_make("delegator");
-        let validator_addr = api.addr_make("testvaloper1");
+        let validator_addr = valoper_addr("alice");
 
         // add validator
         let valoper1 = Validator::new(
@@ -1291,7 +1295,7 @@ mod test {
 
     #[test]
     fn rewards_work_for_multiple_delegators() {
-        let (api, mut store, router, mut block, validator) =
+        let (api, mut store, router, mut block, validator_addr) =
             setup_test_env(Decimal::percent(10), Decimal::percent(10));
         let stake = &router.staking;
         let distr = &router.distribution;
@@ -1308,7 +1312,7 @@ mod test {
                 &mut staking_storage,
                 &block,
                 &delegator1,
-                &validator,
+                &validator_addr,
                 coin(100, "TOKEN"),
             )
             .unwrap();
@@ -1318,7 +1322,7 @@ mod test {
                 &mut staking_storage,
                 &block,
                 &delegator2,
-                &validator,
+                &validator_addr,
                 coin(200, "TOKEN"),
             )
             .unwrap();
@@ -1328,14 +1332,14 @@ mod test {
 
         // delegator1 should now have 100 * 10% - 10% commission = 9 tokens
         let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+            .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9);
 
         // delegator2 should now have 200 * 10% - 10% commission = 18 tokens
         let rewards = stake
-            .get_rewards(&store, &block, &delegator2, &validator)
+            .get_rewards(&store, &block, &delegator2, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
@@ -1348,7 +1352,7 @@ mod test {
                 &mut staking_storage,
                 &block,
                 &delegator1,
-                &validator,
+                &validator_addr,
                 coin(100, "TOKEN"),
             )
             .unwrap();
@@ -1358,14 +1362,14 @@ mod test {
 
         // delegator1 should now have 9 + 200 * 10% - 10% commission = 27 tokens
         let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+            .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 27);
 
         // delegator2 should now have 18 + 200 * 10% - 10% commission = 36 tokens
         let rewards = stake
-            .get_rewards(&store, &block, &delegator2, &validator)
+            .get_rewards(&store, &block, &delegator2, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 36);
@@ -1378,7 +1382,7 @@ mod test {
                 &mut staking_storage,
                 &block,
                 &delegator2,
-                &validator,
+                &validator_addr,
                 coin(100, "TOKEN"),
             )
             .unwrap();
@@ -1392,7 +1396,7 @@ mod test {
                 &block,
                 delegator1.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator.to_string(),
+                    validator: validator_addr.to_string(),
                 },
             )
             .unwrap();
@@ -1417,7 +1421,7 @@ mod test {
             "withdraw should change bank balance"
         );
         let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+            .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(
@@ -1431,14 +1435,14 @@ mod test {
 
         // delegator1 should now have 0 + 200 * 10% - 10% commission = 18 tokens
         let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+            .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
 
         // delegator2 should now have 36 + 100 * 10% - 10% commission = 45 tokens
         let rewards = stake
-            .get_rewards(&store, &block, &delegator2, &validator)
+            .get_rewards(&store, &block, &delegator2, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 45);
@@ -1553,7 +1557,7 @@ mod test {
                 .unwrap();
 
             // add second validator
-            let validator2 = test_env.api.addr_make("validator2");
+            let validator2 = valoper_addr("validator2");
             test_env
                 .router
                 .staking
@@ -1794,7 +1798,7 @@ mod test {
             assert_eq!(e.to_string(), "invalid shares amount");
 
             // add second validator
-            let validator2 = test_env.api.addr_make("validator2");
+            let validator2 = valoper_addr("validator2");
             test_env
                 .router
                 .staking
@@ -1881,7 +1885,7 @@ mod test {
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
             let delegator = test_env.api.addr_make("delegator");
-            let non_existing_validator = test_env.api.addr_make("nonexistingvaloper");
+            let non_existing_validator = valoper_addr("bob");
 
             // fund delegator1 account
             test_env
@@ -1914,7 +1918,7 @@ mod test {
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
 
             let delegator = test_env.api.addr_make("delegator1");
-            let validator = test_env.api.addr_make("testvaloper2");
+            let validator = valoper_addr("bob");
 
             // init balances
             test_env
@@ -1983,28 +1987,36 @@ mod test {
         #[test]
         fn query_staking() {
             // run all staking queries
-            let (mut test_env, validator1) =
+            let (mut test_env, validator_addr_1) =
                 TestEnv::wrap(setup_test_env(Decimal::percent(10), Decimal::percent(10)));
-            let delegator1 = test_env.api.addr_make("delegator1");
-            let delegator2 = test_env.api.addr_make("delegator2");
-            let validator2 = test_env.api.addr_make("testvaloper2");
-            let not_validator = test_env.api.addr_make("notvaloper");
+            let delegator_addr_1 = test_env.api.addr_make("delegator1");
+            let delegator_addr_2 = test_env.api.addr_make("delegator2");
+            let validator_addr_2 = valoper_addr("bob");
+            let non_validator_addr = valoper_addr("jane");
 
             // init balances
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(260, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator_addr_1,
+                    vec![coin(260, "TOKEN")],
+                )
                 .unwrap();
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator2, vec![coin(150, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator_addr_2,
+                    vec![coin(150, "TOKEN")],
+                )
                 .unwrap();
 
             // add another validator
             let valoper2 = Validator::new(
-                validator2.to_string(),
+                validator_addr_2.to_string(),
                 Decimal::percent(0),
                 Decimal::percent(1),
                 Decimal::percent(1),
@@ -2024,7 +2036,7 @@ mod test {
             let valoper1: ValidatorResponse = query_stake(
                 &test_env,
                 StakingQuery::Validator {
-                    address: validator1.to_string(),
+                    address: validator_addr_1.to_string(),
                 },
             )
             .unwrap();
@@ -2038,7 +2050,7 @@ mod test {
             let response = query_stake::<ValidatorResponse>(
                 &test_env,
                 StakingQuery::Validator {
-                    address: not_validator.to_string(),
+                    address: non_validator_addr.to_string(),
                 },
             )
             .unwrap();
@@ -2052,27 +2064,27 @@ mod test {
             // delegate some tokens with delegator1 and delegator2
             execute_stake(
                 &mut test_env,
-                delegator1.clone(),
+                delegator_addr_1.clone(),
                 StakingMsg::Delegate {
-                    validator: validator1.to_string(),
+                    validator: validator_addr_1.to_string(),
                     amount: coin(100, "TOKEN"),
                 },
             )
             .unwrap();
             execute_stake(
                 &mut test_env,
-                delegator1.clone(),
+                delegator_addr_1.clone(),
                 StakingMsg::Delegate {
-                    validator: validator2.to_string(),
+                    validator: validator_addr_2.to_string(),
                     amount: coin(160, "TOKEN"),
                 },
             )
             .unwrap();
             execute_stake(
                 &mut test_env,
-                delegator2.clone(),
+                delegator_addr_2.clone(),
                 StakingMsg::Delegate {
-                    validator: validator1.to_string(),
+                    validator: validator_addr_1.to_string(),
                     amount: coin(150, "TOKEN"),
                 },
             )
@@ -2080,18 +2092,18 @@ mod test {
             // unstake some again
             execute_stake(
                 &mut test_env,
-                delegator1.clone(),
+                delegator_addr_1.clone(),
                 StakingMsg::Undelegate {
-                    validator: validator1.to_string(),
+                    validator: validator_addr_1.to_string(),
                     amount: coin(50, "TOKEN"),
                 },
             )
             .unwrap();
             execute_stake(
                 &mut test_env,
-                delegator2.clone(),
+                delegator_addr_2.clone(),
                 StakingMsg::Undelegate {
-                    validator: validator1.to_string(),
+                    validator: validator_addr_1.to_string(),
                     amount: coin(50, "TOKEN"),
                 },
             )
@@ -2101,7 +2113,7 @@ mod test {
             let response1: AllDelegationsResponse = query_stake(
                 &test_env,
                 StakingQuery::AllDelegations {
-                    delegator: delegator1.to_string(),
+                    delegator: delegator_addr_1.to_string(),
                 },
             )
             .unwrap();
@@ -2109,13 +2121,13 @@ mod test {
                 response1.delegations,
                 vec![
                     Delegation::new(
-                        delegator1.clone(),
-                        validator1.to_string(),
+                        delegator_addr_1.clone(),
+                        validator_addr_1.to_string(),
                         coin(50, "TOKEN"),
                     ),
                     Delegation::new(
-                        delegator1.clone(),
-                        validator2.to_string(),
+                        delegator_addr_1.clone(),
+                        validator_addr_2.to_string(),
                         coin(160, "TOKEN"),
                     ),
                 ]
@@ -2123,16 +2135,16 @@ mod test {
             let response2: DelegationResponse = query_stake(
                 &test_env,
                 StakingQuery::Delegation {
-                    delegator: delegator2.to_string(),
-                    validator: validator1.to_string(),
+                    delegator: delegator_addr_2.to_string(),
+                    validator: validator_addr_1.to_string(),
                 },
             )
             .unwrap();
             assert_eq!(
                 response2.delegation.unwrap(),
                 FullDelegation::new(
-                    delegator2.clone(),
-                    validator1.to_string(),
+                    delegator_addr_2.clone(),
+                    validator_addr_1.to_string(),
                     coin(100, "TOKEN"),
                     coin(100, "TOKEN"),
                     vec![],
