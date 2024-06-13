@@ -50,7 +50,7 @@ fn simple_transfer_timeout() -> anyhow::Result<()> {
         &mut app1,
         &mut app2,
         src_connection_id,
-        port1.clone(),
+        port1,
         port2,
         "ics20-1".to_string(),
         IbcOrder::Ordered,
@@ -225,8 +225,8 @@ fn simple_transfer_timeout_closes_channel() -> anyhow::Result<()> {
     assert!(!channel_info.open);
     // We make sure the channel is closed
     let channel_info: ChannelInfo = from_json(app2.ibc_query(MockIbcQuery::ChannelInfo {
-        port_id: port2.clone(),
-        channel_id: dst_channel.clone(),
+        port_id: port2,
+        channel_id: dst_channel,
     })?)?;
     assert!(!channel_info.open);
 

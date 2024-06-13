@@ -52,7 +52,7 @@ fn simple_transfer() -> anyhow::Result<()> {
         &mut app1,
         &mut app2,
         src_connection_id,
-        port1.clone(),
+        port1,
         port2,
         "ics20-1".to_string(),
         IbcOrder::Ordered,
@@ -150,7 +150,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
         &mut app1,
         &mut app2,
         src_connection_id,
-        port1.clone(),
+        port1,
         port2,
         "ics20-1".to_string(),
         IbcOrder::Ordered,
@@ -199,7 +199,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
         CosmosMsg::Ibc(IbcMsg::Transfer {
             channel_id: dst_channel,
             to_address: fund_owner.to_string(),
-            amount: chain2_funds.clone(),
+            amount: chain2_funds,
             timeout: IbcTimeout::with_block(IbcTimeoutBlock {
                 revision: 1,
                 height: app2.block_info().height + 100,

@@ -96,12 +96,12 @@ fn channel_creation() -> anyhow::Result<()> {
         channel,
         ChannelResponse::new(Some(IbcChannel::new(
             IbcEndpoint {
-                port_id: dst_port.clone(),
-                channel_id: dst_channel.clone()
+                port_id: dst_port,
+                channel_id: dst_channel
             },
             IbcEndpoint {
-                port_id: src_port.clone(),
-                channel_id: src_channel.clone()
+                port_id: src_port,
+                channel_id: src_channel
             },
             order,
             version,
