@@ -1074,7 +1074,7 @@ mod test {
     fn setup_test_env(apr: u64, validator_commission: u64) -> TestTuple {
         let api = MockApi::default();
         let router = mock_router();
-        let mut store = MockStorage::new();
+        let mut storage = MockStorage::new();
         let block = mock_env().block;
 
         let validator_addr = valoper_addr("validator1");
@@ -1082,7 +1082,7 @@ mod test {
         router
             .staking
             .setup(
-                &mut store,
+                &mut storage,
                 StakingInfo {
                     bonded_denom: "TOKEN".to_string(),
                     unbonding_time: 60,
@@ -1100,16 +1100,16 @@ mod test {
         );
         router
             .staking
-            .add_validator(&api, &mut store, &block, validator)
+            .add_validator(&api, &mut storage, &block, validator)
             .unwrap();
 
-        (api, store, router, block, validator_addr)
+        (api, storage, router, block, validator_addr)
     }
 
     // shortens tests a bit
     struct TestEnv {
         api: MockApi,
-        store: MockStorage,
+        storage: MockStorage,
         router: BasicRouter,
         block: BlockInfo,
         validator_addr_1: Addr,
@@ -1129,7 +1129,7 @@ mod test {
             let user_addr_1 = api.addr_make("user1");
             Self {
                 api,
-                store: tuple.1,
+                storage: tuple.1,
                 router: tuple.2,
                 block: tuple.3,
                 validator_addr_1,
@@ -1336,16 +1336,15 @@ mod test {
     #[test]
     fn rewards_work_for_multiple_delegators() {
         let (api, mut store, router, mut block, validator_addr) = setup_test_env(10, 10);
-        let stake = &router.staking;
-        let distr = &router.distribution;
-        let bank = &router.bank;
+
         let delegator1 = api.addr_make("delegator1");
         let delegator2 = api.addr_make("delegator2");
 
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
 
         // add 100 stake to delegator1 and 200 to delegator2
-        stake
+        router
+            .staking
             .add_stake(
                 &api,
                 &mut staking_storage,
@@ -1355,7 +1354,8 @@ mod test {
                 coin(100, "TOKEN"),
             )
             .unwrap();
-        stake
+        router
+            .staking
             .add_stake(
                 &api,
                 &mut staking_storage,
@@ -1370,14 +1370,16 @@ mod test {
         block.time = block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 100 * 10% - 10% commission = 9 tokens
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9);
 
         // delegator2 should now have 200 * 10% - 10% commission = 18 tokens
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator2, &validator_addr)
             .unwrap()
             .unwrap();
@@ -1385,7 +1387,8 @@ mod test {
 
         // delegator1 stakes 100 more
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        stake
+        router
+            .staking
             .add_stake(
                 &api,
                 &mut staking_storage,
@@ -1400,14 +1403,16 @@ mod test {
         block.time = block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 9 + 200 * 10% - 10% commission = 27 tokens
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 27);
 
         // delegator2 should now have 18 + 200 * 10% - 10% commission = 36 tokens
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator2, &validator_addr)
             .unwrap()
             .unwrap();
@@ -1415,7 +1420,8 @@ mod test {
 
         // delegator2 unstakes 100 (has 100 left after that)
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        stake
+        router
+            .staking
             .remove_stake(
                 &api,
                 &mut staking_storage,
@@ -1427,7 +1433,8 @@ mod test {
             .unwrap();
 
         // and delegator1 withdraws rewards
-        distr
+        router
+            .distribution
             .execute(
                 &api,
                 &mut store,
@@ -1441,17 +1448,19 @@ mod test {
             .unwrap();
 
         let balance: BalanceResponse = from_json(
-            bank.query(
-                &api,
-                &store,
-                &router.querier(&api, &store, &block),
-                &block,
-                BankQuery::Balance {
-                    address: delegator1.to_string(),
-                    denom: "TOKEN".to_string(),
-                },
-            )
-            .unwrap(),
+            router
+                .bank
+                .query(
+                    &api,
+                    &store,
+                    &router.querier(&api, &store, &block),
+                    &block,
+                    BankQuery::Balance {
+                        address: delegator1.to_string(),
+                        denom: "TOKEN".to_string(),
+                    },
+                )
+                .unwrap(),
         )
         .unwrap();
         assert_eq!(
@@ -1459,7 +1468,8 @@ mod test {
             27,
             "withdraw should change bank balance"
         );
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
@@ -1473,14 +1483,16 @@ mod test {
         block.time = block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 0 + 200 * 10% - 10% commission = 18 tokens
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator1, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
 
         // delegator2 should now have 36 + 100 * 10% - 10% commission = 45 tokens
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator2, &validator_addr)
             .unwrap()
             .unwrap();
@@ -1499,7 +1511,7 @@ mod test {
         ) -> AnyResult<AppResponse> {
             env.router.staking.execute(
                 &env.api,
-                &mut env.store,
+                &mut env.storage,
                 &env.router,
                 &env.block,
                 sender,
@@ -1510,8 +1522,8 @@ mod test {
         fn query_stake<T: DeserializeOwned>(env: &TestEnv, msg: StakingQuery) -> AnyResult<T> {
             Ok(from_json(env.router.staking.query(
                 &env.api,
-                &env.store,
-                &env.router.querier(&env.api, &env.store, &env.block),
+                &env.storage,
+                &env.router.querier(&env.api, &env.storage, &env.block),
                 &env.block,
                 msg,
             )?)?)
@@ -1524,7 +1536,7 @@ mod test {
         ) -> AnyResult<AppResponse> {
             env.router.distribution.execute(
                 &env.api,
-                &mut env.store,
+                &mut env.storage,
                 &env.router,
                 &env.block,
                 sender,
@@ -1535,8 +1547,8 @@ mod test {
         fn query_bank<T: DeserializeOwned>(env: &TestEnv, msg: BankQuery) -> AnyResult<T> {
             Ok(from_json(env.router.bank.query(
                 &env.api,
-                &env.store,
-                &env.router.querier(&env.api, &env.store, &env.block),
+                &env.storage,
+                &env.router.querier(&env.api, &env.storage, &env.block),
                 &env.block,
                 msg,
             )?)?)
@@ -1569,7 +1581,11 @@ mod test {
             // fund delegator account
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(1000, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(1000, "TOKEN")],
+                )
                 .unwrap();
 
             // add second validator
@@ -1577,7 +1593,7 @@ mod test {
                 .staking
                 .add_validator(
                     &env.api,
-                    &mut env.store,
+                    &mut env.storage,
                     &env.block,
                     Validator::new(
                         validator_addr_2.to_string(),
@@ -1680,7 +1696,7 @@ mod test {
             // need to manually cause queue to get processed
             env.router
                 .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+                .process_queue(&env.api, &mut env.storage, &env.router, &env.block)
                 .unwrap();
 
             // check bank balance
@@ -1698,7 +1714,7 @@ mod test {
             // fund delegator's account
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, coins(100, "TOKEN"))
+                .init_balance(&mut env.storage, &delegator_addr_1, coins(100, "TOKEN"))
                 .unwrap();
 
             // stake (delegate) 100 tokens to the validator
@@ -1781,7 +1797,11 @@ mod test {
             // fund delegator's account
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(100, "TOKEN")],
+                )
                 .unwrap();
 
             // stake (delegate) 100 tokens to validator 1
@@ -1814,7 +1834,7 @@ mod test {
                 .staking
                 .add_validator(
                     &env.api,
-                    &mut env.store,
+                    &mut env.storage,
                     &env.block,
                     Validator::new(
                         validator_addr_2.to_string(),
@@ -1867,7 +1887,7 @@ mod test {
                 .router
                 .bank
                 .init_balance(
-                    &mut test_env.store,
+                    &mut test_env.storage,
                     &delegator_addr_1,
                     vec![coin(100, "FAKE")],
                 )
@@ -1900,7 +1920,7 @@ mod test {
             // fund delegator account
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
+                .init_balance(&mut env.storage, &delegator_addr_1, vec![coin(100, "FAKE")])
                 .unwrap();
 
             // try to delegate 100 tokens to non-existing validator
@@ -1910,7 +1930,7 @@ mod test {
                 .staking
                 .sudo(
                     &env.api,
-                    &mut env.store,
+                    &mut env.storage,
                     &env.router,
                     &env.block,
                     StakingSudo::Slash {
@@ -1933,7 +1953,11 @@ mod test {
             // init balances for delegator
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(100, "TOKEN")],
+                )
                 .unwrap();
 
             // try to delegate
@@ -2006,11 +2030,19 @@ mod test {
             // init balances for delegators
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(260, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(260, "TOKEN")],
+                )
                 .unwrap();
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_2, vec![coin(150, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_2,
+                    vec![coin(150, "TOKEN")],
+                )
                 .unwrap();
 
             // add another validator
@@ -2022,7 +2054,7 @@ mod test {
             );
             env.router
                 .staking
-                .add_validator(&env.api, &mut env.store, &env.block, valoper2.clone())
+                .add_validator(&env.api, &mut env.storage, &env.block, valoper2.clone())
                 .unwrap();
 
             // query validators
@@ -2156,11 +2188,19 @@ mod test {
             // init balances for delegators
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(100, "TOKEN")],
+                )
                 .unwrap();
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_2, vec![coin(150, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_2,
+                    vec![coin(150, "TOKEN")],
+                )
                 .unwrap();
 
             // delegate some tokens with delegator 1 and delegator 2
@@ -2283,7 +2323,11 @@ mod test {
             // init balance for delegator
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(100, "TOKEN")],
+                )
                 .unwrap();
 
             // stake (delegate) all tokens to validator
@@ -2332,7 +2376,7 @@ mod test {
             env.block.time = env.block.time.plus_seconds(40);
             env.router
                 .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+                .process_queue(&env.api, &mut env.storage, &env.router, &env.block)
                 .unwrap();
 
             // query delegations
@@ -2359,7 +2403,7 @@ mod test {
             env.block.time = env.block.time.plus_seconds(20);
             env.router
                 .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+                .process_queue(&env.api, &mut env.storage, &env.router, &env.block)
                 .unwrap();
 
             // query delegations again
@@ -2396,7 +2440,11 @@ mod test {
             // init balance for delegator
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(333, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(333, "TOKEN")],
+                )
                 .unwrap();
 
             // delegate some tokens to validator
@@ -2426,7 +2474,7 @@ mod test {
                 .staking
                 .sudo(
                     &env.api,
-                    &mut env.store,
+                    &mut env.storage,
                     &env.router,
                     &env.block,
                     StakingSudo::Slash {
@@ -2458,12 +2506,15 @@ mod test {
             env.block.time = env.block.time.plus_seconds(60);
             env.router
                 .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+                .process_queue(&env.api, &mut env.storage, &env.router, &env.block)
                 .unwrap();
-            let balance =
-                QuerierWrapper::<Empty>::new(&env.router.querier(&env.api, &env.store, &env.block))
-                    .query_balance(delegator_addr_1, "TOKEN")
-                    .unwrap();
+            let balance = QuerierWrapper::<Empty>::new(&env.router.querier(
+                &env.api,
+                &env.storage,
+                &env.block,
+            ))
+            .query_balance(delegator_addr_1, "TOKEN")
+            .unwrap();
 
             assert_eq!(55, balance.amount.u128());
         }
@@ -2478,7 +2529,11 @@ mod test {
             // init balance
             env.router
                 .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    vec![coin(100, "TOKEN")],
+                )
                 .unwrap();
 
             // wait a year before staking
