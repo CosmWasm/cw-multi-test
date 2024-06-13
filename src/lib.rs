@@ -135,7 +135,7 @@ pub mod custom_handler;
 pub mod error;
 mod executor;
 mod gov;
-mod ibc;
+pub mod ibc;
 mod module;
 mod prefixed_storage;
 mod staking;
