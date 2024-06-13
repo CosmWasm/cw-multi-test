@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "2.0.0"
+version = "2.0.1"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <DariuszDepta@users.noreply.github.com>",
@@ -44,8 +44,3 @@ hex = "0.4.3"
 hex = "0.4.3"
 hex-literal = "0.4.1"
 once_cell = "1.19.0"
-
-polytone-note = { version = "1.0.0" }
-polytone-voice = { version = "1.0.0" }
-polytone-proxy = { version = "1.0.0" }
-polytone = { version = "1.0.0" }
