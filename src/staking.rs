@@ -1025,8 +1025,8 @@ impl Module for DistributionKeeper {
 mod test {
     use super::*;
     use crate::{
-        app::MockRouter, BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, IntoBech32,
-        Router, StargateFailing, WasmKeeper,
+        BankKeeper, FailingModule, GovFailingModule, IbcFailingModule, IntoBech32, Router,
+        StargateFailing, WasmKeeper,
     };
     use cosmwasm_std::{
         from_json,
@@ -1191,14 +1191,10 @@ mod test {
 
     #[test]
     fn validator_slashing() {
-        let api = MockApi::default();
-        let router = MockRouter::default();
-        let mut store = MockStorage::new();
-        let stake = StakeKeeper::new();
-        let block = mock_env().block;
+        let mut env = TestEnv::wrap(setup_test_env(10, 10));
 
-        let validator_addr = valoper_addr("validator");
-        let delegator_addr = api.addr_make("delegator");
+        let validator_addr = env.validator_addr_2.clone();
+        let delegator_addr = env.delegator_addr_1.clone();
 
         // add validator
         let valoper1 = Validator::new(
@@ -1207,17 +1203,19 @@ mod test {
             Decimal::percent(20),
             Decimal::percent(1),
         );
-        stake
-            .add_validator(&api, &mut store, &block, valoper1)
+        env.router
+            .staking
+            .add_validator(&env.api, &mut env.storage, &env.block, valoper1)
             .unwrap();
 
         // stake 100 tokens
-        let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        stake
+        let mut staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
+        env.router
+            .staking
             .add_stake(
-                &api,
+                &env.api,
                 &mut staking_storage,
-                &block,
+                &env.block,
                 &delegator_addr,
                 &validator_addr,
                 coin(100, "TOKEN"),
@@ -1225,12 +1223,13 @@ mod test {
             .unwrap();
 
         // slash 50%
-        stake
+        env.router
+            .staking
             .sudo(
-                &api,
-                &mut store,
-                &router,
-                &block,
+                &env.api,
+                &mut env.storage,
+                &env.router,
+                &env.block,
                 StakingSudo::Slash {
                     validator: validator_addr.to_string(),
                     percentage: Decimal::percent(50),
@@ -1239,8 +1238,10 @@ mod test {
             .unwrap();
 
         // check stake
-        let staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        let stake_left = stake
+        let staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
+        let stake_left = env
+            .router
+            .staking
             .get_stake(&staking_storage, &delegator_addr, &validator_addr)
             .unwrap();
         assert_eq!(
@@ -1250,12 +1251,13 @@ mod test {
         );
 
         // slash all
-        stake
+        env.router
+            .staking
             .sudo(
-                &api,
-                &mut store,
-                &router,
-                &block,
+                &env.api,
+                &mut env.storage,
+                &env.router,
+                &env.block,
                 StakingSudo::Slash {
                     validator: validator_addr.to_string(),
                     percentage: Decimal::percent(100),
@@ -1264,8 +1266,10 @@ mod test {
             .unwrap();
 
         // check stake
-        let staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        let stake_left = stake
+        let staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
+        let stake_left = env
+            .router
+            .staking
             .get_stake(&staking_storage, &delegator_addr, &validator_addr)
             .unwrap();
         assert_eq!(stake_left, None, "should have slashed whole stake");
@@ -1275,13 +1279,12 @@ mod test {
     fn rewards_work_for_single_delegator() {
         let (api, mut store, router, mut block, validator_addr) = setup_test_env(10, 10);
 
-        let stake = &router.staking;
-        let distr = &router.distribution;
         let delegator_addr = api.addr_make("delegator");
 
         let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
         // stake 200 tokens
-        stake
+        router
+            .staking
             .add_stake(
                 &api,
                 &mut staking_storage,
@@ -1296,14 +1299,16 @@ mod test {
         block.time = block.time.plus_seconds(HALF_YEAR);
 
         // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9, "should have 9 tokens reward");
 
         // withdraw rewards
-        distr
+        router
+            .distribution
             .execute(
                 &api,
                 &mut store,
@@ -1317,7 +1322,8 @@ mod test {
             .unwrap();
 
         // should have no rewards left
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
@@ -1326,7 +1332,8 @@ mod test {
         // wait another 1/2 year
         block.time = block.time.plus_seconds(HALF_YEAR);
         // should now have 9 tokens again
-        let rewards = stake
+        let rewards = router
+            .staking
             .get_rewards(&store, &block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
