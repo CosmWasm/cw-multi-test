@@ -1041,9 +1041,6 @@ mod test {
     /// One year expressed in seconds.
     const YEAR: u64 = 60 * 60 * 24 * 365;
 
-    /// Half a year expressed in seconds.
-    const HALF_YEAR: u64 = YEAR / 2;
-
     /// Type alias for default build of [Router], to make its reference in typical test scenario.
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
         BankKeeper,
@@ -1259,7 +1256,7 @@ mod test {
             .unwrap();
 
         // wait 1/2 year
-        block.time = block.time.plus_seconds(HALF_YEAR);
+        block.time = block.time.plus_seconds(YEAR / 2);
 
         // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
         let rewards = stake
@@ -1290,7 +1287,7 @@ mod test {
         assert_eq!(rewards.amount.u128(), 0);
 
         // wait another 1/2 year
-        block.time = block.time.plus_seconds(HALF_YEAR);
+        block.time = block.time.plus_seconds(YEAR / 2);
         // should now have 9 tokens again
         let rewards = stake
             .get_rewards(&store, &block, &delegator_addr, &validator_addr)
