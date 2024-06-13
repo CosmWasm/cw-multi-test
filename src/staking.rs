@@ -14,14 +14,18 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, VecDeque};
 
+/// Default denominator of the staking token.
+pub const BONDED_DENOM: &str = "TOKEN";
+
 /// A structure containing some general staking parameters.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct StakingInfo {
-    /// The denominator of the staking token
+    /// The denominator of the staking token.
     pub bonded_denom: String,
-    /// Time between unbonding and receiving tokens in seconds
+    /// Time between unbonding and receiving tokens back (in seconds).
     pub unbonding_time: u64,
-    /// Interest rate per year (60 * 60 * 24 * 365 seconds)
+    /// Annual percentage rate (interest rate and any additional fees associated with bonding).
+    /// 1 year = 60 * 60 * 24 * 365 seconds.
     pub apr: Decimal,
 }
 
@@ -29,7 +33,7 @@ impl Default for StakingInfo {
     /// Creates staking info with default settings.
     fn default() -> Self {
         StakingInfo {
-            bonded_denom: "TOKEN".to_string(),
+            bonded_denom: BONDED_DENOM.to_string(),
             unbonding_time: 60,
             apr: Decimal::percent(10),
         }
@@ -53,7 +57,7 @@ impl Shares {
     }
 }
 
-/// Holds some operational data about a validator
+/// Holds some operational data about a validator.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 struct ValidatorInfo {
     /// The stakers that have staked with this validator.
@@ -1034,7 +1038,13 @@ mod test {
         BalanceResponse, BankQuery,
     };
 
-    /// Type alias for default build `Router` to make its reference in typical scenario
+    /// One year expressed in seconds.
+    const YEAR: u64 = 60 * 60 * 24 * 365;
+
+    /// Half a year expressed in seconds.
+    const HALF_YEAR: u64 = YEAR / 2;
+
+    /// Type alias for default build of [Router], to make its reference in typical test scenario.
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
         BankKeeper,
         FailingModule<ExecC, QueryC, Empty>,
@@ -1075,7 +1085,7 @@ mod test {
             .setup(
                 &mut store,
                 StakingInfo {
-                    bonded_denom: "TOKEN".to_string(),
+                    bonded_denom: BONDED_DENOM.to_string(),
                     unbonding_time: 60,
                     apr,
                 },
@@ -1176,7 +1186,7 @@ mod test {
                 &block,
                 &delegator_addr,
                 &validator_addr,
-                coin(100, "TOKEN"),
+                coin(100, BONDED_DENOM),
             )
             .unwrap();
 
@@ -1244,12 +1254,12 @@ mod test {
                 &block,
                 &delegator_addr,
                 &validator_addr,
-                coin(200, "TOKEN"),
+                coin(200, BONDED_DENOM),
             )
             .unwrap();
 
         // wait 1/2 year
-        block.time = block.time.plus_seconds(60 * 60 * 24 * 365 / 2);
+        block.time = block.time.plus_seconds(HALF_YEAR);
 
         // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
         let rewards = stake
@@ -1280,7 +1290,7 @@ mod test {
         assert_eq!(rewards.amount.u128(), 0);
 
         // wait another 1/2 year
-        block.time = block.time.plus_seconds(60 * 60 * 24 * 365 / 2);
+        block.time = block.time.plus_seconds(HALF_YEAR);
         // should now have 9 tokens again
         let rewards = stake
             .get_rewards(&store, &block, &delegator_addr, &validator_addr)
@@ -1309,7 +1319,7 @@ mod test {
                 &block,
                 &delegator1,
                 &validator,
-                coin(100, "TOKEN"),
+                coin(100, BONDED_DENOM),
             )
             .unwrap();
         stake
@@ -1319,12 +1329,12 @@ mod test {
                 &block,
                 &delegator2,
                 &validator,
-                coin(200, "TOKEN"),
+                coin(200, BONDED_DENOM),
             )
             .unwrap();
 
         // wait 1 year
-        block.time = block.time.plus_seconds(60 * 60 * 24 * 365);
+        block.time = block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 100 * 10% - 10% commission = 9 tokens
         let rewards = stake
@@ -1349,12 +1359,12 @@ mod test {
                 &block,
                 &delegator1,
                 &validator,
-                coin(100, "TOKEN"),
+                coin(100, BONDED_DENOM),
             )
             .unwrap();
 
         // wait another year
-        block.time = block.time.plus_seconds(60 * 60 * 24 * 365);
+        block.time = block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 9 + 200 * 10% - 10% commission = 27 tokens
         let rewards = stake
@@ -1379,7 +1389,7 @@ mod test {
                 &block,
                 &delegator2,
                 &validator,
-                coin(100, "TOKEN"),
+                coin(100, BONDED_DENOM),
             )
             .unwrap();
 
@@ -1405,7 +1415,7 @@ mod test {
                 &block,
                 BankQuery::Balance {
                     address: delegator1.to_string(),
-                    denom: "TOKEN".to_string(),
+                    denom: BONDED_DENOM.to_string(),
                 },
             )
             .unwrap(),
@@ -1427,7 +1437,7 @@ mod test {
         );
 
         // wait another year
-        block.time = block.time.plus_seconds(60 * 60 * 24 * 365);
+        block.time = block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 0 + 200 * 10% - 10% commission = 18 tokens
         let rewards = stake
@@ -1528,7 +1538,7 @@ mod test {
                     env,
                     BankQuery::Balance {
                         address: addr.to_string(),
-                        denom: "TOKEN".to_string(),
+                        denom: BONDED_DENOM.to_string(),
                     },
                 )
                 .unwrap();
@@ -1549,7 +1559,11 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(1000, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator1,
+                    vec![coin(1000, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // add second validator
@@ -1576,7 +1590,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Delegate {
                     validator: validator1.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -1585,7 +1599,7 @@ mod test {
             assert_balances(&test_env, vec![(delegator1.clone(), 900)]);
 
             // wait a year
-            test_env.block.time = test_env.block.time.plus_seconds(60 * 60 * 24 * 365);
+            test_env.block.time = test_env.block.time.plus_seconds(YEAR);
 
             // change the withdrawal address
             execute_distr(
@@ -1621,7 +1635,7 @@ mod test {
                 StakingMsg::Redelegate {
                     src_validator: validator1.to_string(),
                     dst_validator: validator2.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -1641,7 +1655,7 @@ mod test {
                 [Delegation::new(
                     delegator1.clone(),
                     validator2.to_string(),
-                    coin(100, "TOKEN"),
+                    coin(100, BONDED_DENOM),
                 )]
             );
 
@@ -1651,7 +1665,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator2.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -1686,7 +1700,7 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator, coins(100, "TOKEN"))
+                .init_balance(&mut test_env.store, &delegator, coins(100, BONDED_DENOM))
                 .unwrap();
 
             // Stake 100 tokens to the validator.
@@ -1695,7 +1709,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -1766,7 +1780,11 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator1,
+                    vec![coin(100, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // delegate 100 tokens to validator1
@@ -1775,7 +1793,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Delegate {
                     validator: validator1.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -1786,7 +1804,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator1.to_string(),
-                    amount: coin(200, "TOKEN"),
+                    amount: coin(200, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1818,7 +1836,7 @@ mod test {
                 StakingMsg::Redelegate {
                     src_validator: validator1.to_string(),
                     dst_validator: validator2.to_string(),
-                    amount: coin(200, "TOKEN"),
+                    amount: coin(200, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1830,7 +1848,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator2.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1920,7 +1938,11 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator,
+                    vec![coin(100, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // try to delegate
@@ -1929,7 +1951,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1941,7 +1963,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1961,7 +1983,7 @@ mod test {
                 delegator_addr.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(0, "TOKEN"),
+                    amount: coin(0, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1973,7 +1995,7 @@ mod test {
                 delegator_addr,
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(0, "TOKEN"),
+                    amount: coin(0, BONDED_DENOM),
                 },
             )
             .unwrap_err();
@@ -1994,12 +2016,20 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(260, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator1,
+                    vec![coin(260, BONDED_DENOM)],
+                )
                 .unwrap();
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator2, vec![coin(150, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator2,
+                    vec![coin(150, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // add another validator
@@ -2047,7 +2077,7 @@ mod test {
             // query bonded denom
             let response: BondedDenomResponse =
                 query_stake(&test_env, StakingQuery::BondedDenom {}).unwrap();
-            assert_eq!(response.denom, "TOKEN");
+            assert_eq!(response.denom, BONDED_DENOM);
 
             // delegate some tokens with delegator1 and delegator2
             execute_stake(
@@ -2055,7 +2085,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Delegate {
                     validator: validator1.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2064,7 +2094,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Delegate {
                     validator: validator2.to_string(),
-                    amount: coin(160, "TOKEN"),
+                    amount: coin(160, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2073,7 +2103,7 @@ mod test {
                 delegator2.clone(),
                 StakingMsg::Delegate {
                     validator: validator1.to_string(),
-                    amount: coin(150, "TOKEN"),
+                    amount: coin(150, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2083,7 +2113,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator1.to_string(),
-                    amount: coin(50, "TOKEN"),
+                    amount: coin(50, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2092,7 +2122,7 @@ mod test {
                 delegator2.clone(),
                 StakingMsg::Undelegate {
                     validator: validator1.to_string(),
-                    amount: coin(50, "TOKEN"),
+                    amount: coin(50, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2111,12 +2141,12 @@ mod test {
                     Delegation::new(
                         delegator1.clone(),
                         validator1.to_string(),
-                        coin(50, "TOKEN"),
+                        coin(50, BONDED_DENOM),
                     ),
                     Delegation::new(
                         delegator1.clone(),
                         validator2.to_string(),
-                        coin(160, "TOKEN"),
+                        coin(160, BONDED_DENOM),
                     ),
                 ]
             );
@@ -2133,8 +2163,8 @@ mod test {
                 FullDelegation::new(
                     delegator2.clone(),
                     validator1.to_string(),
-                    coin(100, "TOKEN"),
-                    coin(100, "TOKEN"),
+                    coin(100, BONDED_DENOM),
+                    coin(100, BONDED_DENOM),
                     vec![],
                 ),
             );
@@ -2152,12 +2182,20 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator1, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator1,
+                    vec![coin(100, BONDED_DENOM)],
+                )
                 .unwrap();
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator2, vec![coin(150, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator2,
+                    vec![coin(150, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // delegate some tokens with delegator1 and delegator2
@@ -2166,7 +2204,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2175,7 +2213,7 @@ mod test {
                 delegator2.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(150, "TOKEN"),
+                    amount: coin(150, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2185,7 +2223,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
+                    amount: coin(50, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2195,7 +2233,7 @@ mod test {
                 delegator2.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(150, "TOKEN"),
+                    amount: coin(150, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2213,7 +2251,7 @@ mod test {
                 vec![Delegation::new(
                     delegator1.clone(),
                     validator.to_string(),
-                    coin(50, "TOKEN"),
+                    coin(50, BONDED_DENOM),
                 )]
             );
             let response2: DelegationResponse = query_stake(
@@ -2232,7 +2270,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(25, "TOKEN"),
+                    amount: coin(25, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2242,7 +2280,7 @@ mod test {
                 delegator1.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(25, "TOKEN"),
+                    amount: coin(25, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2280,7 +2318,11 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator,
+                    vec![coin(100, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // delegate all tokens
@@ -2289,7 +2331,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2299,7 +2341,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(50, "TOKEN"),
+                    amount: coin(50, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2309,7 +2351,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(30, "TOKEN"),
+                    amount: coin(30, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2319,7 +2361,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(20, "TOKEN"),
+                    amount: coin(20, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2404,7 +2446,11 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator, vec![coin(333, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator,
+                    vec![coin(333, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // delegate some tokens
@@ -2413,7 +2459,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(333, "TOKEN"),
+                    amount: coin(333, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2423,7 +2469,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Undelegate {
                     validator: validator.to_string(),
-                    amount: coin(111, "TOKEN"),
+                    amount: coin(111, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2454,7 +2500,11 @@ mod test {
             .unwrap();
             assert_eq!(
                 response1.delegations[0],
-                Delegation::new(delegator.clone(), validator.to_string(), coin(111, "TOKEN"),)
+                Delegation::new(
+                    delegator.clone(),
+                    validator.to_string(),
+                    coin(111, BONDED_DENOM),
+                )
             );
 
             // wait until unbonding is complete and check if amount was slashed
@@ -2474,7 +2524,7 @@ mod test {
                 &test_env.store,
                 &test_env.block,
             ))
-            .query_balance(delegator, "TOKEN")
+            .query_balance(delegator, BONDED_DENOM)
             .unwrap();
             assert_eq!(balance.amount.u128(), 55);
         }
@@ -2489,11 +2539,14 @@ mod test {
             test_env
                 .router
                 .bank
-                .init_balance(&mut test_env.store, &delegator, vec![coin(100, "TOKEN")])
+                .init_balance(
+                    &mut test_env.store,
+                    &delegator,
+                    vec![coin(100, BONDED_DENOM)],
+                )
                 .unwrap();
 
             // wait a year before staking
-            const YEAR: u64 = 60 * 60 * 24 * 365;
             test_env.block.time = test_env.block.time.plus_seconds(YEAR);
 
             // delegate some tokens
@@ -2502,7 +2555,7 @@ mod test {
                 delegator.clone(),
                 StakingMsg::Delegate {
                     validator: validator.to_string(),
-                    amount: coin(100, "TOKEN"),
+                    amount: coin(100, BONDED_DENOM),
                 },
             )
             .unwrap();
@@ -2521,7 +2574,7 @@ mod test {
             .unwrap();
             assert_eq!(
                 response.delegation.unwrap().accumulated_rewards,
-                vec![coin(10, "TOKEN")] // 10% of 100
+                vec![coin(10, BONDED_DENOM)] // 10% of 100
             );
         }
     }
