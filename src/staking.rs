@@ -1213,6 +1213,17 @@ mod test {
         )?)?)
     }
 
+    fn init_balance(env: &mut TestEnv, address: &Addr, amount: u128) {
+        init_balance_denom(env, address, amount, BONDED_DENOM);
+    }
+
+    fn init_balance_denom(env: &mut TestEnv, address: &Addr, amount: u128, denom: &str) {
+        env.router
+            .bank
+            .init_balance(&mut env.store, address, coins(amount, denom))
+            .unwrap();
+    }
+
     fn assert_balances(env: &TestEnv, balances: impl IntoIterator<Item = (Addr, u128)>) {
         for (addr, amount) in balances {
             let balance: BalanceResponse = query_bank(
@@ -1594,15 +1605,8 @@ mod test {
         let delegator_addr_1 = env.delegator_addr_2();
         let reward_receiver_addr = env.user_addr_1();
 
-        // initialize delegator account
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(1000, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 1000);
 
         // delegate 100 tokens to validator 1
         execute_stake(
@@ -1711,12 +1715,10 @@ mod test {
         let delegator_addr_1 = env.delegator_addr_1();
         let reward_receiver_addr = env.user_addr_1();
 
-        env.router
-            .bank
-            .init_balance(&mut env.store, &delegator_addr_1, coins(100, BONDED_DENOM))
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 100);
 
-        // Stake 100 tokens to the validator.
+        // stake (delegate) 100 tokens to the validator
         execute_stake(
             &mut env,
             delegator_addr_1.clone(),
@@ -1727,7 +1729,7 @@ mod test {
         )
         .unwrap();
 
-        // Change rewards receiver.
+        // change the receiver of rewards
         execute_distr(
             &mut env,
             delegator_addr_1.clone(),
@@ -1737,7 +1739,7 @@ mod test {
         )
         .unwrap();
 
-        // A year passes.
+        // let one year pass
         env.block.time = env.block.time.plus_seconds(YEAR);
 
         // Withdraw rewards to reward receiver.
@@ -1793,15 +1795,8 @@ mod test {
         let validator_addr_2 = env.validator_addr_2();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // initialize delegator account
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(100, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 100);
 
         // delegate 100 tokens to validator 1
         execute_stake(
@@ -1863,11 +1858,8 @@ mod test {
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // fund delegator account
-        env.router
-            .bank
-            .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
-            .unwrap();
+        // init balances
+        init_balance_denom(&mut env, &delegator_addr_1, 100, "FAKE");
 
         // try to delegate 100 to validator
         let e = execute_stake(
@@ -1893,11 +1885,8 @@ mod test {
         let validator_addr_3 = env.validator_addr_3();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // fund delegator account
-        env.router
-            .bank
-            .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
-            .unwrap();
+        // init balances
+        init_balance_denom(&mut env, &delegator_addr_1, 100, "FAKE");
 
         // try to delegate 100 to non existing validator
         let e = env
@@ -1925,15 +1914,8 @@ mod test {
         let validator_addr_3 = env.validator_addr_3();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // init balances
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(100, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 100);
 
         // try to delegate
         let err = execute_stake(
@@ -2002,23 +1984,9 @@ mod test {
         let delegator_addr_2 = env.delegator_addr_2();
         let user_addr_1 = env.user_addr_1();
 
-        // init balances
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(260, BONDED_DENOM)],
-            )
-            .unwrap();
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_2,
-                vec![coin(150, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 260);
+        init_balance(&mut env, &delegator_addr_2, 150);
 
         // query validators
         let valoper1: ValidatorResponse = query_stake(
@@ -2157,23 +2125,9 @@ mod test {
         let delegator_addr_1 = env.delegator_addr_1();
         let delegator_addr_2 = env.delegator_addr_2();
 
-        // init balances
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(100, BONDED_DENOM)],
-            )
-            .unwrap();
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_2,
-                vec![coin(150, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 100);
+        init_balance(&mut env, &delegator_addr_2, 150);
 
         // delegate some tokens with delegator1 and delegator2
         execute_stake(
@@ -2292,15 +2246,8 @@ mod test {
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // init balance
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(100, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 100);
 
         // delegate all tokens
         execute_stake(
@@ -2407,17 +2354,10 @@ mod test {
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // init balance
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(333, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 333);
 
-        // delegate some tokens
+        // stake (delegate) some tokens
         execute_stake(
             &mut env,
             delegator_addr_1.clone(),
@@ -2427,7 +2367,8 @@ mod test {
             },
         )
         .unwrap();
-        // unstake some
+
+        // unstake (undelegate) some tokens
         execute_stake(
             &mut env,
             delegator_addr_1.clone(),
@@ -2480,30 +2421,23 @@ mod test {
             QuerierWrapper::<Empty>::new(&env.router.querier(&env.api, &env.store, &env.block))
                 .query_balance(delegator_addr_1, BONDED_DENOM)
                 .unwrap();
-        assert_eq!(balance.amount.u128(), 55);
+        assert_eq!(55, balance.amount.u128());
     }
 
     #[test]
     fn rewards_initial_wait() {
-        let mut env = TestEnv::new((0, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new((0, 100, 1), (0, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        // initialize balances for delegator
-        env.router
-            .bank
-            .init_balance(
-                &mut env.store,
-                &delegator_addr_1,
-                vec![coin(100, BONDED_DENOM)],
-            )
-            .unwrap();
+        // initialize balances
+        init_balance(&mut env, &delegator_addr_1, 100);
 
         // wait one year before staking
         env.block.time = env.block.time.plus_seconds(YEAR);
 
-        // stake (delegate) some tokens to validator
+        // stake (delegate) 100 tokens to validator
         execute_stake(
             &mut env,
             delegator_addr_1.clone(),
