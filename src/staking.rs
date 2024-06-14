@@ -1065,42 +1065,126 @@ mod test {
         }
     }
 
-    fn setup_test_env(
-        apr: u64,
-        validator_commission: u64,
-    ) -> (MockApi, MockStorage, BasicRouter, BlockInfo, Addr) {
-        let api = MockApi::default();
-        let router = mock_router();
-        let mut store = MockStorage::new();
-        let block = mock_env().block;
+    type TestTuple = (MockApi, MockStorage, BasicRouter, BlockInfo, Addr, Addr);
 
-        let validator_addr = api.addr_make("validator1");
+    // shortens tests a bit
+    struct TestEnv {
+        api: MockApi,
+        store: MockStorage,
+        router: BasicRouter,
+        block: BlockInfo,
+        validator_addr_1: Addr,
+        validator_addr_2: Addr,
+        validator_addr_3: Addr,
+        delegator_addr_1: Addr,
+        delegator_addr_2: Addr,
+        user_addr_1: Addr,
+    }
 
-        router
-            .staking
-            .setup(
-                &mut store,
-                StakingInfo {
-                    bonded_denom: BONDED_DENOM.to_string(),
-                    unbonding_time: 60,
-                    apr: Decimal::percent(apr),
-                },
+    impl TestEnv {
+        fn setup(apr: u64, validator1: (u64, u64, u64), validator2: (u64, u64, u64)) -> TestTuple {
+            let api = MockApi::default();
+            let router = mock_router();
+            let mut store = MockStorage::new();
+            let block = mock_env().block;
+
+            let validator_addr_1 = api.addr_make("validator1");
+            let validator_addr_2 = api.addr_make("validator2");
+
+            router
+                .staking
+                .setup(
+                    &mut store,
+                    StakingInfo {
+                        bonded_denom: BONDED_DENOM.to_string(),
+                        unbonding_time: 60,
+                        apr: Decimal::percent(apr),
+                    },
+                )
+                .unwrap();
+
+            // add first validator
+            let valoper1 = Validator::new(
+                validator_addr_1.to_string(),
+                Decimal::percent(validator1.0),
+                Decimal::percent(validator1.1),
+                Decimal::percent(validator1.2),
+            );
+            router
+                .staking
+                .add_validator(&api, &mut store, &block, valoper1)
+                .unwrap();
+
+            // add second validator
+            let valoper2 = Validator::new(
+                validator_addr_2.to_string(),
+                Decimal::percent(validator2.0),
+                Decimal::percent(validator2.1),
+                Decimal::percent(validator2.2),
+            );
+            router
+                .staking
+                .add_validator(&api, &mut store, &block, valoper2)
+                .unwrap();
+
+            (
+                api,
+                store,
+                router,
+                block,
+                validator_addr_1,
+                validator_addr_2,
             )
-            .unwrap();
+        }
 
-        // add validator
-        let valoper1 = Validator::new(
-            validator_addr.to_string(),
-            Decimal::percent(validator_commission),
-            Decimal::percent(100),
-            Decimal::percent(1),
-        );
-        router
-            .staking
-            .add_validator(&api, &mut store, &block, valoper1)
-            .unwrap();
+        fn wrap(tuple: TestTuple) -> Self {
+            let api = tuple.0;
+            Self {
+                api,
+                store: tuple.1,
+                router: tuple.2,
+                block: tuple.3,
+                validator_addr_1: tuple.4,
+                validator_addr_2: tuple.5,
+                validator_addr_3: api.addr_make("validator3"),
+                delegator_addr_1: api.addr_make("delegator1"),
+                delegator_addr_2: api.addr_make("delegator2"),
+                user_addr_1: api.addr_make("user1"),
+            }
+        }
 
-        (api, store, router, block, validator_addr)
+        /// Returns an address of EXISTING validator no. 1.
+        #[inline(always)]
+        fn validator_addr_1(&self) -> Addr {
+            self.validator_addr_1.clone()
+        }
+
+        /// Returns an address of EXISTING validator no. 2.
+        #[inline(always)]
+        fn validator_addr_2(&self) -> Addr {
+            self.validator_addr_2.clone()
+        }
+
+        /// Returns an address of NON-EXISTING validator no. 3.
+        #[inline(always)]
+        fn validator_addr_3(&self) -> Addr {
+            self.validator_addr_3.clone()
+        }
+
+        #[inline(always)]
+        fn delegator_addr_1(&self) -> Addr {
+            self.delegator_addr_1.clone()
+        }
+
+        #[inline(always)]
+        fn delegator_addr_2(&self) -> Addr {
+            self.delegator_addr_2.clone()
+        }
+
+        #[inline(always)]
+        fn user_addr_1(&self) -> Addr {
+            self.user_addr_1.clone()
+        }
     }
 
     #[test]
@@ -1235,7 +1319,8 @@ mod test {
 
     #[test]
     fn rewards_work_for_single_delegator() {
-        let (api, mut store, router, mut block, validator_addr) = setup_test_env(10, 10);
+        let (api, mut store, router, mut block, validator_addr, _) =
+            TestEnv::setup(10, (10, 100, 1), (10, 100, 1));
         let stake = &router.staking;
         let distr = &router.distribution;
         let delegator_addr = api.addr_make("delegator");
@@ -1296,7 +1381,8 @@ mod test {
 
     #[test]
     fn rewards_work_for_multiple_delegators() {
-        let (api, mut store, router, mut block, validator) = setup_test_env(10, 10);
+        let (api, mut store, router, mut block, validator, _) =
+            TestEnv::setup(10, (10, 100, 1), (10, 100, 1));
         let stake = &router.staking;
         let distr = &router.distribution;
         let bank = &router.bank;
@@ -1449,69 +1535,9 @@ mod test {
     }
 
     mod msg {
+        use super::*;
         use cosmwasm_std::{coins, QuerierWrapper};
         use serde::de::DeserializeOwned;
-
-        use super::*;
-
-        // shortens tests a bit
-        struct TestEnv {
-            api: MockApi,
-            store: MockStorage,
-            router: BasicRouter,
-            block: BlockInfo,
-            validator_addr_1: Addr,
-            validator_addr_2: Addr,
-            delegator_addr_1: Addr,
-            delegator_addr_2: Addr,
-            user_addr_1: Addr,
-        }
-
-        impl TestEnv {
-            fn wrap(tuple: (MockApi, MockStorage, BasicRouter, BlockInfo, Addr)) -> Self {
-                let api = tuple.0;
-                let validator_addr_2 = api.addr_make("validator2");
-                let delegator_addr_1 = api.addr_make("delegator1");
-                let delegator_addr_2 = api.addr_make("delegator2");
-                let user_addr_1 = api.addr_make("user1");
-                Self {
-                    api: tuple.0,
-                    store: tuple.1,
-                    router: tuple.2,
-                    block: tuple.3,
-                    validator_addr_1: tuple.4,
-                    validator_addr_2,
-                    delegator_addr_1,
-                    delegator_addr_2,
-                    user_addr_1,
-                }
-            }
-
-            #[inline(always)]
-            fn validator_addr_1(&self) -> Addr {
-                self.validator_addr_1.clone()
-            }
-
-            #[inline(always)]
-            fn validator_addr_2(&self) -> Addr {
-                self.validator_addr_2.clone()
-            }
-
-            #[inline(always)]
-            fn delegator_addr_1(&self) -> Addr {
-                self.delegator_addr_1.clone()
-            }
-
-            #[inline(always)]
-            fn delegator_addr_2(&self) -> Addr {
-                self.delegator_addr_2.clone()
-            }
-
-            #[inline(always)]
-            fn user_addr_1(&self) -> Addr {
-                self.user_addr_1.clone()
-            }
-        }
 
         fn execute_stake(
             env: &mut TestEnv,
@@ -1579,14 +1605,14 @@ mod test {
 
         #[test]
         fn execute() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (0, 20, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let validator_addr_2 = env.validator_addr_2();
             let delegator_addr_1 = env.delegator_addr_2();
             let reward_receiver_addr = env.user_addr_1();
 
-            // fund delegator1 account
+            // initialize delegator account
             env.router
                 .bank
                 .init_balance(
@@ -1596,23 +1622,7 @@ mod test {
                 )
                 .unwrap();
 
-            // add second validator
-            env.router
-                .staking
-                .add_validator(
-                    &env.api,
-                    &mut env.store,
-                    &env.block,
-                    Validator::new(
-                        validator_addr_2.to_string(),
-                        Decimal::zero(),
-                        Decimal::percent(20),
-                        Decimal::percent(1),
-                    ),
-                )
-                .unwrap();
-
-            // delegate 100 tokens to validator1
+            // delegate 100 tokens to validator 1
             execute_stake(
                 &mut env,
                 delegator_addr_1.clone(),
@@ -1649,14 +1659,14 @@ mod test {
             )
             .unwrap();
 
-            // withdrawal address received rewards.
+            // withdrawal address received rewards
             assert_balances(
                 &env,
                 // one year, 10%apr, 10% commission, 100 tokens staked
                 vec![(reward_receiver_addr, 100 / 10 * 9 / 10)],
             );
 
-            // redelegate to validator2
+            // redelegate to validator 2
             execute_stake(
                 &mut env,
                 delegator_addr_1.clone(),
@@ -1668,7 +1678,7 @@ mod test {
             )
             .unwrap();
 
-            // should have same amount as before (rewards receiver received rewards).
+            // should have same amount as before (rewards receiver received rewards)
             assert_balances(&env, vec![(delegator_addr_1.clone(), 900)]);
 
             let delegations: AllDelegationsResponse = query_stake(
@@ -1713,7 +1723,7 @@ mod test {
 
         #[test]
         fn can_set_withdraw_address() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
@@ -1795,13 +1805,13 @@ mod test {
 
         #[test]
         fn cannot_steal() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (0, 20, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let validator_addr_2 = env.validator_addr_2();
             let delegator_addr_1 = env.delegator_addr_1();
 
-            // fund delegator account
+            // initialize delegator account
             env.router
                 .bank
                 .init_balance(
@@ -1811,7 +1821,7 @@ mod test {
                 )
                 .unwrap();
 
-            // delegate 100 tokens to validator1
+            // delegate 100 tokens to validator 1
             execute_stake(
                 &mut env,
                 delegator_addr_1.clone(),
@@ -1835,23 +1845,7 @@ mod test {
 
             assert_eq!(e.to_string(), "invalid shares amount");
 
-            // add second validator
-            env.router
-                .staking
-                .add_validator(
-                    &env.api,
-                    &mut env.store,
-                    &env.block,
-                    Validator::new(
-                        validator_addr_2.to_string(),
-                        Decimal::zero(),
-                        Decimal::percent(20),
-                        Decimal::percent(1),
-                    ),
-                )
-                .unwrap();
-
-            // redelegate more tokens than we have
+            // redelegate more tokens than we have from validator 1 to validator 2
             let e = execute_stake(
                 &mut env,
                 delegator_addr_1.clone(),
@@ -1882,7 +1876,7 @@ mod test {
 
         #[test]
         fn denom_validation() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
@@ -1912,9 +1906,9 @@ mod test {
 
         #[test]
         fn cannot_slash_nonexistent() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
-            let non_existing_validator_addr = env.validator_addr_2();
+            let non_existing_validator_addr = env.validator_addr_3();
             let delegator_addr_1 = env.delegator_addr_1();
 
             // fund delegator account
@@ -1944,9 +1938,9 @@ mod test {
 
         #[test]
         fn non_existent_validator() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
-            let non_existing_validator_addr = env.validator_addr_2();
+            let non_existing_validator_addr = env.validator_addr_3();
             let delegator_addr_1 = env.delegator_addr_1();
 
             // init balances
@@ -1986,7 +1980,7 @@ mod test {
 
         #[test]
         fn zero_staking_forbidden() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
@@ -2018,7 +2012,7 @@ mod test {
 
         #[test]
         fn query_staking() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (0, 1, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let validator_addr_2 = env.validator_addr_2();
@@ -2044,18 +2038,6 @@ mod test {
                 )
                 .unwrap();
 
-            // add another validator
-            let valoper2 = Validator::new(
-                validator_addr_2.to_string(),
-                Decimal::percent(0),
-                Decimal::percent(1),
-                Decimal::percent(1),
-            );
-            env.router
-                .staking
-                .add_validator(&env.api, &mut env.store, &env.block, valoper2.clone())
-                .unwrap();
-
             // query validators
             let valoper1: ValidatorResponse = query_stake(
                 &env,
@@ -2064,12 +2046,21 @@ mod test {
                 },
             )
             .unwrap();
+            let valoper2: ValidatorResponse = query_stake(
+                &env,
+                StakingQuery::Validator {
+                    address: validator_addr_2.to_string(),
+                },
+            )
+            .unwrap();
+
             let validators: AllValidatorsResponse =
                 query_stake(&env, StakingQuery::AllValidators {}).unwrap();
             assert_eq!(
                 validators.validators,
-                [valoper1.validator.unwrap(), valoper2]
+                [valoper1.validator.unwrap(), valoper2.validator.unwrap()]
             );
+
             // query non-existent validator
             let response = query_stake::<ValidatorResponse>(
                 &env,
@@ -2178,7 +2169,7 @@ mod test {
 
         #[test]
         fn delegation_queries_unbonding() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
@@ -2314,7 +2305,7 @@ mod test {
 
         #[test]
         fn partial_unbonding_reduces_stake() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
@@ -2429,7 +2420,7 @@ mod test {
 
         #[test]
         fn delegations_slashed() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 10));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
@@ -2512,7 +2503,7 @@ mod test {
 
         #[test]
         fn rewards_initial_wait() {
-            let mut env = TestEnv::wrap(setup_test_env(10, 0));
+            let mut env = TestEnv::wrap(TestEnv::setup(10, (0, 100, 1), (10, 100, 1)));
 
             let validator_addr_1 = env.validator_addr_1();
             let delegator_addr_1 = env.delegator_addr_1();
