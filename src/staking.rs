@@ -1304,19 +1304,19 @@ mod test {
 
     #[test]
     fn rewards_work_for_single_delegator() {
-        let (api, mut store, router, mut block, validator_addr, _) =
-            TestEnv::setup((10, 100, 1), (10, 100, 1));
-        let stake = &router.staking;
-        let distr = &router.distribution;
-        let delegator_addr = api.addr_make("delegator");
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 20, 1), (10, 20, 1)));
 
-        let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
+        let validator_addr = env.validator_addr_1();
+        let delegator_addr = env.delegator_addr_1();
+
+        let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
         // stake 200 tokens
-        stake
+        env.router
+            .staking
             .add_stake(
-                &api,
+                &env.api,
                 &mut staking_storage,
-                &block,
+                &env.block,
                 &delegator_addr,
                 &validator_addr,
                 coin(200, BONDED_DENOM),
@@ -1324,22 +1324,25 @@ mod test {
             .unwrap();
 
         // wait 1/2 year
-        block.time = block.time.plus_seconds(YEAR / 2);
+        env.block.time = env.block.time.plus_seconds(YEAR / 2);
 
         // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator_addr, &validator_addr)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 9, "should have 9 tokens reward");
+        assert_eq!(9, rewards.amount.u128());
 
         // withdraw rewards
-        distr
+        env.router
+            .distribution
             .execute(
-                &api,
-                &mut store,
-                &router,
-                &block,
+                &env.api,
+                &mut env.store,
+                &env.router,
+                &env.block,
                 delegator_addr.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
                     validator: validator_addr.to_string(),
@@ -1348,20 +1351,24 @@ mod test {
             .unwrap();
 
         // should have no rewards left
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator_addr, &validator_addr)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 0);
+        assert_eq!(0, rewards.amount.u128());
 
         // wait another 1/2 year
-        block.time = block.time.plus_seconds(YEAR / 2);
+        env.block.time = env.block.time.plus_seconds(YEAR / 2);
         // should now have 9 tokens again
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator_addr, &validator_addr)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator_addr, &validator_addr)
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 9);
+        assert_eq!(9, rewards.amount.u128());
     }
 
     #[test]
