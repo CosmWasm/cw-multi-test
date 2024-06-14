@@ -1189,46 +1189,49 @@ mod test {
 
     #[test]
     fn add_get_validators() {
-        let api = MockApi::default();
-        let mut store = MockStorage::new();
-        let stake = StakeKeeper::default();
-        let block = mock_env().block;
+        let mut env = TestEnv::wrap(TestEnv::setup(10, (10, 100, 1), (0, 20, 1)));
 
-        let validator_addr = api.addr_make("test-validator");
+        let validator_addr = env.validator_addr_3();
 
-        // add validator
+        // add a new validator (validator no. 3 does not exist yet)
         let validator = Validator::new(
             validator_addr.to_string(),
             Decimal::percent(10),
             Decimal::percent(20),
             Decimal::percent(1),
         );
-        stake
-            .add_validator(&api, &mut store, &block, validator.clone())
+        env.router
+            .staking
+            .add_validator(&env.api, &mut env.store, &env.block, validator.clone())
             .unwrap();
 
-        // get it
-        let staking_storage = prefixed_read(&store, NAMESPACE_STAKING);
-        let val = stake
+        // get the newly created validator
+        let staking_storage = prefixed_read(&env.store, NAMESPACE_STAKING);
+        let val = env
+            .router
+            .staking
             .get_validator(&staking_storage, &validator_addr)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
 
-        // try to add with same address
+        // try to add a validator with same address (validator no. 3)
         let validator_fake = Validator::new(
             validator_addr.to_string(),
             Decimal::percent(1),
             Decimal::percent(10),
             Decimal::percent(100),
         );
-        stake
-            .add_validator(&api, &mut store, &block, validator_fake)
+        env.router
+            .staking
+            .add_validator(&env.api, &mut env.store, &env.block, validator_fake)
             .unwrap_err();
 
-        // should still be original value
-        let staking_storage = prefixed_read(&store, NAMESPACE_STAKING);
-        let val = stake
+        // validator no. 3 should be still like the original value
+        let staking_storage = prefixed_read(&env.store, NAMESPACE_STAKING);
+        let val = env
+            .router
+            .staking
             .get_validator(&staking_storage, &validator_addr)
             .unwrap()
             .unwrap();
