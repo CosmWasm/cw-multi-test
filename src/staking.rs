@@ -1721,7 +1721,11 @@ mod test {
             // fund delegator's account
             env.router
                 .bank
-                .init_balance(&mut env.storage, &delegator_addr_1, coins(100, BONDED_DENOM))
+                .init_balance(
+                    &mut env.storage,
+                    &delegator_addr_1,
+                    coins(100, BONDED_DENOM),
+                )
                 .unwrap();
 
             // stake (delegate) 100 tokens to the validator
