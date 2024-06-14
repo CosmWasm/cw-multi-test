@@ -1035,10 +1035,11 @@ mod test {
         WasmKeeper,
     };
     use cosmwasm_std::{
-        from_json,
+        coins, from_json,
         testing::{mock_env, MockApi, MockStorage},
-        BalanceResponse, BankQuery,
+        BalanceResponse, BankQuery, QuerierWrapper,
     };
+    use serde::de::DeserializeOwned;
 
     /// Type alias for default build of [Router], to make its reference in typical test scenario.
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
@@ -1177,6 +1178,66 @@ mod test {
         #[inline(always)]
         fn user_addr_1(&self) -> Addr {
             self.user_addr_1.clone()
+        }
+    }
+
+    fn execute_stake(env: &mut TestEnv, sender: Addr, msg: StakingMsg) -> AnyResult<AppResponse> {
+        env.router.staking.execute(
+            &env.api,
+            &mut env.store,
+            &env.router,
+            &env.block,
+            sender,
+            msg,
+        )
+    }
+
+    fn query_stake<T: DeserializeOwned>(env: &TestEnv, msg: StakingQuery) -> AnyResult<T> {
+        Ok(from_json(env.router.staking.query(
+            &env.api,
+            &env.store,
+            &env.router.querier(&env.api, &env.store, &env.block),
+            &env.block,
+            msg,
+        )?)?)
+    }
+
+    fn execute_distr(
+        env: &mut TestEnv,
+        sender: Addr,
+        msg: DistributionMsg,
+    ) -> AnyResult<AppResponse> {
+        env.router.distribution.execute(
+            &env.api,
+            &mut env.store,
+            &env.router,
+            &env.block,
+            sender,
+            msg,
+        )
+    }
+
+    fn query_bank<T: DeserializeOwned>(env: &TestEnv, msg: BankQuery) -> AnyResult<T> {
+        Ok(from_json(env.router.bank.query(
+            &env.api,
+            &env.store,
+            &env.router.querier(&env.api, &env.store, &env.block),
+            &env.block,
+            msg,
+        )?)?)
+    }
+
+    fn assert_balances(env: &TestEnv, balances: impl IntoIterator<Item = (Addr, u128)>) {
+        for (addr, amount) in balances {
+            let balance: BalanceResponse = query_bank(
+                env,
+                BankQuery::Balance {
+                    address: addr.to_string(),
+                    denom: BONDED_DENOM.to_string(),
+                },
+            )
+            .unwrap();
+            assert_eq!(balance.amount.amount.u128(), amount);
         }
     }
 
@@ -1374,11 +1435,6 @@ mod test {
     #[test]
     fn rewards_work_for_multiple_delegators() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
-        // let (api, mut store, router, mut block, validator, _) =
-        //     TestEnv::setup((10, 100, 1), (10, 100, 1));
-        // let stake = &router.staking;
-        // let distr = &router.distribution;
-        // let bank = &router.bank;
 
         let validator = env.validator_addr_1();
         let delegator1 = env.delegator_addr_1();
@@ -1511,22 +1567,15 @@ mod test {
                 .unwrap(),
         )
         .unwrap();
-        assert_eq!(
-            balance.amount.amount.u128(),
-            27,
-            "withdraw should change bank balance"
-        );
+        assert_eq!(27, balance.amount.amount.u128());
+
         let rewards = env
             .router
             .staking
             .get_rewards(&env.store, &env.block, &delegator1, &validator)
             .unwrap()
             .unwrap();
-        assert_eq!(
-            rewards.amount.u128(),
-            0,
-            "withdraw should reduce rewards to 0"
-        );
+        assert_eq!(0, rewards.amount.u128());
 
         // wait another year
         env.block.time = env.block.time.plus_seconds(YEAR);
@@ -1538,7 +1587,7 @@ mod test {
             .get_rewards(&env.store, &env.block, &delegator1, &validator)
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 18);
+        assert_eq!(18, rewards.amount.u128());
 
         // delegator2 should now have 36 + 100 * 10% - 10% commission = 45 tokens
         let rewards = env
@@ -1547,1024 +1596,954 @@ mod test {
             .get_rewards(&env.store, &env.block, &delegator2, &validator)
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 45);
+        assert_eq!(45, rewards.amount.u128());
     }
 
-    mod msg {
-        use super::*;
-        use cosmwasm_std::{coins, QuerierWrapper};
-        use serde::de::DeserializeOwned;
+    #[test]
+    fn execute() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 20, 1)));
 
-        fn execute_stake(
-            env: &mut TestEnv,
-            sender: Addr,
-            msg: StakingMsg,
-        ) -> AnyResult<AppResponse> {
-            env.router.staking.execute(
-                &env.api,
+        let validator_addr_1 = env.validator_addr_1();
+        let validator_addr_2 = env.validator_addr_2();
+        let delegator_addr_1 = env.delegator_addr_2();
+        let reward_receiver_addr = env.user_addr_1();
+
+        // initialize delegator account
+        env.router
+            .bank
+            .init_balance(
                 &mut env.store,
-                &env.router,
-                &env.block,
-                sender,
-                msg,
-            )
-        }
-
-        fn query_stake<T: DeserializeOwned>(env: &TestEnv, msg: StakingQuery) -> AnyResult<T> {
-            Ok(from_json(env.router.staking.query(
-                &env.api,
-                &env.store,
-                &env.router.querier(&env.api, &env.store, &env.block),
-                &env.block,
-                msg,
-            )?)?)
-        }
-
-        fn execute_distr(
-            env: &mut TestEnv,
-            sender: Addr,
-            msg: DistributionMsg,
-        ) -> AnyResult<AppResponse> {
-            env.router.distribution.execute(
-                &env.api,
-                &mut env.store,
-                &env.router,
-                &env.block,
-                sender,
-                msg,
-            )
-        }
-
-        fn query_bank<T: DeserializeOwned>(env: &TestEnv, msg: BankQuery) -> AnyResult<T> {
-            Ok(from_json(env.router.bank.query(
-                &env.api,
-                &env.store,
-                &env.router.querier(&env.api, &env.store, &env.block),
-                &env.block,
-                msg,
-            )?)?)
-        }
-
-        fn assert_balances(env: &TestEnv, balances: impl IntoIterator<Item = (Addr, u128)>) {
-            for (addr, amount) in balances {
-                let balance: BalanceResponse = query_bank(
-                    env,
-                    BankQuery::Balance {
-                        address: addr.to_string(),
-                        denom: BONDED_DENOM.to_string(),
-                    },
-                )
-                .unwrap();
-                assert_eq!(balance.amount.amount.u128(), amount);
-            }
-        }
-
-        #[test]
-        fn execute() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 20, 1)));
-
-            let validator_addr_1 = env.validator_addr_1();
-            let validator_addr_2 = env.validator_addr_2();
-            let delegator_addr_1 = env.delegator_addr_2();
-            let reward_receiver_addr = env.user_addr_1();
-
-            // initialize delegator account
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(1000, BONDED_DENOM)],
-                )
-                .unwrap();
-
-            // delegate 100 tokens to validator 1
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
+                &delegator_addr_1,
+                vec![coin(1000, BONDED_DENOM)],
             )
             .unwrap();
 
-            // should now have 100 tokens less
-            assert_balances(&env, vec![(delegator_addr_1.clone(), 900)]);
+        // delegate 100 tokens to validator 1
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
 
-            // wait a year
-            env.block.time = env.block.time.plus_seconds(YEAR);
+        // should now have 100 tokens less
+        assert_balances(&env, vec![(delegator_addr_1.clone(), 900)]);
 
-            // change the withdrawal address
-            execute_distr(
-                &mut env,
-                delegator_addr_1.clone(),
-                DistributionMsg::SetWithdrawAddress {
-                    address: reward_receiver_addr.to_string(),
-                },
-            )
-            .unwrap();
+        // wait a year
+        env.block.time = env.block.time.plus_seconds(YEAR);
 
-            // withdraw rewards
-            execute_distr(
-                &mut env,
-                delegator_addr_1.clone(),
-                DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
+        // change the withdrawal address
+        execute_distr(
+            &mut env,
+            delegator_addr_1.clone(),
+            DistributionMsg::SetWithdrawAddress {
+                address: reward_receiver_addr.to_string(),
+            },
+        )
+        .unwrap();
 
-            // withdrawal address received rewards
-            assert_balances(
-                &env,
-                // one year, 10%apr, 10% commission, 100 tokens staked
-                vec![(reward_receiver_addr, 100 / 10 * 9 / 10)],
-            );
+        // withdraw rewards
+        execute_distr(
+            &mut env,
+            delegator_addr_1.clone(),
+            DistributionMsg::WithdrawDelegatorReward {
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
 
-            // redelegate to validator 2
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Redelegate {
-                    src_validator: validator_addr_1.to_string(),
-                    dst_validator: validator_addr_2.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-
-            // should have same amount as before (rewards receiver received rewards)
-            assert_balances(&env, vec![(delegator_addr_1.clone(), 900)]);
-
-            let delegations: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                delegations.delegations,
-                [Delegation::new(
-                    delegator_addr_1.clone(),
-                    validator_addr_2.to_string(),
-                    coin(100, BONDED_DENOM),
-                )]
-            );
-
-            // undelegate all tokens
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_2.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-
-            // wait for unbonding period (60 seconds in default config)
-            env.block.time = env.block.time.plus_seconds(60);
-
-            // need to manually cause queue to get processed
-            env.router
-                .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
-                .unwrap();
-
-            // check bank balance
-            assert_balances(&env, vec![(delegator_addr_1.clone(), 1000)]);
-        }
-
-        #[test]
-        fn can_set_withdraw_address() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
-
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
-            let reward_receiver_addr = env.user_addr_1();
-
-            env.router
-                .bank
-                .init_balance(&mut env.store, &delegator_addr_1, coins(100, BONDED_DENOM))
-                .unwrap();
-
-            // Stake 100 tokens to the validator.
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-
-            // Change rewards receiver.
-            execute_distr(
-                &mut env,
-                delegator_addr_1.clone(),
-                DistributionMsg::SetWithdrawAddress {
-                    address: reward_receiver_addr.to_string(),
-                },
-            )
-            .unwrap();
-
-            // A year passes.
-            env.block.time = env.block.time.plus_seconds(YEAR);
-
-            // Withdraw rewards to reward receiver.
-            execute_distr(
-                &mut env,
-                delegator_addr_1.clone(),
-                DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-
-            // Change reward receiver back to delegator.
-            execute_distr(
-                &mut env,
-                delegator_addr_1.clone(),
-                DistributionMsg::SetWithdrawAddress {
-                    address: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-
-            // Another year passes.
-            env.block.time = env.block.time.plus_seconds(YEAR);
-
-            // Withdraw rewards to delegator.
-            execute_distr(
-                &mut env,
-                delegator_addr_1.clone(),
-                DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-
+        // withdrawal address received rewards
+        assert_balances(
+            &env,
             // one year, 10%apr, 10% commission, 100 tokens staked
-            let rewards_yr = 100 / 10 * 9 / 10;
+            vec![(reward_receiver_addr, 100 / 10 * 9 / 10)],
+        );
 
-            assert_balances(
-                &env,
-                vec![
-                    (reward_receiver_addr, rewards_yr),
-                    (delegator_addr_1, rewards_yr),
-                ],
-            );
-        }
+        // redelegate to validator 2
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Redelegate {
+                src_validator: validator_addr_1.to_string(),
+                dst_validator: validator_addr_2.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
 
-        #[test]
-        fn cannot_steal() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 20, 1)));
+        // should have same amount as before (rewards receiver received rewards)
+        assert_balances(&env, vec![(delegator_addr_1.clone(), 900)]);
 
-            let validator_addr_1 = env.validator_addr_1();
-            let validator_addr_2 = env.validator_addr_2();
-            let delegator_addr_1 = env.delegator_addr_1();
-
-            // initialize delegator account
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(100, BONDED_DENOM)],
-                )
-                .unwrap();
-
-            // delegate 100 tokens to validator 1
-            execute_stake(
-                &mut env,
+        let delegations: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            delegations.delegations,
+            [Delegation::new(
                 delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
+                validator_addr_2.to_string(),
+                coin(100, BONDED_DENOM),
+            )]
+        );
+
+        // undelegate all tokens
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_2.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+
+        // wait for unbonding period (60 seconds in default config)
+        env.block.time = env.block.time.plus_seconds(60);
+
+        // need to manually cause queue to get processed
+        env.router
+            .staking
+            .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+            .unwrap();
+
+        // check bank balance
+        assert_balances(&env, vec![(delegator_addr_1.clone(), 1000)]);
+    }
+
+    #[test]
+    fn can_set_withdraw_address() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
+        let reward_receiver_addr = env.user_addr_1();
+
+        env.router
+            .bank
+            .init_balance(&mut env.store, &delegator_addr_1, coins(100, BONDED_DENOM))
+            .unwrap();
+
+        // Stake 100 tokens to the validator.
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+
+        // Change rewards receiver.
+        execute_distr(
+            &mut env,
+            delegator_addr_1.clone(),
+            DistributionMsg::SetWithdrawAddress {
+                address: reward_receiver_addr.to_string(),
+            },
+        )
+        .unwrap();
+
+        // A year passes.
+        env.block.time = env.block.time.plus_seconds(YEAR);
+
+        // Withdraw rewards to reward receiver.
+        execute_distr(
+            &mut env,
+            delegator_addr_1.clone(),
+            DistributionMsg::WithdrawDelegatorReward {
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+
+        // Change reward receiver back to delegator.
+        execute_distr(
+            &mut env,
+            delegator_addr_1.clone(),
+            DistributionMsg::SetWithdrawAddress {
+                address: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+
+        // Another year passes.
+        env.block.time = env.block.time.plus_seconds(YEAR);
+
+        // Withdraw rewards to delegator.
+        execute_distr(
+            &mut env,
+            delegator_addr_1.clone(),
+            DistributionMsg::WithdrawDelegatorReward {
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+
+        // one year, 10%apr, 10% commission, 100 tokens staked
+        let rewards_yr = 100 / 10 * 9 / 10;
+
+        assert_balances(
+            &env,
+            vec![
+                (reward_receiver_addr, rewards_yr),
+                (delegator_addr_1, rewards_yr),
+            ],
+        );
+    }
+
+    #[test]
+    fn cannot_steal() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 20, 1)));
+
+        let validator_addr_1 = env.validator_addr_1();
+        let validator_addr_2 = env.validator_addr_2();
+        let delegator_addr_1 = env.delegator_addr_1();
+
+        // initialize delegator account
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(100, BONDED_DENOM)],
             )
             .unwrap();
 
-            // undelegate more tokens than we have
-            let e = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(200, BONDED_DENOM),
-                },
-            )
-            .unwrap_err();
+        // delegate 100 tokens to validator 1
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
 
-            assert_eq!(e.to_string(), "invalid shares amount");
+        // undelegate more tokens than we have
+        let e = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(200, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
 
-            // redelegate more tokens than we have from validator 1 to validator 2
-            let e = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Redelegate {
-                    src_validator: validator_addr_1.to_string(),
-                    dst_validator: validator_addr_2.to_string(),
-                    amount: coin(200, BONDED_DENOM),
-                },
-            )
-            .unwrap_err();
-            assert_eq!(e.to_string(), "invalid shares amount");
+        assert_eq!(e.to_string(), "invalid shares amount");
 
-            // undelegate from non-existing delegation
-            let e = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_2.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap_err();
-            assert_eq!(
-                e.to_string(),
-                "no delegation for (address, validator) tuple"
-            );
-        }
+        // redelegate more tokens than we have from validator 1 to validator 2
+        let e = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Redelegate {
+                src_validator: validator_addr_1.to_string(),
+                dst_validator: validator_addr_2.to_string(),
+                amount: coin(200, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(e.to_string(), "invalid shares amount");
 
-        #[test]
-        fn denom_validation() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+        // undelegate from non-existing delegation
+        let e = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_2.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "no delegation for (address, validator) tuple"
+        );
+    }
 
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
+    #[test]
+    fn denom_validation() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-            // fund delegator account
-            env.router
-                .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
-                .unwrap();
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
 
-            // try to delegate 100 to validator
-            let e = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, "FAKE"),
-                },
-            )
-            .unwrap_err();
+        // fund delegator account
+        env.router
+            .bank
+            .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
+            .unwrap();
 
-            assert_eq!(
-                e.to_string(),
-                "cannot delegate coins of denominator FAKE, only of TOKEN",
-            );
-        }
+        // try to delegate 100 to validator
+        let e = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, "FAKE"),
+            },
+        )
+        .unwrap_err();
 
-        #[test]
-        fn cannot_slash_nonexistent() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+        assert_eq!(
+            e.to_string(),
+            "cannot delegate coins of denominator FAKE, only of TOKEN",
+        );
+    }
 
-            let non_existing_validator_addr = env.validator_addr_3();
-            let delegator_addr_1 = env.delegator_addr_1();
+    #[test]
+    fn cannot_slash_nonexistent() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-            // fund delegator account
-            env.router
-                .bank
-                .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
-                .unwrap();
+        let non_existing_validator_addr = env.validator_addr_3();
+        let delegator_addr_1 = env.delegator_addr_1();
 
-            // try to delegate 100 to non existing validator
-            let e = env
-                .router
-                .staking
-                .sudo(
-                    &env.api,
-                    &mut env.store,
-                    &env.router,
-                    &env.block,
-                    StakingSudo::Slash {
-                        validator: non_existing_validator_addr.to_string(),
-                        percentage: Decimal::percent(50),
-                    },
-                )
-                .unwrap_err();
+        // fund delegator account
+        env.router
+            .bank
+            .init_balance(&mut env.store, &delegator_addr_1, vec![coin(100, "FAKE")])
+            .unwrap();
 
-            assert_eq!(e.to_string(), "validator does not exist");
-        }
-
-        #[test]
-        fn non_existent_validator() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
-
-            let non_existing_validator_addr = env.validator_addr_3();
-            let delegator_addr_1 = env.delegator_addr_1();
-
-            // init balances
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(100, BONDED_DENOM)],
-                )
-                .unwrap();
-
-            // try to delegate
-            let err = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
+        // try to delegate 100 to non existing validator
+        let e = env
+            .router
+            .staking
+            .sudo(
+                &env.api,
+                &mut env.store,
+                &env.router,
+                &env.block,
+                StakingSudo::Slash {
                     validator: non_existing_validator_addr.to_string(),
-                    amount: coin(100, BONDED_DENOM),
+                    percentage: Decimal::percent(50),
                 },
             )
             .unwrap_err();
-            assert_eq!(err.to_string(), "validator does not exist");
 
-            // try to undelegate
-            let err = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: non_existing_validator_addr.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap_err();
-            assert_eq!(err.to_string(), "validator does not exist");
-        }
+        assert_eq!(e.to_string(), "validator does not exist");
+    }
 
-        #[test]
-        fn zero_staking_forbidden() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+    #[test]
+    fn non_existent_validator() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
+        let non_existing_validator_addr = env.validator_addr_3();
+        let delegator_addr_1 = env.delegator_addr_1();
 
-            // delegate 0
-            let err = execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(0, BONDED_DENOM),
-                },
-            )
-            .unwrap_err();
-            assert_eq!(err.to_string(), "invalid delegation amount");
-
-            // undelegate 0
-            let err = execute_stake(
-                &mut env,
-                delegator_addr_1,
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(0, BONDED_DENOM),
-                },
-            )
-            .unwrap_err();
-            assert_eq!(err.to_string(), "invalid shares amount");
-        }
-
-        #[test]
-        fn query_staking() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 1, 1)));
-
-            let validator_addr_1 = env.validator_addr_1();
-            let validator_addr_2 = env.validator_addr_2();
-            let delegator_addr_1 = env.delegator_addr_1();
-            let delegator_addr_2 = env.delegator_addr_2();
-            let not_validator_addr = env.user_addr_1();
-
-            // init balances
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(260, BONDED_DENOM)],
-                )
-                .unwrap();
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_2,
-                    vec![coin(150, BONDED_DENOM)],
-                )
-                .unwrap();
-
-            // query validators
-            let valoper1: ValidatorResponse = query_stake(
-                &env,
-                StakingQuery::Validator {
-                    address: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            let valoper2: ValidatorResponse = query_stake(
-                &env,
-                StakingQuery::Validator {
-                    address: validator_addr_2.to_string(),
-                },
+        // init balances
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(100, BONDED_DENOM)],
             )
             .unwrap();
 
-            let validators: AllValidatorsResponse =
-                query_stake(&env, StakingQuery::AllValidators {}).unwrap();
-            assert_eq!(
-                validators.validators,
-                [valoper1.validator.unwrap(), valoper2.validator.unwrap()]
-            );
+        // try to delegate
+        let err = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: non_existing_validator_addr.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(err.to_string(), "validator does not exist");
 
-            // query non-existent validator
-            let response = query_stake::<ValidatorResponse>(
-                &env,
-                StakingQuery::Validator {
-                    address: not_validator_addr.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(response.validator, None);
+        // try to undelegate
+        let err = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: non_existing_validator_addr.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(err.to_string(), "validator does not exist");
+    }
 
-            // query bonded denom
-            let response: BondedDenomResponse =
-                query_stake(&env, StakingQuery::BondedDenom {}).unwrap();
-            assert_eq!(response.denom, BONDED_DENOM);
+    #[test]
+    fn zero_staking_forbidden() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-            // delegate some tokens with delegator1 and delegator2
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_2.to_string(),
-                    amount: coin(160, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            execute_stake(
-                &mut env,
-                delegator_addr_2.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(150, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            // unstake some again
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(50, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            execute_stake(
-                &mut env,
-                delegator_addr_2.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(50, BONDED_DENOM),
-                },
-            )
-            .unwrap();
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
 
-            // query all delegations
-            let response1: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response1.delegations,
-                vec![
-                    Delegation::new(
-                        delegator_addr_1.clone(),
-                        validator_addr_1.to_string(),
-                        coin(50, BONDED_DENOM),
-                    ),
-                    Delegation::new(
-                        delegator_addr_1.clone(),
-                        validator_addr_2.to_string(),
-                        coin(160, BONDED_DENOM),
-                    ),
-                ]
-            );
-            let response2: DelegationResponse = query_stake(
-                &env,
-                StakingQuery::Delegation {
-                    delegator: delegator_addr_2.to_string(),
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response2.delegation.unwrap(),
-                FullDelegation::new(
-                    delegator_addr_2.clone(),
-                    validator_addr_1.to_string(),
-                    coin(100, BONDED_DENOM),
-                    coin(100, BONDED_DENOM),
-                    vec![],
-                ),
-            );
-        }
+        // delegate 0
+        let err = execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(0, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(err.to_string(), "invalid delegation amount");
 
-        #[test]
-        fn delegation_queries_unbonding() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+        // undelegate 0
+        let err = execute_stake(
+            &mut env,
+            delegator_addr_1,
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(0, BONDED_DENOM),
+            },
+        )
+        .unwrap_err();
+        assert_eq!(err.to_string(), "invalid shares amount");
+    }
 
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
-            let delegator_addr_2 = env.delegator_addr_2();
+    #[test]
+    fn query_staking() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 1, 1)));
 
-            // init balances
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(100, BONDED_DENOM)],
-                )
-                .unwrap();
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_2,
-                    vec![coin(150, BONDED_DENOM)],
-                )
-                .unwrap();
+        let validator_addr_1 = env.validator_addr_1();
+        let validator_addr_2 = env.validator_addr_2();
+        let delegator_addr_1 = env.delegator_addr_1();
+        let delegator_addr_2 = env.delegator_addr_2();
+        let not_validator_addr = env.user_addr_1();
 
-            // delegate some tokens with delegator1 and delegator2
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
+        // init balances
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(260, BONDED_DENOM)],
             )
             .unwrap();
-            execute_stake(
-                &mut env,
-                delegator_addr_2.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(150, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            // unstake some of delegator1's stake
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(50, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            // unstake all of delegator2's stake
-            execute_stake(
-                &mut env,
-                delegator_addr_2.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(150, BONDED_DENOM),
-                },
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_2,
+                vec![coin(150, BONDED_DENOM)],
             )
             .unwrap();
 
-            // query all delegations
-            let response1: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response1.delegations,
-                vec![Delegation::new(
-                    delegator_addr_1.clone(),
-                    validator_addr_1.to_string(),
-                    coin(50, BONDED_DENOM),
-                )]
-            );
-            let response2: DelegationResponse = query_stake(
-                &env,
-                StakingQuery::Delegation {
-                    delegator: delegator_addr_2.to_string(),
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(response2.delegation, None);
+        // query validators
+        let valoper1: ValidatorResponse = query_stake(
+            &env,
+            StakingQuery::Validator {
+                address: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        let valoper2: ValidatorResponse = query_stake(
+            &env,
+            StakingQuery::Validator {
+                address: validator_addr_2.to_string(),
+            },
+        )
+        .unwrap();
 
-            // unstake rest of delegator1's stake in two steps
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(25, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            env.block.time = env.block.time.plus_seconds(10);
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(25, BONDED_DENOM),
-                },
-            )
-            .unwrap();
+        let validators: AllValidatorsResponse =
+            query_stake(&env, StakingQuery::AllValidators {}).unwrap();
+        assert_eq!(
+            validators.validators,
+            [valoper1.validator.unwrap(), valoper2.validator.unwrap()]
+        );
 
-            // query all delegations again
-            let response1: DelegationResponse = query_stake(
-                &env,
-                StakingQuery::Delegation {
-                    delegator: delegator_addr_1.to_string(),
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            let response2: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response1.delegation, None,
-                "delegator1 should have no delegations left"
-            );
-            assert_eq!(response2.delegations, vec![]);
-        }
+        // query non-existent validator
+        let response = query_stake::<ValidatorResponse>(
+            &env,
+            StakingQuery::Validator {
+                address: not_validator_addr.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(response.validator, None);
 
-        #[test]
-        fn partial_unbonding_reduces_stake() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+        // query bonded denom
+        let response: BondedDenomResponse =
+            query_stake(&env, StakingQuery::BondedDenom {}).unwrap();
+        assert_eq!(response.denom, BONDED_DENOM);
 
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
+        // delegate some tokens with delegator1 and delegator2
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_2.to_string(),
+                amount: coin(160, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        execute_stake(
+            &mut env,
+            delegator_addr_2.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(150, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        // unstake some again
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(50, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        execute_stake(
+            &mut env,
+            delegator_addr_2.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(50, BONDED_DENOM),
+            },
+        )
+        .unwrap();
 
-            // init balance
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(100, BONDED_DENOM)],
-                )
-                .unwrap();
-
-            // delegate all tokens
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            // unstake in multiple steps
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(50, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            env.block.time = env.block.time.plus_seconds(10);
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(30, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            env.block.time = env.block.time.plus_seconds(10);
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(20, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-
-            // wait for first unbonding to complete (but not the others) and process queue
-            env.block.time = env.block.time.plus_seconds(40);
-            env.router
-                .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
-                .unwrap();
-
-            // query delegations
-            // we now have 0 stake, 50 unbonding and 50 completed unbonding
-            let response1: DelegationResponse = query_stake(
-                &env,
-                StakingQuery::Delegation {
-                    delegator: delegator_addr_1.to_string(),
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            let response2: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(response1.delegation, None);
-            assert_eq!(response2.delegations, vec![]);
-
-            // wait for the rest to complete
-            env.block.time = env.block.time.plus_seconds(20);
-            env.router
-                .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
-                .unwrap();
-
-            // query delegations again
-            let response1: DelegationResponse = query_stake(
-                &env,
-                StakingQuery::Delegation {
-                    delegator: delegator_addr_1.to_string(),
-                    validator: validator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            let response2: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response1.delegation, None,
-                "delegator should have nothing left"
-            );
-            assert!(response2.delegations.is_empty());
-        }
-
-        #[test]
-        fn delegations_slashed() {
-            let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
-
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
-
-            // init balance
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(333, BONDED_DENOM)],
-                )
-                .unwrap();
-
-            // delegate some tokens
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Delegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(333, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-            // unstake some
-            execute_stake(
-                &mut env,
-                delegator_addr_1.clone(),
-                StakingMsg::Undelegate {
-                    validator: validator_addr_1.to_string(),
-                    amount: coin(111, BONDED_DENOM),
-                },
-            )
-            .unwrap();
-
-            // slash validator
-            env.router
-                .staking
-                .sudo(
-                    &env.api,
-                    &mut env.store,
-                    &env.router,
-                    &env.block,
-                    StakingSudo::Slash {
-                        validator: validator_addr_1.to_string(),
-                        percentage: Decimal::percent(50),
-                    },
-                )
-                .unwrap();
-
-            // query all delegations
-            let response1: AllDelegationsResponse = query_stake(
-                &env,
-                StakingQuery::AllDelegations {
-                    delegator: delegator_addr_1.to_string(),
-                },
-            )
-            .unwrap();
-            assert_eq!(
-                response1.delegations[0],
+        // query all delegations
+        let response1: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            response1.delegations,
+            vec![
                 Delegation::new(
                     delegator_addr_1.clone(),
                     validator_addr_1.to_string(),
-                    coin(111, BONDED_DENOM),
-                )
-            );
+                    coin(50, BONDED_DENOM),
+                ),
+                Delegation::new(
+                    delegator_addr_1.clone(),
+                    validator_addr_2.to_string(),
+                    coin(160, BONDED_DENOM),
+                ),
+            ]
+        );
+        let response2: DelegationResponse = query_stake(
+            &env,
+            StakingQuery::Delegation {
+                delegator: delegator_addr_2.to_string(),
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            response2.delegation.unwrap(),
+            FullDelegation::new(
+                delegator_addr_2.clone(),
+                validator_addr_1.to_string(),
+                coin(100, BONDED_DENOM),
+                coin(100, BONDED_DENOM),
+                vec![],
+            ),
+        );
+    }
 
-            // wait until unbonding is complete and check if amount was slashed
-            env.block.time = env.block.time.plus_seconds(60);
-            env.router
-                .staking
-                .process_queue(&env.api, &mut env.store, &env.router, &env.block)
-                .unwrap();
-            let balance =
-                QuerierWrapper::<Empty>::new(&env.router.querier(&env.api, &env.store, &env.block))
-                    .query_balance(delegator_addr_1, BONDED_DENOM)
-                    .unwrap();
-            assert_eq!(balance.amount.u128(), 55);
-        }
+    #[test]
+    fn delegation_queries_unbonding() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-        #[test]
-        fn rewards_initial_wait() {
-            let mut env = TestEnv::wrap(TestEnv::setup((0, 100, 1), (10, 100, 1)));
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
+        let delegator_addr_2 = env.delegator_addr_2();
 
-            let validator_addr_1 = env.validator_addr_1();
-            let delegator_addr_1 = env.delegator_addr_1();
+        // init balances
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(100, BONDED_DENOM)],
+            )
+            .unwrap();
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_2,
+                vec![coin(150, BONDED_DENOM)],
+            )
+            .unwrap();
 
-            // initialize balances for delegator
-            env.router
-                .bank
-                .init_balance(
-                    &mut env.store,
-                    &delegator_addr_1,
-                    vec![coin(100, BONDED_DENOM)],
-                )
-                .unwrap();
+        // delegate some tokens with delegator1 and delegator2
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        execute_stake(
+            &mut env,
+            delegator_addr_2.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(150, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        // unstake some of delegator1's stake
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(50, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        // unstake all of delegator2's stake
+        execute_stake(
+            &mut env,
+            delegator_addr_2.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(150, BONDED_DENOM),
+            },
+        )
+        .unwrap();
 
-            // wait one year before staking
-            env.block.time = env.block.time.plus_seconds(YEAR);
-
-            // stake (delegate) some tokens to validator
-            execute_stake(
-                &mut env,
+        // query all delegations
+        let response1: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            response1.delegations,
+            vec![Delegation::new(
                 delegator_addr_1.clone(),
-                StakingMsg::Delegate {
+                validator_addr_1.to_string(),
+                coin(50, BONDED_DENOM),
+            )]
+        );
+        let response2: DelegationResponse = query_stake(
+            &env,
+            StakingQuery::Delegation {
+                delegator: delegator_addr_2.to_string(),
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(response2.delegation, None);
+
+        // unstake rest of delegator1's stake in two steps
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(25, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        env.block.time = env.block.time.plus_seconds(10);
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(25, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+
+        // query all delegations again
+        let response1: DelegationResponse = query_stake(
+            &env,
+            StakingQuery::Delegation {
+                delegator: delegator_addr_1.to_string(),
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        let response2: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            response1.delegation, None,
+            "delegator1 should have no delegations left"
+        );
+        assert_eq!(response2.delegations, vec![]);
+    }
+
+    #[test]
+    fn partial_unbonding_reduces_stake() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
+
+        // init balance
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(100, BONDED_DENOM)],
+            )
+            .unwrap();
+
+        // delegate all tokens
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        // unstake in multiple steps
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(50, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        env.block.time = env.block.time.plus_seconds(10);
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(30, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        env.block.time = env.block.time.plus_seconds(10);
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(20, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+
+        // wait for first unbonding to complete (but not the others) and process queue
+        env.block.time = env.block.time.plus_seconds(40);
+        env.router
+            .staking
+            .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+            .unwrap();
+
+        // query delegations
+        // we now have 0 stake, 50 unbonding and 50 completed unbonding
+        let response1: DelegationResponse = query_stake(
+            &env,
+            StakingQuery::Delegation {
+                delegator: delegator_addr_1.to_string(),
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        let response2: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(response1.delegation, None);
+        assert_eq!(response2.delegations, vec![]);
+
+        // wait for the rest to complete
+        env.block.time = env.block.time.plus_seconds(20);
+        env.router
+            .staking
+            .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+            .unwrap();
+
+        // query delegations again
+        let response1: DelegationResponse = query_stake(
+            &env,
+            StakingQuery::Delegation {
+                delegator: delegator_addr_1.to_string(),
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        let response2: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            response1.delegation, None,
+            "delegator should have nothing left"
+        );
+        assert!(response2.delegations.is_empty());
+    }
+
+    #[test]
+    fn delegations_slashed() {
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
+
+        // init balance
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(333, BONDED_DENOM)],
+            )
+            .unwrap();
+
+        // delegate some tokens
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(333, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+        // unstake some
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Undelegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(111, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+
+        // slash validator
+        env.router
+            .staking
+            .sudo(
+                &env.api,
+                &mut env.store,
+                &env.router,
+                &env.block,
+                StakingSudo::Slash {
                     validator: validator_addr_1.to_string(),
-                    amount: coin(100, BONDED_DENOM),
+                    percentage: Decimal::percent(50),
                 },
             )
             .unwrap();
 
-            // wait another year
-            env.block.time = env.block.time.plus_seconds(YEAR);
+        // query all delegations
+        let response1: AllDelegationsResponse = query_stake(
+            &env,
+            StakingQuery::AllDelegations {
+                delegator: delegator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            response1.delegations[0],
+            Delegation::new(
+                delegator_addr_1.clone(),
+                validator_addr_1.to_string(),
+                coin(111, BONDED_DENOM),
+            )
+        );
 
-            // query rewards
-            let response: DelegationResponse = query_stake(
-                &env,
-                StakingQuery::Delegation {
-                    delegator: delegator_addr_1.to_string(),
-                    validator: validator_addr_1.to_string(),
-                },
+        // wait until unbonding is complete and check if amount was slashed
+        env.block.time = env.block.time.plus_seconds(60);
+        env.router
+            .staking
+            .process_queue(&env.api, &mut env.store, &env.router, &env.block)
+            .unwrap();
+        let balance =
+            QuerierWrapper::<Empty>::new(&env.router.querier(&env.api, &env.store, &env.block))
+                .query_balance(delegator_addr_1, BONDED_DENOM)
+                .unwrap();
+        assert_eq!(balance.amount.u128(), 55);
+    }
+
+    #[test]
+    fn rewards_initial_wait() {
+        let mut env = TestEnv::wrap(TestEnv::setup((0, 100, 1), (10, 100, 1)));
+
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
+
+        // initialize balances for delegator
+        env.router
+            .bank
+            .init_balance(
+                &mut env.store,
+                &delegator_addr_1,
+                vec![coin(100, BONDED_DENOM)],
             )
             .unwrap();
 
-            assert_eq!(
-                response.delegation.unwrap().accumulated_rewards,
-                vec![coin(10, BONDED_DENOM)] // 10% of 100
-            );
-        }
+        // wait one year before staking
+        env.block.time = env.block.time.plus_seconds(YEAR);
+
+        // stake (delegate) some tokens to validator
+        execute_stake(
+            &mut env,
+            delegator_addr_1.clone(),
+            StakingMsg::Delegate {
+                validator: validator_addr_1.to_string(),
+                amount: coin(100, BONDED_DENOM),
+            },
+        )
+        .unwrap();
+
+        // wait another year
+        env.block.time = env.block.time.plus_seconds(YEAR);
+
+        // query rewards
+        let response: DelegationResponse = query_stake(
+            &env,
+            StakingQuery::Delegation {
+                delegator: delegator_addr_1.to_string(),
+                validator: validator_addr_1.to_string(),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            response.delegation.unwrap().accumulated_rewards,
+            vec![coin(10, BONDED_DENOM)] // 10% of 100
+        );
     }
 }
