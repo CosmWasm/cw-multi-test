@@ -1373,32 +1373,37 @@ mod test {
 
     #[test]
     fn rewards_work_for_multiple_delegators() {
-        let (api, mut store, router, mut block, validator, _) =
-            TestEnv::setup((10, 100, 1), (10, 100, 1));
-        let stake = &router.staking;
-        let distr = &router.distribution;
-        let bank = &router.bank;
-        let delegator1 = api.addr_make("delegator1");
-        let delegator2 = api.addr_make("delegator2");
+        let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
+        // let (api, mut store, router, mut block, validator, _) =
+        //     TestEnv::setup((10, 100, 1), (10, 100, 1));
+        // let stake = &router.staking;
+        // let distr = &router.distribution;
+        // let bank = &router.bank;
 
-        let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
+        let validator = env.validator_addr_1();
+        let delegator1 = env.delegator_addr_1();
+        let delegator2 = env.delegator_addr_2();
+
+        let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
 
         // add 100 stake to delegator1 and 200 to delegator2
-        stake
+        env.router
+            .staking
             .add_stake(
-                &api,
+                &env.api,
                 &mut staking_storage,
-                &block,
+                &env.block,
                 &delegator1,
                 &validator,
                 coin(100, BONDED_DENOM),
             )
             .unwrap();
-        stake
+        env.router
+            .staking
             .add_stake(
-                &api,
+                &env.api,
                 &mut staking_storage,
-                &block,
+                &env.block,
                 &delegator2,
                 &validator,
                 coin(200, BONDED_DENOM),
@@ -1406,29 +1411,34 @@ mod test {
             .unwrap();
 
         // wait 1 year
-        block.time = block.time.plus_seconds(YEAR);
+        env.block.time = env.block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 100 * 10% - 10% commission = 9 tokens
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator1, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9);
 
         // delegator2 should now have 200 * 10% - 10% commission = 18 tokens
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator2, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator2, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
 
         // delegator1 stakes 100 more
-        let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        stake
+        let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
+        env.router
+            .staking
             .add_stake(
-                &api,
+                &env.api,
                 &mut staking_storage,
-                &block,
+                &env.block,
                 &delegator1,
                 &validator,
                 coin(100, BONDED_DENOM),
@@ -1436,29 +1446,34 @@ mod test {
             .unwrap();
 
         // wait another year
-        block.time = block.time.plus_seconds(YEAR);
+        env.block.time = env.block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 9 + 200 * 10% - 10% commission = 27 tokens
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator1, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 27);
 
         // delegator2 should now have 18 + 200 * 10% - 10% commission = 36 tokens
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator2, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator2, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 36);
 
         // delegator2 unstakes 100 (has 100 left after that)
-        let mut staking_storage = prefixed(&mut store, NAMESPACE_STAKING);
-        stake
+        let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
+        env.router
+            .staking
             .remove_stake(
-                &api,
+                &env.api,
                 &mut staking_storage,
-                &block,
+                &env.block,
                 &delegator2,
                 &validator,
                 coin(100, BONDED_DENOM),
@@ -1466,12 +1481,13 @@ mod test {
             .unwrap();
 
         // and delegator1 withdraws rewards
-        distr
+        env.router
+            .distribution
             .execute(
-                &api,
-                &mut store,
-                &router,
-                &block,
+                &env.api,
+                &mut env.store,
+                &env.router,
+                &env.block,
                 delegator1.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
                     validator: validator.to_string(),
@@ -1480,17 +1496,19 @@ mod test {
             .unwrap();
 
         let balance: BalanceResponse = from_json(
-            bank.query(
-                &api,
-                &store,
-                &router.querier(&api, &store, &block),
-                &block,
-                BankQuery::Balance {
-                    address: delegator1.to_string(),
-                    denom: BONDED_DENOM.to_string(),
-                },
-            )
-            .unwrap(),
+            env.router
+                .bank
+                .query(
+                    &env.api,
+                    &env.store,
+                    &env.router.querier(&env.api, &env.store, &env.block),
+                    &env.block,
+                    BankQuery::Balance {
+                        address: delegator1.to_string(),
+                        denom: BONDED_DENOM.to_string(),
+                    },
+                )
+                .unwrap(),
         )
         .unwrap();
         assert_eq!(
@@ -1498,8 +1516,10 @@ mod test {
             27,
             "withdraw should change bank balance"
         );
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator1, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(
@@ -1509,18 +1529,22 @@ mod test {
         );
 
         // wait another year
-        block.time = block.time.plus_seconds(YEAR);
+        env.block.time = env.block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 0 + 200 * 10% - 10% commission = 18 tokens
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator1, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator1, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
 
         // delegator2 should now have 36 + 100 * 10% - 10% commission = 45 tokens
-        let rewards = stake
-            .get_rewards(&store, &block, &delegator2, &validator)
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(&env.store, &env.block, &delegator2, &validator)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 45);
