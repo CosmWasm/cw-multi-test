@@ -1245,11 +1245,11 @@ mod test {
     fn add_get_validators() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (0, 20, 1)));
 
-        let validator_addr = env.validator_addr_3();
+        let validator_addr_3 = env.validator_addr_3();
 
         // add a new validator (validator no. 3 does not exist yet)
         let validator = Validator::new(
-            validator_addr.to_string(),
+            validator_addr_3.to_string(),
             Decimal::percent(10),
             Decimal::percent(20),
             Decimal::percent(1),
@@ -1264,14 +1264,14 @@ mod test {
         let val = env
             .router
             .staking
-            .get_validator(&staking_storage, &validator_addr)
+            .get_validator(&staking_storage, &validator_addr_3)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
 
         // try to add a validator with same address (validator no. 3)
         let validator_fake = Validator::new(
-            validator_addr.to_string(),
+            validator_addr_3.to_string(),
             Decimal::percent(1),
             Decimal::percent(10),
             Decimal::percent(100),
@@ -1286,7 +1286,7 @@ mod test {
         let val = env
             .router
             .staking
-            .get_validator(&staking_storage, &validator_addr)
+            .get_validator(&staking_storage, &validator_addr_3)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
@@ -1296,8 +1296,8 @@ mod test {
     fn validator_slashing() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 20, 1), (10, 20, 1)));
 
-        let validator_addr = env.validator_addr_1();
-        let delegator_addr = env.delegator_addr_1();
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
 
         // stake (delegate) 100 tokens from delegator to validator
         let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
@@ -1307,8 +1307,8 @@ mod test {
                 &env.api,
                 &mut staking_storage,
                 &env.block,
-                &delegator_addr,
-                &validator_addr,
+                &delegator_addr_1,
+                &validator_addr_1,
                 coin(100, BONDED_DENOM),
             )
             .unwrap();
@@ -1322,7 +1322,7 @@ mod test {
                 &env.router,
                 &env.block,
                 StakingSudo::Slash {
-                    validator: validator_addr.to_string(),
+                    validator: validator_addr_1.to_string(),
                     percentage: Decimal::percent(50),
                 },
             )
@@ -1333,7 +1333,7 @@ mod test {
         let stake_left = env
             .router
             .staking
-            .get_stake(&staking_storage, &delegator_addr, &validator_addr)
+            .get_stake(&staking_storage, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(50, stake_left.amount.u128());
@@ -1347,7 +1347,7 @@ mod test {
                 &env.router,
                 &env.block,
                 StakingSudo::Slash {
-                    validator: validator_addr.to_string(),
+                    validator: validator_addr_1.to_string(),
                     percentage: Decimal::percent(100),
                 },
             )
@@ -1358,7 +1358,7 @@ mod test {
         let stake_left = env
             .router
             .staking
-            .get_stake(&staking_storage, &delegator_addr, &validator_addr)
+            .get_stake(&staking_storage, &delegator_addr_1, &validator_addr_1)
             .unwrap();
         assert_eq!(None, stake_left);
     }
@@ -1367,8 +1367,8 @@ mod test {
     fn rewards_work_for_single_delegator() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 20, 1), (10, 20, 1)));
 
-        let validator_addr = env.validator_addr_1();
-        let delegator_addr = env.delegator_addr_1();
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
 
         let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
         // stake 200 tokens
@@ -1378,8 +1378,8 @@ mod test {
                 &env.api,
                 &mut staking_storage,
                 &env.block,
-                &delegator_addr,
-                &validator_addr,
+                &delegator_addr_1,
+                &validator_addr_1,
                 coin(200, BONDED_DENOM),
             )
             .unwrap();
@@ -1391,7 +1391,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator_addr, &validator_addr)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(9, rewards.amount.u128());
@@ -1404,9 +1404,9 @@ mod test {
                 &mut env.store,
                 &env.router,
                 &env.block,
-                delegator_addr.clone(),
+                delegator_addr_1.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator_addr.to_string(),
+                    validator: validator_addr_1.to_string(),
                 },
             )
             .unwrap();
@@ -1415,7 +1415,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator_addr, &validator_addr)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(0, rewards.amount.u128());
@@ -1426,7 +1426,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator_addr, &validator_addr)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(9, rewards.amount.u128());
@@ -1436,9 +1436,9 @@ mod test {
     fn rewards_work_for_multiple_delegators() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-        let validator = env.validator_addr_1();
-        let delegator1 = env.delegator_addr_1();
-        let delegator2 = env.delegator_addr_2();
+        let validator_addr_1 = env.validator_addr_1();
+        let delegator_addr_1 = env.delegator_addr_1();
+        let delegator_addr_2 = env.delegator_addr_2();
 
         let mut staking_storage = prefixed(&mut env.store, NAMESPACE_STAKING);
 
@@ -1449,8 +1449,8 @@ mod test {
                 &env.api,
                 &mut staking_storage,
                 &env.block,
-                &delegator1,
-                &validator,
+                &delegator_addr_1,
+                &validator_addr_1,
                 coin(100, BONDED_DENOM),
             )
             .unwrap();
@@ -1460,8 +1460,8 @@ mod test {
                 &env.api,
                 &mut staking_storage,
                 &env.block,
-                &delegator2,
-                &validator,
+                &delegator_addr_2,
+                &validator_addr_1,
                 coin(200, BONDED_DENOM),
             )
             .unwrap();
@@ -1473,7 +1473,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator1, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 9);
@@ -1482,7 +1482,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator2, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_2, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
@@ -1495,8 +1495,8 @@ mod test {
                 &env.api,
                 &mut staking_storage,
                 &env.block,
-                &delegator1,
-                &validator,
+                &delegator_addr_1,
+                &validator_addr_1,
                 coin(100, BONDED_DENOM),
             )
             .unwrap();
@@ -1508,7 +1508,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator1, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 27);
@@ -1517,7 +1517,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator2, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_2, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(rewards.amount.u128(), 36);
@@ -1530,8 +1530,8 @@ mod test {
                 &env.api,
                 &mut staking_storage,
                 &env.block,
-                &delegator2,
-                &validator,
+                &delegator_addr_2,
+                &validator_addr_1,
                 coin(100, BONDED_DENOM),
             )
             .unwrap();
@@ -1544,9 +1544,9 @@ mod test {
                 &mut env.store,
                 &env.router,
                 &env.block,
-                delegator1.clone(),
+                delegator_addr_1.clone(),
                 DistributionMsg::WithdrawDelegatorReward {
-                    validator: validator.to_string(),
+                    validator: validator_addr_1.to_string(),
                 },
             )
             .unwrap();
@@ -1560,7 +1560,7 @@ mod test {
                     &env.router.querier(&env.api, &env.store, &env.block),
                     &env.block,
                     BankQuery::Balance {
-                        address: delegator1.to_string(),
+                        address: delegator_addr_1.to_string(),
                         denom: BONDED_DENOM.to_string(),
                     },
                 )
@@ -1572,7 +1572,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator1, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(0, rewards.amount.u128());
@@ -1584,7 +1584,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator1, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_1, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(18, rewards.amount.u128());
@@ -1593,7 +1593,7 @@ mod test {
         let rewards = env
             .router
             .staking
-            .get_rewards(&env.store, &env.block, &delegator2, &validator)
+            .get_rewards(&env.store, &env.block, &delegator_addr_2, &validator_addr_1)
             .unwrap()
             .unwrap();
         assert_eq!(45, rewards.amount.u128());
@@ -1904,7 +1904,7 @@ mod test {
     fn cannot_slash_nonexistent() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-        let non_existing_validator_addr = env.validator_addr_3();
+        let validator_addr_3 = env.validator_addr_3();
         let delegator_addr_1 = env.delegator_addr_1();
 
         // fund delegator account
@@ -1923,7 +1923,7 @@ mod test {
                 &env.router,
                 &env.block,
                 StakingSudo::Slash {
-                    validator: non_existing_validator_addr.to_string(),
+                    validator: validator_addr_3.to_string(),
                     percentage: Decimal::percent(50),
                 },
             )
@@ -1936,7 +1936,7 @@ mod test {
     fn non_existent_validator() {
         let mut env = TestEnv::wrap(TestEnv::setup((10, 100, 1), (10, 100, 1)));
 
-        let non_existing_validator_addr = env.validator_addr_3();
+        let validator_addr_3 = env.validator_addr_3();
         let delegator_addr_1 = env.delegator_addr_1();
 
         // init balances
@@ -1954,7 +1954,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: non_existing_validator_addr.to_string(),
+                validator: validator_addr_3.to_string(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1966,7 +1966,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
-                validator: non_existing_validator_addr.to_string(),
+                validator: validator_addr_3.to_string(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -2014,7 +2014,7 @@ mod test {
         let validator_addr_2 = env.validator_addr_2();
         let delegator_addr_1 = env.delegator_addr_1();
         let delegator_addr_2 = env.delegator_addr_2();
-        let not_validator_addr = env.user_addr_1();
+        let user_addr_1 = env.user_addr_1();
 
         // init balances
         env.router
@@ -2061,7 +2061,7 @@ mod test {
         let response = query_stake::<ValidatorResponse>(
             &env,
             StakingQuery::Validator {
-                address: not_validator_addr.to_string(),
+                address: user_addr_1.to_string(),
             },
         )
         .unwrap();
