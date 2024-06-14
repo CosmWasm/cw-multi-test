@@ -154,17 +154,17 @@ pub struct StakeKeeper {
 impl Default for StakeKeeper {
     /// Creates a new stake keeper with default settings.
     fn default() -> Self {
-        Self::new()
+        StakeKeeper {
+            // The address of the staking module. This holds all staked tokens.
+            module_addr: Addr::unchecked("staking_module"),
+        }
     }
 }
 
 impl StakeKeeper {
     /// Creates a new stake keeper with default module address.
     pub fn new() -> Self {
-        StakeKeeper {
-            // The address of the staking module. This holds all staked tokens.
-            module_addr: Addr::unchecked("staking_module"),
-        }
+        Self::default()
     }
 
     /// Provides some general parameters to the stake keeper
