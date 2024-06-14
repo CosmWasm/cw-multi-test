@@ -17,6 +17,9 @@ use std::collections::{BTreeSet, VecDeque};
 /// Default denominator of the staking token.
 const BONDED_DENOM: &str = "TOKEN";
 
+/// One year expressed in seconds.
+const YEAR: u64 = 60 * 60 * 24 * 365;
+
 /// A structure containing some general staking parameters.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct StakingInfo {
@@ -25,7 +28,6 @@ pub struct StakingInfo {
     /// Time between unbonding and receiving tokens back (in seconds).
     pub unbonding_time: u64,
     /// Annual percentage rate (interest rate and any additional fees associated with bonding).
-    /// 1 year = 60 * 60 * 24 * 365 seconds.
     pub apr: Decimal,
 }
 
@@ -276,7 +278,7 @@ impl StakeKeeper {
         let reward = Decimal::from_ratio(stake, 1u128)
             * interest_rate
             * Decimal::from_ratio(time_diff, 1u128)
-            / Decimal::from_ratio(60u128 * 60 * 24 * 365, 1u128);
+            / Decimal::from_ratio(YEAR, 1u128);
         let commission = reward * validator_commission;
 
         reward - commission
@@ -1038,9 +1040,6 @@ mod test {
         BalanceResponse, BankQuery,
     };
 
-    /// One year expressed in seconds.
-    const YEAR: u64 = 60 * 60 * 24 * 365;
-
     /// Type alias for default build of [Router], to make its reference in typical test scenario.
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
         BankKeeper,
@@ -1747,7 +1746,7 @@ mod test {
             .unwrap();
 
             // A year passes.
-            env.block.time = env.block.time.plus_seconds(60 * 60 * 24 * 365);
+            env.block.time = env.block.time.plus_seconds(YEAR);
 
             // Withdraw rewards to reward receiver.
             execute_distr(
@@ -1770,7 +1769,7 @@ mod test {
             .unwrap();
 
             // Another year passes.
-            env.block.time = env.block.time.plus_seconds(60 * 60 * 24 * 365);
+            env.block.time = env.block.time.plus_seconds(YEAR);
 
             // Withdraw rewards to delegator.
             execute_distr(
