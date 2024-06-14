@@ -1810,7 +1810,7 @@ mod test {
         .unwrap();
 
         // undelegate more tokens than we have
-        let e = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
@@ -1819,11 +1819,10 @@ mod test {
             },
         )
         .unwrap_err();
-
-        assert_eq!(e.to_string(), "invalid shares amount");
+        assert_eq!(error_result.to_string(), "invalid shares amount");
 
         // redelegate more tokens than we have from validator 1 to validator 2
-        let e = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Redelegate {
@@ -1833,10 +1832,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(e.to_string(), "invalid shares amount");
+        assert_eq!(error_result.to_string(), "invalid shares amount");
 
         // undelegate from non-existing delegation
-        let e = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
@@ -1846,7 +1845,7 @@ mod test {
         )
         .unwrap_err();
         assert_eq!(
-            e.to_string(),
+            error_result.to_string(),
             "no delegation for (address, validator) tuple"
         );
     }
@@ -1862,7 +1861,7 @@ mod test {
         init_balance_denom(&mut env, &delegator_addr_1, 100, "FAKE");
 
         // try to delegate 100 to validator
-        let e = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
@@ -1871,9 +1870,8 @@ mod test {
             },
         )
         .unwrap_err();
-
         assert_eq!(
-            e.to_string(),
+            error_result.to_string(),
             "cannot delegate coins of denominator FAKE, only of TOKEN",
         );
     }
@@ -1889,7 +1887,7 @@ mod test {
         init_balance_denom(&mut env, &delegator_addr_1, 100, "FAKE");
 
         // try to delegate 100 to non existing validator
-        let e = env
+        let error_result = env
             .router
             .staking
             .sudo(
@@ -1903,8 +1901,7 @@ mod test {
                 },
             )
             .unwrap_err();
-
-        assert_eq!(e.to_string(), "validator does not exist");
+        assert_eq!(error_result.to_string(), "validator does not exist");
     }
 
     #[test]
@@ -1918,7 +1915,7 @@ mod test {
         init_balance(&mut env, &delegator_addr_1, 100);
 
         // try to delegate
-        let err = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
@@ -1927,10 +1924,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(err.to_string(), "validator does not exist");
+        assert_eq!(error_result.to_string(), "validator does not exist");
 
         // try to undelegate
-        let err = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
@@ -1939,7 +1936,7 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(err.to_string(), "validator does not exist");
+        assert_eq!(error_result.to_string(), "validator does not exist");
     }
 
     #[test]
@@ -1950,7 +1947,7 @@ mod test {
         let delegator_addr_1 = env.delegator_addr_1();
 
         // delegate 0
-        let err = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
@@ -1959,10 +1956,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(err.to_string(), "invalid delegation amount");
+        assert_eq!(error_result.to_string(), "invalid delegation amount");
 
         // undelegate 0
-        let err = execute_stake(
+        let error_result = execute_stake(
             &mut env,
             delegator_addr_1,
             StakingMsg::Undelegate {
@@ -1971,7 +1968,7 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(err.to_string(), "invalid shares amount");
+        assert_eq!(error_result.to_string(), "invalid shares amount");
     }
 
     #[test]
