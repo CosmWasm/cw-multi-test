@@ -1029,11 +1029,9 @@ impl Module for DistributionKeeper {
 
 /// Utility function for validating validator's address.
 ///
-/// Currently, we do not validate this address, because we do not have
-/// a place to store Bech32 prefix for validators.
+/// Currently, we do not validate this address, because we do not have a place to store Bech32 prefix for validators.
 /// In real-life blockchains, validator addresses have a different prefix than user addresses.
-/// In case such a validation should be possible in the future, just place it inside
-/// this function.
+/// In case such a validation should be possible in the future, just place it inside this function.
 fn validate_valoper_address(human: &str) -> StdResult<Addr> {
     Ok(Addr::unchecked(human))
 }
