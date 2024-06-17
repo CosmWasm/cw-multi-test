@@ -1041,6 +1041,26 @@ mod test {
     };
     use serde::de::DeserializeOwned;
 
+    /// Utility structure for combining validator properties,
+    /// used mainly for validator initialization.
+    struct ValidatorProperties {
+        /// Validator's commission.
+        commission: Decimal,
+        /// Validator's maximum commission.
+        max_commission: Decimal,
+        /// The maximum daily increase of the validator's commission.
+        max_change_rate: Decimal,
+    }
+
+    /// Creates validator properties from values expressed as a percentage.
+    fn vp(commission: u64, max_commission: u64, max_change_rate: u64) -> ValidatorProperties {
+        ValidatorProperties {
+            commission: Decimal::percent(commission),
+            max_commission: Decimal::percent(max_commission),
+            max_change_rate: Decimal::percent(max_change_rate),
+        }
+    }
+
     /// Type alias for default build of [Router], to make its reference in typical test scenario.
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
         BankKeeper,
@@ -1069,7 +1089,7 @@ mod test {
 
     impl TestEnv {
         /// Returns preconfigured test environment.
-        fn new(validator1: (u64, u64, u64), validator2: (u64, u64, u64)) -> Self {
+        fn new(validator1: ValidatorProperties, validator2: ValidatorProperties) -> Self {
             // Utility function for creating a validator's address,
             // which has a different prefix from a user's address.
             fn valoper_address(api: &MockApi, value: &str) -> Addr {
@@ -1110,9 +1130,9 @@ mod test {
             // create validator no. 1
             let valoper1 = Validator::new(
                 validator_addr_1.to_string(),
-                Decimal::percent(validator1.0),
-                Decimal::percent(validator1.1),
-                Decimal::percent(validator1.2),
+                validator1.commission,
+                validator1.max_commission,
+                validator1.max_change_rate,
             );
             router
                 .staking
@@ -1122,9 +1142,9 @@ mod test {
             // create validator no. 2
             let valoper2 = Validator::new(
                 validator_addr_2.to_string(),
-                Decimal::percent(validator2.0),
-                Decimal::percent(validator2.1),
-                Decimal::percent(validator2.2),
+                validator2.commission,
+                validator2.max_commission,
+                validator2.max_change_rate,
             );
             router
                 .staking
@@ -1263,7 +1283,7 @@ mod test {
 
     #[test]
     fn add_get_validators() {
-        let mut env = TestEnv::new((10, 100, 1), (0, 20, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(0, 20, 1));
 
         let validator_addr_3 = env.validator_addr_3();
 
@@ -1314,7 +1334,7 @@ mod test {
 
     #[test]
     fn validator_slashing() {
-        let mut env = TestEnv::new((10, 20, 1), (10, 20, 1));
+        let mut env = TestEnv::new(vp(10, 20, 1), vp(10, 20, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -1385,7 +1405,7 @@ mod test {
 
     #[test]
     fn rewards_work_for_single_delegator() {
-        let mut env = TestEnv::new((10, 20, 1), (10, 20, 1));
+        let mut env = TestEnv::new(vp(10, 20, 1), vp(10, 20, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -1469,7 +1489,7 @@ mod test {
 
     #[test]
     fn rewards_work_for_multiple_delegators() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -1671,7 +1691,7 @@ mod test {
 
     #[test]
     fn execute() {
-        let mut env = TestEnv::new((10, 100, 1), (0, 20, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(0, 20, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let validator_addr_2 = env.validator_addr_2();
@@ -1782,7 +1802,7 @@ mod test {
 
     #[test]
     fn can_set_withdraw_address() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -1862,7 +1882,7 @@ mod test {
 
     #[test]
     fn cannot_steal() {
-        let mut env = TestEnv::new((10, 100, 1), (0, 20, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(0, 20, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let validator_addr_2 = env.validator_addr_2();
@@ -1925,7 +1945,7 @@ mod test {
 
     #[test]
     fn denom_validation() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -1951,7 +1971,7 @@ mod test {
 
     #[test]
     fn cannot_slash_nonexistent() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_3 = env.validator_addr_3();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -1979,7 +1999,7 @@ mod test {
 
     #[test]
     fn non_existent_validator() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_3 = env.validator_addr_3();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -2014,7 +2034,7 @@ mod test {
 
     #[test]
     fn zero_staking_forbidden() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -2046,7 +2066,7 @@ mod test {
 
     #[test]
     fn query_staking() {
-        let mut env = TestEnv::new((10, 100, 1), (0, 1, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(0, 1, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let validator_addr_2 = env.validator_addr_2();
@@ -2189,7 +2209,7 @@ mod test {
 
     #[test]
     fn delegation_queries_unbonding() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -2311,7 +2331,7 @@ mod test {
 
     #[test]
     fn partial_unbonding_reduces_stake() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -2419,7 +2439,7 @@ mod test {
 
     #[test]
     fn delegations_slashed() {
-        let mut env = TestEnv::new((10, 100, 1), (10, 100, 1));
+        let mut env = TestEnv::new(vp(10, 100, 1), vp(10, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
@@ -2496,7 +2516,7 @@ mod test {
 
     #[test]
     fn rewards_initial_wait() {
-        let mut env = TestEnv::new((0, 100, 1), (0, 100, 1));
+        let mut env = TestEnv::new(vp(0, 100, 1), vp(0, 100, 1));
 
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
