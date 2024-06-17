@@ -7,7 +7,7 @@ use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
     Delegation, DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier,
-    StakingMsg, StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    StakingMsg, StakingQuery, StdResult, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -183,13 +183,15 @@ impl StakeKeeper {
         validator: Validator,
     ) -> AnyResult<()> {
         let mut storage = prefixed(storage, NAMESPACE_STAKING);
-        let val_addr = Addr::unchecked(validator.address.clone());
+
+        let val_addr = validate_valoper_address(&validator.address)?;
         if VALIDATOR_MAP.may_load(&storage, &val_addr)?.is_some() {
             bail!(
                 "Cannot add validator {}, since a validator with that address already exists",
                 val_addr
             );
         }
+
         VALIDATOR_MAP.save(&mut storage, &val_addr, &validator)?;
         VALIDATORS.push_back(&mut storage, &validator)?;
         VALIDATOR_INFO.save(&mut storage, &val_addr, &ValidatorInfo::new(block.time))?;
@@ -289,16 +291,16 @@ impl StakeKeeper {
         _api: &dyn Api,
         staking_storage: &mut dyn Storage,
         block: &BlockInfo,
-        validator_addr: &Addr,
+        validator: &Addr,
     ) -> AnyResult<()> {
         let staking_info = Self::get_staking_info(staking_storage)?;
 
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator_addr)?
+            .may_load(staking_storage, validator)?
             // https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L15
             .ok_or_else(|| anyhow!("validator does not exist"))?;
 
-        let validator_obj = VALIDATOR_MAP.load(staking_storage, validator_addr)?;
+        let validator_obj = VALIDATOR_MAP.load(staking_storage, validator)?;
 
         if validator_info.last_rewards_calculation >= block.time {
             return Ok(());
@@ -314,16 +316,16 @@ impl StakeKeeper {
 
         // update validator info
         validator_info.last_rewards_calculation = block.time;
-        VALIDATOR_INFO.save(staking_storage, validator_addr, &validator_info)?;
+        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
 
         // update delegators
         if !new_rewards.is_zero() {
-            let validator_obj_addr = Addr::unchecked(validator_obj.address);
+            let validator_addr = validate_valoper_address(&validator_obj.address)?;
             // update all delegators
             for staker in validator_info.stakers.iter() {
                 STAKES.update(
                     staking_storage,
-                    (staker, &validator_obj_addr),
+                    (staker, &validator_addr),
                     |shares| -> AnyResult<_> {
                         let mut shares =
                             shares.expect("all stakers in validator_info should exist");
@@ -642,7 +644,7 @@ impl Module for StakeKeeper {
         let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
         match msg {
             StakingMsg::Delegate { validator, amount } => {
-                let validator_addr = Addr::unchecked(validator);
+                let validator = validate_valoper_address(&validator)?;
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L202-L207
                 if amount.amount.is_zero() {
@@ -651,7 +653,7 @@ impl Module for StakeKeeper {
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L251-L256
                 let events = vec![Event::new("delegate")
-                    .add_attribute("validator", &validator_addr)
+                    .add_attribute("validator", &validator)
                     .add_attribute("amount", format!("{}{}", amount.amount, amount.denom))
                     .add_attribute("new_shares", amount.amount.to_string())]; // TODO: calculate shares?
                 self.add_stake(
@@ -659,7 +661,7 @@ impl Module for StakeKeeper {
                     &mut staking_storage,
                     block,
                     &sender,
-                    &validator_addr,
+                    &validator,
                     amount.clone(),
                 )?;
                 // move money from sender account to this module (note we can control sender here)
@@ -677,7 +679,7 @@ impl Module for StakeKeeper {
                 Ok(AppResponse { events, data: None })
             }
             StakingMsg::Undelegate { validator, amount } => {
-                let validator_addr = Addr::unchecked(validator);
+                let validator = validate_valoper_address(&validator)?;
                 self.validate_denom(&staking_storage, &amount)?;
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
@@ -687,7 +689,7 @@ impl Module for StakeKeeper {
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L378-L383
                 let events = vec![Event::new("unbond")
-                    .add_attribute("validator", &validator_addr)
+                    .add_attribute("validator", &validator)
                     .add_attribute("amount", format!("{}{}", amount.amount, amount.denom))
                     .add_attribute("completion_time", "2022-09-27T14:00:00+00:00")]; // TODO: actual date?
                 self.remove_stake(
@@ -695,7 +697,7 @@ impl Module for StakeKeeper {
                     &mut staking_storage,
                     block,
                     &sender,
-                    &validator_addr,
+                    &validator,
                     amount.clone(),
                 )?;
                 // add tokens to unbonding queue
@@ -705,7 +707,7 @@ impl Module for StakeKeeper {
                     .unwrap_or_default();
                 unbonding_queue.push_back(Unbonding {
                     delegator: sender.clone(),
-                    validator: validator_addr,
+                    validator,
                     amount: amount.amount,
                     payout_at: block.time.plus_seconds(staking_info.unbonding_time),
                 });
@@ -717,12 +719,12 @@ impl Module for StakeKeeper {
                 dst_validator,
                 amount,
             } => {
-                let src_validator_addr = Addr::unchecked(src_validator);
-                let dst_validator_addr = Addr::unchecked(dst_validator);
+                let src_validator = validate_valoper_address(&src_validator)?;
+                let dst_validator = validate_valoper_address(&dst_validator)?;
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L316-L322
                 let events = vec![Event::new("redelegate")
-                    .add_attribute("source_validator", &src_validator_addr)
-                    .add_attribute("destination_validator", &dst_validator_addr)
+                    .add_attribute("source_validator", &src_validator)
+                    .add_attribute("destination_validator", &dst_validator)
                     .add_attribute("amount", format!("{}{}", amount.amount, amount.denom))];
 
                 self.remove_stake(
@@ -730,7 +732,7 @@ impl Module for StakeKeeper {
                     &mut staking_storage,
                     block,
                     &sender,
-                    &src_validator_addr,
+                    &src_validator,
                     amount.clone(),
                 )?;
                 self.add_stake(
@@ -738,7 +740,7 @@ impl Module for StakeKeeper {
                     &mut staking_storage,
                     block,
                     &sender,
-                    &dst_validator_addr,
+                    &dst_validator,
                     amount,
                 )?;
 
@@ -762,24 +764,28 @@ impl Module for StakeKeeper {
                 Self::get_staking_info(&staking_storage)?.bonded_denom,
             ))?),
             StakingQuery::AllDelegations { delegator } => {
-                let delegator_addr = api.addr_validate(&delegator)?;
+                let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
-                let res: AnyResult<Vec<Delegation>> = validators
-                    .into_iter()
-                    .filter_map(|validator| {
-                        let delegator_addr_inner = delegator_addr.clone();
-                        let amount = self
-                            .get_stake(
-                                &staking_storage,
-                                &delegator_addr_inner,
-                                &Addr::unchecked(&validator.address),
-                            )
-                            .transpose()?;
-                        Some(amount.map(|amount| {
-                            Delegation::new(delegator_addr_inner, validator.address, amount)
-                        }))
-                    })
-                    .collect();
+
+                let res: AnyResult<Vec<Delegation>> =
+                    validators
+                        .into_iter()
+                        .filter_map(|validator| {
+                            let delegator = delegator.clone();
+                            let amount = self
+                                .get_stake(
+                                    &staking_storage,
+                                    &delegator,
+                                    &Addr::unchecked(&validator.address),
+                                )
+                                .transpose()?;
+
+                            Some(amount.map(|amount| {
+                                Delegation::new(delegator, validator.address, amount)
+                            }))
+                        })
+                        .collect();
+
                 Ok(to_json_binary(&AllDelegationsResponse::new(res?))?)
             }
             StakingQuery::Delegation {
@@ -791,10 +797,10 @@ impl Module for StakeKeeper {
                     Some(validator) => validator,
                     None => bail!("non-existent validator {}", validator),
                 };
-                let delegator_addr = api.addr_validate(&delegator)?;
+                let delegator = api.addr_validate(&delegator)?;
 
                 let shares = STAKES
-                    .may_load(&staking_storage, (&delegator_addr, &validator_addr))?
+                    .may_load(&staking_storage, (&delegator, &validator_addr))?
                     .unwrap_or_default();
 
                 let validator_info = VALIDATOR_INFO.load(&staking_storage, &validator_addr)?;
@@ -817,7 +823,7 @@ impl Module for StakeKeeper {
                     DelegationResponse::new(None)
                 } else {
                     DelegationResponse::new(Some(FullDelegation::new(
-                        delegator_addr,
+                        delegator,
                         validator,
                         amount.clone(),
                         amount, // TODO: not implemented right now
@@ -856,15 +862,9 @@ impl Module for StakeKeeper {
                 percentage,
             } => {
                 let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                let validator_addr = Addr::unchecked(validator);
+                let validator = validate_valoper_address(&validator)?;
                 self.validate_percentage(percentage)?;
-                self.slash(
-                    api,
-                    &mut staking_storage,
-                    block,
-                    &validator_addr,
-                    percentage,
-                )?;
+                self.slash(api, &mut staking_storage, block, &validator, percentage)?;
                 Ok(AppResponse::default())
             }
         }
@@ -956,7 +956,7 @@ impl Module for DistributionKeeper {
     ) -> AnyResult<AppResponse> {
         match msg {
             DistributionMsg::WithdrawDelegatorReward { validator } => {
-                let validator_addr = Addr::unchecked(validator);
+                let validator_addr = validate_valoper_address(&validator)?;
 
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator_addr)?;
 
@@ -980,7 +980,7 @@ impl Module for DistributionKeeper {
                 )?;
 
                 let events = vec![Event::new("withdraw_delegator_reward")
-                    .add_attribute("validator", &validator_addr)
+                    .add_attribute("validator", &validator)
                     .add_attribute("sender", &sender)
                     .add_attribute(
                         "amount",
@@ -1025,6 +1025,17 @@ impl Module for DistributionKeeper {
     ) -> AnyResult<AppResponse> {
         bail!("Something went wrong - Distribution doesn't have sudo messages")
     }
+}
+
+/// Utility function for validating validator's address.
+///
+/// Currently, we do not validate this address, because we do not have
+/// a place to store Bech32 prefix for validators.
+/// In real-life blockchains, validator addresses have a different prefix than user addresses.
+/// In case such a validation should be possible in the future, just place it inside
+/// this function.
+fn validate_valoper_address(human: &str) -> StdResult<Addr> {
+    Ok(Addr::unchecked(human))
 }
 
 #[cfg(test)]
