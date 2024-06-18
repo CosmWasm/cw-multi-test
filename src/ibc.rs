@@ -17,7 +17,7 @@ use self::types::MockIbcQuery;
 pub use simple_ibc::IbcSimpleModule;
 
 /// This is added for modules to implement actions upon ibc actions.
-/// This kind of execution flow is copied from the WASM way of doing things and is not 100% completetely compatible with the IBC standard
+/// This kind of execution flow is copied from the WASM way of doing things and is not 100% completely compatible with the IBC standard
 /// Those messages should only be called by the Ibc module.
 /// For additional Modules, the packet endpoints should be implemented
 /// The Channel endpoints are usually not implemented besides storing the channel ids
