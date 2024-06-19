@@ -16,8 +16,7 @@ fn building_app_with_custom_bank_should_work() {
     let bank_keeper = MyBankKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
     // build the application with custom bank keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_bank(bank_keeper).build(|_, _, _| {});
+    let mut app = AppBuilder::default().with_bank(bank_keeper).build_no_init();
 
     // prepare user addresses
     let recipient_addr = app.api().addr_make("recipient");

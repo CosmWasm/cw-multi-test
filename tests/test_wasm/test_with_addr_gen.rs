@@ -10,7 +10,7 @@ fn contract_address_should_work() {
     // prepare application with custom API
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("purple"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // prepare user addresses
     let creator_addr = app.api().addr_make("creator");
@@ -65,9 +65,7 @@ fn custom_address_generator_should_work() {
     let wasm_keeper = WasmKeeper::new().with_address_generator(CustomAddressGenerator);
 
     // prepare application with custom wasm keeper
-    let mut app = AppBuilder::default()
-        .with_wasm(wasm_keeper)
-        .build(|_, _, _| {});
+    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
 
     // prepare user addresses
     let owner_addr = app.api().addr_make("owner");
@@ -95,7 +93,7 @@ fn predictable_contract_address_should_work() {
     // prepare application with custom api
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     let creator = app.api().addr_make("creator");
 
@@ -148,7 +146,7 @@ fn creating_contract_with_the_same_predictable_address_should_fail() {
     // prepare application with custom api
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     let creator = app.api().addr_make("creator");
 

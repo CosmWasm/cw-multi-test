@@ -15,8 +15,7 @@ fn building_app_with_custom_ibc_should_work() {
     let ibc_keeper = MyIbcKeeper::new(EXECUTE_MSG, QUERY_MSG, NO_MESSAGE);
 
     // build the application with custom ibc keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_ibc(ibc_keeper).build(|_, _, _| {});
+    let mut app = AppBuilder::default().with_ibc(ibc_keeper).build_no_init();
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");

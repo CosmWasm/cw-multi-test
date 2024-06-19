@@ -7,7 +7,7 @@ fn store_code_with_custom_creator_address_should_work() {
     // prepare the application
     let mut app = AppBuilder::default()
         .with_api(MockApiBech32m::new("juno"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     let creator = app.api().addr_make("zeus");
 

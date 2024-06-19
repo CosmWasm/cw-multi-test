@@ -20,9 +20,9 @@ fn default_ibc() {
 
 #[test]
 fn accepting_ibc() {
-    let mut app = AppBuilder::new()
+    let mut app = AppBuilder::default()
         .with_ibc(IbcAcceptingModule::new())
-        .build(|_, _, _| {});
+        .build_no_init();
 
     let creator_addr = app.api().addr_make("creator");
     let code = app.store_code_with_creator(creator_addr, ibc::contract());

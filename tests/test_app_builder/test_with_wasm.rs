@@ -91,8 +91,7 @@ fn building_app_with_custom_wasm_should_work() {
     let wasm_keeper = MyWasmKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
     // build the application with custom wasm keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_wasm(wasm_keeper).build(|_, _, _| {});
+    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
 
     // prepare addresses
     let contract_addr = app.api().addr_make("contract");
@@ -162,8 +161,7 @@ fn building_app_with_custom_wasm_should_work() {
 fn compiling_with_wasm_keeper_should_work() {
     // this verifies only compilation errors
     // while our WasmKeeper does not implement Module
-    let app_builder = AppBuilder::default();
-    let _ = app_builder
+    let _ = AppBuilder::default()
         .with_wasm(WasmKeeper::default())
-        .build(|_, _, _| {});
+        .build_no_init();
 }

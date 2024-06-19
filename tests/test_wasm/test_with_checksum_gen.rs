@@ -38,9 +38,7 @@ fn custom_checksum_generator_should_work() {
     let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
 
     // prepare application with custom wasm keeper
-    let mut app = AppBuilder::default()
-        .with_wasm(wasm_keeper)
-        .build(|_, _, _| {});
+    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
 
     // prepare user addresses
     let creator_addr = app.api().addr_make("creator");

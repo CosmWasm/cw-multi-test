@@ -9,7 +9,7 @@ fn instantiate2_works() {
     // prepare the application with custom Api and custom address generator
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // prepare addresses for sender and creator
     let sender = app.api().addr_make("sender");
@@ -73,7 +73,7 @@ fn instantiate2_should_work_for_multiple_salts() {
     // prepare the application with custom Api and custom address generator
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // prepare addresses for sender and creator
     let sender = app.api().addr_make("sender");
@@ -106,7 +106,7 @@ fn instantiate2_fails_for_duplicated_addresses() {
     // prepare the application with custom Api and custom address generator
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("osmo"))
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // prepare addresses for sender and creator
     let sender = app.api().addr_make("sender");

@@ -34,7 +34,7 @@ fn default_failing_stargate_handler_should_work() {
 fn accepting_stargate_handler_should_work() {
     let mut app = AppBuilder::default()
         .with_stargate(StargateAccepting)
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // store the contract
     let creator_addr = app.api().addr_make("creator");

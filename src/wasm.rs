@@ -439,7 +439,7 @@ where
     /// let wasm_keeper = WasmKeeper::new();
     ///
     /// // create and use the application with newly created wasm keeper
-    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(|_, _, _| {});
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
     /// ```
     pub fn new() -> Self {
         Self::default()
@@ -474,7 +474,7 @@ where
     /// let wasm_keeper = WasmKeeper::new().with_address_generator(CustomAddressGenerator);
     ///
     /// // create and use the application with customized wasm keeper
-    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(|_, _, _| {});
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
     /// ```
     pub fn with_address_generator(
         mut self,
@@ -505,7 +505,7 @@ where
     /// let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
     ///
     /// // create and use the application with customized wasm keeper
-    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(|_, _, _| {});
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
     /// ```
     pub fn with_checksum_generator(
         mut self,

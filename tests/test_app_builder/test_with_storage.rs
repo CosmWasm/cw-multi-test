@@ -41,10 +41,9 @@ fn building_app_with_custom_storage_should_work() {
     let label = "my-counter";
 
     // build the application with custom storage
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder
+    let mut app = AppBuilder::default()
         .with_storage(MyStorage::default())
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // prepare user addresses
     let owner_addr = app.api().addr_make("owner");

@@ -18,7 +18,7 @@ fn building_app_with_custom_distribution_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder
         .with_distribution(distribution_keeper)
-        .build(|_, _, _| {});
+        .build_no_init();
 
     // prepare addresses
     let recipient_addr = app.api().addr_make("recipient");

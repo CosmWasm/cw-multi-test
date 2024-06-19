@@ -14,8 +14,7 @@ fn building_app_with_custom_gov_should_work() {
     let gov_keeper = MyGovKeeper::new(EXECUTE_MSG, NO_MESSAGE, NO_MESSAGE);
 
     // build the application with custom gov keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_gov(gov_keeper).build(|_, _, _| {});
+    let mut app = AppBuilder::default().with_gov(gov_keeper).build_no_init();
 
     // prepare addresses
     let sender_addr = app.api().addr_make("sender");

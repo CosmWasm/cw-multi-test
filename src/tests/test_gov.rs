@@ -22,7 +22,7 @@ fn default_gov() {
 fn accepting_gov() {
     let mut app = AppBuilder::new()
         .with_gov(GovAcceptingModule::new())
-        .build(|_, _, _| {});
+        .build_no_init();
 
     let creator_addr = app.api().addr_make("creator");
     let code = app.store_code_with_creator(creator_addr, gov::contract());
