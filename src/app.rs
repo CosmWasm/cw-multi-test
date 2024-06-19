@@ -216,7 +216,7 @@ where
     where
         F: FnOnce(
             &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-            &dyn Api,
+            &ApiT,
             &mut dyn Storage,
         ) -> T,
     {
@@ -228,7 +228,7 @@ where
     where
         F: FnOnce(
             &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-            &dyn Api,
+            &ApiT,
             &dyn Storage,
         ) -> T,
     {
