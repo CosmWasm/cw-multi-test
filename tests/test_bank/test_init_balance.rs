@@ -15,7 +15,7 @@ fn initializing_balance_should_work() {
                 &api.addr_make(USER),
                 vec![Coin {
                     denom: DENOM.to_string(),
-                    amount: Uint128::new(100),
+                    amount: Uint128::new(AMOUNT),
                 }],
             )
             .unwrap();
