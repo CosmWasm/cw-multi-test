@@ -343,13 +343,13 @@ impl StakeKeeper {
         Ok(())
     }
 
-    /// Returns the single validator with the given address (or `None` if there is no such validator)
+    /// Returns the single validator with the given address (or `None` if there is no such validator).
     fn get_validator(
         &self,
         staking_storage: &dyn Storage,
-        validator: &str,
+        address: &str,
     ) -> AnyResult<Option<Validator>> {
-        Ok(VALIDATOR_MAP.may_load(staking_storage, validator)?)
+        Ok(VALIDATOR_MAP.may_load(staking_storage, address)?)
     }
 
     /// Returns all available validators
