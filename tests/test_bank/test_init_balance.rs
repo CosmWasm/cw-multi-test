@@ -7,7 +7,7 @@ const AMOUNT: u128 = 100;
 
 #[test]
 fn initializing_balance_should_work() {
-    let app = AppBuilder::new().build_a(|router, api, storage| {
+    let app = AppBuilder::new().build(|router, api, storage| {
         router
             .bank
             .init_balance(

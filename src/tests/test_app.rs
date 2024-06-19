@@ -1660,7 +1660,7 @@ mod custom_messages {
 
         let mut app = AppBuilder::new_custom()
             .with_custom(custom_handler)
-            .build(no_init);
+            .build(|_, _, _| {});
 
         let sender = app.api().addr_make("sender");
         let owner = app.api().addr_make("owner");

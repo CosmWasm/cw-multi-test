@@ -1,6 +1,6 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{DistributionMsg, Empty};
-use cw_multi_test::{no_init, AppBuilder, Distribution, Executor};
+use cw_multi_test::{AppBuilder, Distribution, Executor};
 
 type MyDistributionKeeper = MyKeeper<DistributionMsg, Empty, Empty>;
 
@@ -18,7 +18,7 @@ fn building_app_with_custom_distribution_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder
         .with_distribution(distribution_keeper)
-        .build(no_init);
+        .build(|_, _, _| {});
 
     // prepare addresses
     let recipient_addr = app.api().addr_make("recipient");

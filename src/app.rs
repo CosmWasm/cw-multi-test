@@ -77,7 +77,7 @@ pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
 
 impl Default for BasicApp {
     fn default() -> Self {
-        Self::new(no_init)
+        AppBuilder::new().build_no_init()
     }
 }
 
@@ -100,7 +100,7 @@ impl BasicApp {
             &mut dyn Storage,
         ),
     {
-        AppBuilder::new().build(init_fn)
+        AppBuilder::new().build_internal(init_fn)
     }
 }
 
@@ -125,7 +125,7 @@ where
         &mut dyn Storage,
     ),
 {
-    AppBuilder::new_custom().build(init_fn)
+    AppBuilder::new_custom().build_internal(init_fn)
 }
 
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT> Querier

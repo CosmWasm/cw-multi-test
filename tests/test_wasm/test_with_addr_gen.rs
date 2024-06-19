@@ -1,7 +1,7 @@
 use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{Addr, Api, Empty, Storage};
 use cw_multi_test::error::AnyResult;
-use cw_multi_test::{no_init, AddressGenerator, AppBuilder, Executor, WasmKeeper};
+use cw_multi_test::{AddressGenerator, AppBuilder, Executor, WasmKeeper};
 
 use crate::test_contracts;
 
@@ -10,7 +10,7 @@ fn contract_address_should_work() {
     // prepare application with custom API
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("purple"))
-        .build(no_init);
+        .build(|_, _, _| {});
 
     // prepare user addresses
     let creator_addr = app.api().addr_make("creator");
@@ -65,7 +65,9 @@ fn custom_address_generator_should_work() {
     let wasm_keeper = WasmKeeper::new().with_address_generator(CustomAddressGenerator);
 
     // prepare application with custom wasm keeper
-    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    let mut app = AppBuilder::default()
+        .with_wasm(wasm_keeper)
+        .build(|_, _, _| {});
 
     // prepare user addresses
     let owner_addr = app.api().addr_make("owner");
@@ -93,7 +95,7 @@ fn predictable_contract_address_should_work() {
     // prepare application with custom api
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build(no_init);
+        .build(|_, _, _| {});
 
     let creator = app.api().addr_make("creator");
 
@@ -146,7 +148,7 @@ fn creating_contract_with_the_same_predictable_address_should_fail() {
     // prepare application with custom api
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build(no_init);
+        .build(|_, _, _| {});
 
     let creator = app.api().addr_make("creator");
 

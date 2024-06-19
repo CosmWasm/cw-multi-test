@@ -1,6 +1,6 @@
 use crate::test_contracts;
 use cosmwasm_std::{Addr, Checksum};
-use cw_multi_test::{no_init, App, AppBuilder, ChecksumGenerator, WasmKeeper};
+use cw_multi_test::{App, AppBuilder, ChecksumGenerator, WasmKeeper};
 
 #[test]
 fn default_checksum_generator_should_work() {
@@ -38,7 +38,9 @@ fn custom_checksum_generator_should_work() {
     let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
 
     // prepare application with custom wasm keeper
-    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
+    let mut app = AppBuilder::default()
+        .with_wasm(wasm_keeper)
+        .build(|_, _, _| {});
 
     // prepare user addresses
     let creator_addr = app.api().addr_make("creator");

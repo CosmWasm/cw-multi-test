@@ -1,5 +1,5 @@
 use crate::test_contracts::counter;
-use cw_multi_test::{no_init, AppBuilder};
+use cw_multi_test::AppBuilder;
 use cw_multi_test::{MockApiBech32, MockApiBech32m};
 
 #[test]
@@ -7,7 +7,7 @@ fn store_code_with_custom_creator_address_should_work() {
     // prepare the application
     let mut app = AppBuilder::default()
         .with_api(MockApiBech32m::new("juno"))
-        .build(no_init);
+        .build(|_, _, _| {});
 
     let creator = app.api().addr_make("zeus");
 

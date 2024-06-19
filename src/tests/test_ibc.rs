@@ -1,5 +1,5 @@
 use crate::test_helpers::ibc;
-use crate::{no_init, App, AppBuilder, Executor, IbcAcceptingModule};
+use crate::{App, AppBuilder, Executor, IbcAcceptingModule};
 use cosmwasm_std::Empty;
 
 #[test]
@@ -22,7 +22,7 @@ fn default_ibc() {
 fn accepting_ibc() {
     let mut app = AppBuilder::new()
         .with_ibc(IbcAcceptingModule::new())
-        .build(no_init);
+        .build(|_, _, _| {});
 
     let creator_addr = app.api().addr_make("creator");
     let code = app.store_code_with_creator(creator_addr, ibc::contract());
