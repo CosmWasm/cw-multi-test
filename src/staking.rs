@@ -7,7 +7,7 @@ use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
     Delegation, DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier,
-    StakingMsg, StakingQuery, StdResult, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    StakingMsg, StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -84,19 +84,19 @@ impl ValidatorInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 struct Unbonding {
     pub delegator: Addr,
-    pub validator: Addr,
+    pub validator: String,
     pub amount: Uint128,
     pub payout_at: Timestamp,
 }
 
 const STAKING_INFO: Item<StakingInfo> = Item::new("staking_info");
 /// (staker_addr, validator_addr) -> shares
-const STAKES: Map<(&Addr, &Addr), Shares> = Map::new("stakes");
-const VALIDATOR_MAP: Map<&Addr, Validator> = Map::new("validator_map");
+const STAKES: Map<(&Addr, &str), Shares> = Map::new("stakes");
+const VALIDATOR_MAP: Map<&str, Validator> = Map::new("validator_map");
 /// Additional vec of validators, in case the `iterator` feature is disabled
 const VALIDATORS: Deque<Validator> = Deque::new("validators");
 /// Contains additional info for each validator
-const VALIDATOR_INFO: Map<&Addr, ValidatorInfo> = Map::new("validator_info");
+const VALIDATOR_INFO: Map<&str, ValidatorInfo> = Map::new("validator_info");
 /// The queue of unbonding operations. This is needed because unbonding has a waiting time. See [`StakeKeeper`]
 const UNBONDING_QUEUE: Item<VecDeque<Unbonding>> = Item::new("unbonding_queue");
 /// (addr) -> addr. Maps addresses to the address they have delegated
@@ -183,18 +183,22 @@ impl StakeKeeper {
         validator: Validator,
     ) -> AnyResult<()> {
         let mut storage = prefixed(storage, NAMESPACE_STAKING);
-
-        let val_addr = validate_valoper_address(&validator.address)?;
-        if VALIDATOR_MAP.may_load(&storage, &val_addr)?.is_some() {
+        if VALIDATOR_MAP
+            .may_load(&storage, &validator.address)?
+            .is_some()
+        {
             bail!(
                 "Cannot add validator {}, since a validator with that address already exists",
-                val_addr
+                validator.address
             );
         }
-
-        VALIDATOR_MAP.save(&mut storage, &val_addr, &validator)?;
+        VALIDATOR_MAP.save(&mut storage, &validator.address, &validator)?;
         VALIDATORS.push_back(&mut storage, &validator)?;
-        VALIDATOR_INFO.save(&mut storage, &val_addr, &ValidatorInfo::new(block.time))?;
+        VALIDATOR_INFO.save(
+            &mut storage,
+            &validator.address,
+            &ValidatorInfo::new(block.time),
+        )?;
         Ok(())
     }
 
@@ -208,22 +212,22 @@ impl StakeKeeper {
         storage: &dyn Storage,
         block: &BlockInfo,
         delegator: &Addr,
-        validator: &Addr,
+        validator_addr: &str,
     ) -> AnyResult<Option<Coin>> {
         let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
 
-        let validator_obj = match self.get_validator(&staking_storage, validator)? {
+        let validator_obj = match self.get_validator(&staking_storage, validator_addr)? {
             Some(validator) => validator,
-            None => bail!("validator {} not found", validator),
+            None => bail!("validator {} not found", validator_addr),
         };
         // calculate rewards using fixed ratio
-        let shares = match STAKES.load(&staking_storage, (delegator, validator)) {
+        let shares = match STAKES.load(&staking_storage, (delegator, validator_addr)) {
             Ok(stakes) => stakes,
             Err(_) => {
                 return Ok(None);
             }
         };
-        let validator_info = VALIDATOR_INFO.load(&staking_storage, validator)?;
+        let validator_info = VALIDATOR_INFO.load(&staking_storage, validator_addr)?;
 
         Self::get_rewards_internal(
             &staking_storage,
@@ -291,16 +295,16 @@ impl StakeKeeper {
         _api: &dyn Api,
         staking_storage: &mut dyn Storage,
         block: &BlockInfo,
-        validator: &Addr,
+        validator_addr: &str,
     ) -> AnyResult<()> {
         let staking_info = Self::get_staking_info(staking_storage)?;
 
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
+            .may_load(staking_storage, validator_addr)?
             // https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L15
             .ok_or_else(|| anyhow!("validator does not exist"))?;
 
-        let validator_obj = VALIDATOR_MAP.load(staking_storage, validator)?;
+        let validator_obj = VALIDATOR_MAP.load(staking_storage, validator_addr)?;
 
         if validator_info.last_rewards_calculation >= block.time {
             return Ok(());
@@ -316,16 +320,15 @@ impl StakeKeeper {
 
         // update validator info
         validator_info.last_rewards_calculation = block.time;
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(staking_storage, validator_addr, &validator_info)?;
 
         // update delegators
         if !new_rewards.is_zero() {
-            let validator_addr = validate_valoper_address(&validator_obj.address)?;
             // update all delegators
             for staker in validator_info.stakers.iter() {
                 STAKES.update(
                     staking_storage,
-                    (staker, &validator_addr),
+                    (staker, &validator_obj.address),
                     |shares| -> AnyResult<_> {
                         let mut shares =
                             shares.expect("all stakers in validator_info should exist");
@@ -342,9 +345,9 @@ impl StakeKeeper {
     fn get_validator(
         &self,
         staking_storage: &dyn Storage,
-        address: &Addr,
+        validator_addr: &str,
     ) -> AnyResult<Option<Validator>> {
-        Ok(VALIDATOR_MAP.may_load(staking_storage, address)?)
+        Ok(VALIDATOR_MAP.may_load(staking_storage, validator_addr)?)
     }
 
     /// Returns all available validators
@@ -357,9 +360,9 @@ impl StakeKeeper {
         &self,
         staking_storage: &dyn Storage,
         account: &Addr,
-        validator: &Addr,
+        validator_addr: &str,
     ) -> AnyResult<Option<Coin>> {
-        let shares = STAKES.may_load(staking_storage, (account, validator))?;
+        let shares = STAKES.may_load(staking_storage, (account, validator_addr))?;
         let staking_info = Self::get_staking_info(staking_storage)?;
 
         Ok(shares.map(|shares| {
@@ -376,7 +379,7 @@ impl StakeKeeper {
         staking_storage: &mut dyn Storage,
         block: &BlockInfo,
         to_address: &Addr,
-        validator: &Addr,
+        validator_addr: &str,
         amount: Coin,
     ) -> AnyResult<()> {
         self.validate_denom(staking_storage, &amount)?;
@@ -385,7 +388,7 @@ impl StakeKeeper {
             staking_storage,
             block,
             to_address,
-            validator,
+            validator_addr,
             amount.amount,
             false,
         )
@@ -397,7 +400,7 @@ impl StakeKeeper {
         staking_storage: &mut dyn Storage,
         block: &BlockInfo,
         from_address: &Addr,
-        validator: &Addr,
+        validator_addr: &str,
         amount: Coin,
     ) -> AnyResult<()> {
         self.validate_denom(staking_storage, &amount)?;
@@ -406,7 +409,7 @@ impl StakeKeeper {
             staking_storage,
             block,
             from_address,
-            validator,
+            validator_addr,
             amount.amount,
             true,
         )
@@ -418,20 +421,20 @@ impl StakeKeeper {
         staking_storage: &mut dyn Storage,
         block: &BlockInfo,
         delegator: &Addr,
-        validator: &Addr,
+        validator_addr: &str,
         amount: impl Into<Uint128>,
         sub: bool,
     ) -> AnyResult<()> {
         let amount = amount.into();
 
         // update rewards for this validator
-        Self::update_rewards(api, staking_storage, block, validator)?;
+        Self::update_rewards(api, staking_storage, block, validator_addr)?;
 
         // now, we can update the stake of the delegator and validator
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
+            .may_load(staking_storage, validator_addr)?
             .unwrap_or_else(|| ValidatorInfo::new(block.time));
-        let shares = STAKES.may_load(staking_storage, (delegator, validator))?;
+        let shares = STAKES.may_load(staking_storage, (delegator, validator_addr))?;
         let mut shares = if sub {
             // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1005-L1007
             // and https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L31
@@ -456,14 +459,14 @@ impl StakeKeeper {
         // save updated values
         if shares.stake.is_zero() {
             // no more stake, so remove
-            STAKES.remove(staking_storage, (delegator, validator));
+            STAKES.remove(staking_storage, (delegator, validator_addr));
             validator_info.stakers.remove(delegator);
         } else {
-            STAKES.save(staking_storage, (delegator, validator), &shares)?;
+            STAKES.save(staking_storage, (delegator, validator_addr), &shares)?;
             validator_info.stakers.insert(delegator.clone());
         }
         // save updated validator info
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(staking_storage, validator_addr, &validator_info)?;
 
         Ok(())
     }
@@ -473,15 +476,15 @@ impl StakeKeeper {
         api: &dyn Api,
         staking_storage: &mut dyn Storage,
         block: &BlockInfo,
-        validator: &Addr,
+        validator_addr: &str,
         percentage: Decimal,
     ) -> AnyResult<()> {
         // calculate rewards before slashing
-        Self::update_rewards(api, staking_storage, block, validator)?;
+        Self::update_rewards(api, staking_storage, block, validator_addr)?;
 
         // update stake of validator and stakers
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
+            .may_load(staking_storage, validator_addr)?
             .unwrap();
 
         let remaining_percentage = Decimal::one() - percentage;
@@ -491,7 +494,7 @@ impl StakeKeeper {
         if validator_info.stake.is_zero() {
             // need to remove all stakes
             for delegator in validator_info.stakers.iter() {
-                STAKES.remove(staking_storage, (delegator, validator));
+                STAKES.remove(staking_storage, (delegator, validator_addr));
             }
             validator_info.stakers.clear();
         } else {
@@ -499,7 +502,7 @@ impl StakeKeeper {
             for delegator in validator_info.stakers.iter() {
                 STAKES.update(
                     staking_storage,
-                    (delegator, validator),
+                    (delegator, validator_addr),
                     |stake| -> AnyResult<_> {
                         let mut stake = stake.expect("all stakers in validator_info should exist");
                         stake.stake *= remaining_percentage;
@@ -516,13 +519,13 @@ impl StakeKeeper {
         #[allow(clippy::op_ref)]
         unbonding_queue
             .iter_mut()
-            .filter(|ub| &ub.validator == validator)
+            .filter(|ub| &ub.validator == validator_addr)
             .for_each(|ub| {
                 ub.amount = ub.amount.mul_floor(remaining_percentage);
             });
         UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
 
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(staking_storage, validator_addr, &validator_info)?;
         Ok(())
     }
 
@@ -644,8 +647,6 @@ impl Module for StakeKeeper {
         let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
         match msg {
             StakingMsg::Delegate { validator, amount } => {
-                let validator = validate_valoper_address(&validator)?;
-
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L202-L207
                 if amount.amount.is_zero() {
                     bail!("invalid delegation amount");
@@ -679,7 +680,6 @@ impl Module for StakeKeeper {
                 Ok(AppResponse { events, data: None })
             }
             StakingMsg::Undelegate { validator, amount } => {
-                let validator = validate_valoper_address(&validator)?;
                 self.validate_denom(&staking_storage, &amount)?;
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
@@ -719,8 +719,6 @@ impl Module for StakeKeeper {
                 dst_validator,
                 amount,
             } => {
-                let src_validator = validate_valoper_address(&src_validator)?;
-                let dst_validator = validate_valoper_address(&dst_validator)?;
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L316-L322
                 let events = vec![Event::new("redelegate")
                     .add_attribute("source_validator", &src_validator)
@@ -773,11 +771,7 @@ impl Module for StakeKeeper {
                         .filter_map(|validator| {
                             let delegator = delegator.clone();
                             let amount = self
-                                .get_stake(
-                                    &staking_storage,
-                                    &delegator,
-                                    &Addr::unchecked(&validator.address),
-                                )
+                                .get_stake(&staking_storage, &delegator, &validator.address)
                                 .transpose()?;
 
                             Some(amount.map(|amount| {
@@ -792,18 +786,17 @@ impl Module for StakeKeeper {
                 delegator,
                 validator,
             } => {
-                let validator_addr = Addr::unchecked(&validator);
-                let validator_obj = match self.get_validator(&staking_storage, &validator_addr)? {
+                let validator_obj = match self.get_validator(&staking_storage, &validator)? {
                     Some(validator) => validator,
                     None => bail!("non-existent validator {}", validator),
                 };
                 let delegator = api.addr_validate(&delegator)?;
 
                 let shares = STAKES
-                    .may_load(&staking_storage, (&delegator, &validator_addr))?
+                    .may_load(&staking_storage, (&delegator, &validator))?
                     .unwrap_or_default();
 
-                let validator_info = VALIDATOR_INFO.load(&staking_storage, &validator_addr)?;
+                let validator_info = VALIDATOR_INFO.load(&staking_storage, &validator)?;
                 let reward = Self::get_rewards_internal(
                     &staking_storage,
                     block,
@@ -842,7 +835,7 @@ impl Module for StakeKeeper {
                 self.get_validators(&staking_storage)?,
             ))?),
             StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(
-                self.get_validator(&staking_storage, &Addr::unchecked(address))?,
+                self.get_validator(&staking_storage, &address)?,
             ))?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
         }
@@ -862,7 +855,6 @@ impl Module for StakeKeeper {
                 percentage,
             } => {
                 let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-                let validator = validate_valoper_address(&validator)?;
                 self.validate_percentage(percentage)?;
                 self.slash(api, &mut staking_storage, block, &validator, percentage)?;
                 Ok(AppResponse::default())
@@ -892,7 +884,7 @@ impl DistributionKeeper {
         storage: &mut dyn Storage,
         block: &BlockInfo,
         delegator: &Addr,
-        validator: &Addr,
+        validator: &str,
     ) -> AnyResult<Uint128> {
         let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
         // update the validator and staker rewards
@@ -956,10 +948,7 @@ impl Module for DistributionKeeper {
     ) -> AnyResult<AppResponse> {
         match msg {
             DistributionMsg::WithdrawDelegatorReward { validator } => {
-                let validator_addr = validate_valoper_address(&validator)?;
-
-                let rewards = self.remove_rewards(api, storage, block, &sender, &validator_addr)?;
-
+                let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
                 let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
                 let distribution_storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
@@ -1027,15 +1016,6 @@ impl Module for DistributionKeeper {
     }
 }
 
-/// Utility function for validating validator's address.
-///
-/// Currently, we do not validate this address, because we do not have a place to store Bech32 prefix for validators.
-/// In real-life blockchains, validator addresses have a different prefix than user addresses.
-/// In case such a validation should be possible in the future, just place it inside this function.
-fn validate_valoper_address(human: &str) -> StdResult<Addr> {
-    Ok(Addr::unchecked(human))
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -1088,9 +1068,9 @@ mod test {
         storage: MockStorage,
         router: BasicRouter,
         block: BlockInfo,
-        validator_addr_1: Addr,
-        validator_addr_2: Addr,
-        validator_addr_3: Addr,
+        validator_addr_1: String,
+        validator_addr_2: String,
+        validator_addr_3: String,
         delegator_addr_1: Addr,
         delegator_addr_2: Addr,
         user_addr_1: Addr,
@@ -1101,8 +1081,8 @@ mod test {
         fn new(validator1: ValidatorProperties, validator2: ValidatorProperties) -> Self {
             // Utility function for creating a validator's address,
             // which has a different prefix from a user's address.
-            fn valoper_address(value: &str) -> Addr {
-                value.into_bech32_with_prefix("cosmwasmvaloper")
+            fn validator_address(value: &str) -> String {
+                value.into_bech32_with_prefix("cosmwasmvaloper").to_string()
             }
 
             // Utility function for creating a user's address,
@@ -1125,9 +1105,9 @@ mod test {
             let mut storage = MockStorage::new();
             let block = mock_env().block;
 
-            let validator_addr_1 = valoper_address("validator1");
-            let validator_addr_2 = valoper_address("validator2");
-            let validator_addr_3 = valoper_address("validator3");
+            let validator_addr_1 = validator_address("validator1");
+            let validator_addr_2 = validator_address("validator2");
+            let validator_addr_3 = validator_address("validator3");
 
             // configure basic staking parameters
             router
@@ -1176,19 +1156,19 @@ mod test {
 
         /// Returns an address of EXISTING validator no. 1.
         #[inline(always)]
-        fn validator_addr_1(&self) -> Addr {
+        fn validator_addr_1(&self) -> String {
             self.validator_addr_1.clone()
         }
 
         /// Returns an address of EXISTING validator no. 2.
         #[inline(always)]
-        fn validator_addr_2(&self) -> Addr {
+        fn validator_addr_2(&self) -> String {
             self.validator_addr_2.clone()
         }
 
         /// Returns an address of NON-EXISTING validator no. 3.
         #[inline(always)]
-        fn validator_addr_3(&self) -> Addr {
+        fn validator_addr_3(&self) -> String {
             self.validator_addr_3.clone()
         }
 
@@ -1714,7 +1694,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1741,7 +1721,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             DistributionMsg::WithdrawDelegatorReward {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
             },
         )
         .unwrap();
@@ -1758,8 +1738,8 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Redelegate {
-                src_validator: validator_addr_1.to_string(),
-                dst_validator: validator_addr_2.to_string(),
+                src_validator: validator_addr_1,
+                dst_validator: validator_addr_2.clone(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1779,7 +1759,7 @@ mod test {
             delegations.delegations,
             [Delegation::new(
                 delegator_addr_1.clone(),
-                validator_addr_2.to_string(),
+                validator_addr_2.clone(),
                 coin(100, BONDED_DENOM),
             )]
         );
@@ -1789,7 +1769,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
-                validator: validator_addr_2.to_string(),
+                validator: validator_addr_2,
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1824,7 +1804,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1848,7 +1828,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             DistributionMsg::WithdrawDelegatorReward {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
             },
         )
         .unwrap();
@@ -1871,7 +1851,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             DistributionMsg::WithdrawDelegatorReward {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1,
             },
         )
         .unwrap();
@@ -1904,7 +1884,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1915,7 +1895,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
                 amount: coin(200, BONDED_DENOM),
             },
         )
@@ -1927,8 +1907,8 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Redelegate {
-                src_validator: validator_addr_1.to_string(),
-                dst_validator: validator_addr_2.to_string(),
+                src_validator: validator_addr_1,
+                dst_validator: validator_addr_2.clone(),
                 amount: coin(200, BONDED_DENOM),
             },
         )
@@ -1940,7 +1920,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
-                validator: validator_addr_2.to_string(),
+                validator: validator_addr_2,
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -1966,7 +1946,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1,
                 amount: coin(100, "FAKE"),
             },
         )
@@ -1997,7 +1977,7 @@ mod test {
                 &env.router,
                 &env.block,
                 StakingSudo::Slash {
-                    validator: validator_addr_3.to_string(),
+                    validator: validator_addr_3,
                     percentage: Decimal::percent(50),
                 },
             )
@@ -2020,7 +2000,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: validator_addr_3.to_string(),
+                validator: validator_addr_3.clone(),
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -2032,7 +2012,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Undelegate {
-                validator: validator_addr_3.to_string(),
+                validator: validator_addr_3,
                 amount: coin(100, BONDED_DENOM),
             },
         )
@@ -2052,7 +2032,7 @@ mod test {
             &mut env,
             delegator_addr_1.clone(),
             StakingMsg::Delegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
                 amount: coin(0, BONDED_DENOM),
             },
         )
@@ -2064,7 +2044,7 @@ mod test {
             &mut env,
             delegator_addr_1,
             StakingMsg::Undelegate {
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1,
                 amount: coin(0, BONDED_DENOM),
             },
         )
@@ -2190,7 +2170,7 @@ mod test {
                 ),
                 Delegation::new(
                     delegator_addr_1.clone(),
-                    validator_addr_2.to_string(),
+                    validator_addr_2,
                     coin(160, BONDED_DENOM),
                 ),
             ]
@@ -2199,7 +2179,7 @@ mod test {
             &env,
             StakingQuery::Delegation {
                 delegator: delegator_addr_2.to_string(),
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1.clone(),
             },
         )
         .unwrap();
@@ -2207,7 +2187,7 @@ mod test {
             response2.delegation.unwrap(),
             FullDelegation::new(
                 delegator_addr_2.clone(),
-                validator_addr_1.to_string(),
+                validator_addr_1,
                 coin(100, BONDED_DENOM),
                 coin(100, BONDED_DENOM),
                 vec![],
@@ -2319,7 +2299,7 @@ mod test {
             &env,
             StakingQuery::Delegation {
                 delegator: delegator_addr_1.to_string(),
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1,
             },
         )
         .unwrap();
@@ -2427,7 +2407,7 @@ mod test {
             &env,
             StakingQuery::Delegation {
                 delegator: delegator_addr_1.to_string(),
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1,
             },
         )
         .unwrap();
@@ -2504,7 +2484,7 @@ mod test {
             response1.delegations[0],
             Delegation::new(
                 delegator_addr_1.clone(),
-                validator_addr_1.to_string(),
+                validator_addr_1,
                 coin(111, BONDED_DENOM),
             )
         );
@@ -2554,7 +2534,7 @@ mod test {
             &env,
             StakingQuery::Delegation {
                 delegator: delegator_addr_1.to_string(),
-                validator: validator_addr_1.to_string(),
+                validator: validator_addr_1,
             },
         )
         .unwrap();
