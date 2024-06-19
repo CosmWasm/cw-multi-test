@@ -13,19 +13,19 @@ fn assert_balance(coins: Vec<Coin>) {
     assert_eq!(DENOM, coins[0].denom);
 }
 
+fn coins() -> Vec<Coin> {
+    vec![Coin {
+        denom: DENOM.to_string(),
+        amount: Uint128::new(AMOUNT),
+    }]
+}
+
 #[test]
 fn initializing_balance_should_work() {
     let app = AppBuilder::new().build(|router, api, storage| {
         router
             .bank
-            .init_balance(
-                storage,
-                &api.addr_make(USER),
-                vec![Coin {
-                    denom: DENOM.to_string(),
-                    amount: Uint128::new(AMOUNT),
-                }],
-            )
+            .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
     assert_balance(
@@ -40,14 +40,7 @@ fn initializing_balance_without_builder_should_work() {
     let app = App::new(|router, api, storage| {
         router
             .bank
-            .init_balance(
-                storage,
-                &api.addr_make(USER),
-                vec![Coin {
-                    denom: DENOM.to_string(),
-                    amount: Uint128::new(AMOUNT),
-                }],
-            )
+            .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
     assert_balance(
@@ -76,14 +69,7 @@ fn initializing_balance_custom_app_should_work() {
     let app: BasicApp<CustomHelperMsg, CustomHelperQuery> = custom_app(|router, api, storage| {
         router
             .bank
-            .init_balance(
-                storage,
-                &api.addr_make(USER),
-                vec![Coin {
-                    denom: DENOM.to_string(),
-                    amount: Uint128::new(AMOUNT),
-                }],
-            )
+            .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
     assert_balance(
@@ -99,14 +85,7 @@ fn initializing_balance_later_should_work() {
     app.init_modules(|router, api, storage| {
         router
             .bank
-            .init_balance(
-                storage,
-                &api.addr_make(USER),
-                vec![Coin {
-                    denom: DENOM.to_string(),
-                    amount: Uint128::new(AMOUNT),
-                }],
-            )
+            .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
     assert_balance(
