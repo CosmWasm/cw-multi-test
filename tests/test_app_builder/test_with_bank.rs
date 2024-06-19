@@ -1,6 +1,6 @@
 use crate::test_app_builder::MyKeeper;
 use cosmwasm_std::{coins, BankMsg, BankQuery};
-use cw_multi_test::{AppBuilder, Bank, BankSudo, Executor};
+use cw_multi_test::{no_init, AppBuilder, Bank, BankSudo, Executor};
 
 type MyBankKeeper = MyKeeper<BankMsg, BankQuery, BankSudo>;
 
@@ -16,7 +16,7 @@ fn building_app_with_custom_bank_should_work() {
     let bank_keeper = MyBankKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
     // build the application with custom bank keeper
-    let mut app = AppBuilder::default().with_bank(bank_keeper).build_no_init();
+    let mut app = AppBuilder::default().with_bank(bank_keeper).build(no_init);
 
     // prepare user addresses
     let recipient_addr = app.api().addr_make("recipient");

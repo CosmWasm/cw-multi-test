@@ -1,5 +1,5 @@
 use crate::test_helpers::stargate;
-use crate::{App, AppBuilder, Executor, StargateAccepting};
+use crate::{no_init, App, AppBuilder, Executor, StargateAccepting};
 use cosmwasm_std::Empty;
 
 #[test]
@@ -34,7 +34,7 @@ fn default_failing_stargate_handler_should_work() {
 fn accepting_stargate_handler_should_work() {
     let mut app = AppBuilder::default()
         .with_stargate(StargateAccepting)
-        .build_no_init();
+        .build(no_init);
 
     // store the contract
     let creator_addr = app.api().addr_make("creator");

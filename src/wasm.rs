@@ -433,13 +433,13 @@ where
     /// # Example
     ///
     /// ```
-    /// use cw_multi_test::{AppBuilder, WasmKeeper};
+    /// use cw_multi_test::{no_init, AppBuilder, WasmKeeper};
     ///
     /// // create wasm keeper
     /// let wasm_keeper = WasmKeeper::new();
     ///
     /// // create and use the application with newly created wasm keeper
-    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
     /// ```
     pub fn new() -> Self {
         Self::default()
@@ -451,7 +451,7 @@ where
     ///
     /// ```
     /// use cosmwasm_std::{Addr, Api, Storage};
-    /// use cw_multi_test::{AddressGenerator, AppBuilder, WasmKeeper};
+    /// use cw_multi_test::{no_init, AddressGenerator, AppBuilder, WasmKeeper};
     /// use cw_multi_test::error::AnyResult;
     /// # use cosmwasm_std::testing::MockApi;
     ///
@@ -474,7 +474,7 @@ where
     /// let wasm_keeper = WasmKeeper::new().with_address_generator(CustomAddressGenerator);
     ///
     /// // create and use the application with customized wasm keeper
-    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
     /// ```
     pub fn with_address_generator(
         mut self,
@@ -490,7 +490,7 @@ where
     ///
     /// ```
     /// use cosmwasm_std::{Addr, Checksum};
-    /// use cw_multi_test::{AppBuilder, ChecksumGenerator, WasmKeeper};
+    /// use cw_multi_test::{no_init, AppBuilder, ChecksumGenerator, WasmKeeper};
     ///
     /// struct MyChecksumGenerator;
     ///
@@ -505,7 +505,7 @@ where
     /// let wasm_keeper = WasmKeeper::new().with_checksum_generator(MyChecksumGenerator);
     ///
     /// // create and use the application with customized wasm keeper
-    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
+    /// let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
     /// ```
     pub fn with_checksum_generator(
         mut self,

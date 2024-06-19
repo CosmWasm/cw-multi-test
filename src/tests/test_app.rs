@@ -1652,6 +1652,7 @@ mod wasm_queries {
 
 mod custom_messages {
     use super::*;
+    use crate::no_init;
 
     #[test]
     fn triggering_custom_msg() {
@@ -1660,7 +1661,7 @@ mod custom_messages {
 
         let mut app = AppBuilder::new_custom()
             .with_custom(custom_handler)
-            .build_no_init();
+            .build(no_init);
 
         let sender = app.api().addr_make("sender");
         let owner = app.api().addr_make("owner");

@@ -1,6 +1,6 @@
 use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{Api, CanonicalAddr, HexBinary};
-use cw_multi_test::AppBuilder;
+use cw_multi_test::{no_init, AppBuilder};
 
 #[test]
 fn building_app_with_custom_api_should_work() {
@@ -12,7 +12,7 @@ fn building_app_with_custom_api_should_work() {
     // Bech32 address encoding with 'juno' prefix
     let app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
-        .build_no_init();
+        .build(no_init);
 
     // check address validation function
     assert_eq!(human, app.api().addr_validate(human).unwrap().as_str());

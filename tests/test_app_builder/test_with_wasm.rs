@@ -5,8 +5,8 @@ use cosmwasm_std::{
 };
 use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{
-    AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm, WasmKeeper,
-    WasmSudo,
+    no_init, AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm,
+    WasmKeeper, WasmSudo,
 };
 use once_cell::sync::Lazy;
 
@@ -91,7 +91,7 @@ fn building_app_with_custom_wasm_should_work() {
     let wasm_keeper = MyWasmKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
     // build the application with custom wasm keeper
-    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build_no_init();
+    let mut app = AppBuilder::default().with_wasm(wasm_keeper).build(no_init);
 
     // prepare addresses
     let contract_addr = app.api().addr_make("contract");
@@ -163,5 +163,5 @@ fn compiling_with_wasm_keeper_should_work() {
     // while our WasmKeeper does not implement Module
     let _ = AppBuilder::default()
         .with_wasm(WasmKeeper::default())
-        .build_no_init();
+        .build(no_init);
 }

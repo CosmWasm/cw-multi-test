@@ -1,6 +1,6 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{Empty, GovMsg, VoteOption};
-use cw_multi_test::{AppBuilder, Executor, Gov};
+use cw_multi_test::{no_init, AppBuilder, Executor, Gov};
 
 type MyGovKeeper = MyKeeper<GovMsg, Empty, Empty>;
 
@@ -14,7 +14,7 @@ fn building_app_with_custom_gov_should_work() {
     let gov_keeper = MyGovKeeper::new(EXECUTE_MSG, NO_MESSAGE, NO_MESSAGE);
 
     // build the application with custom gov keeper
-    let mut app = AppBuilder::default().with_gov(gov_keeper).build_no_init();
+    let mut app = AppBuilder::default().with_gov(gov_keeper).build(no_init);
 
     // prepare addresses
     let sender_addr = app.api().addr_make("sender");

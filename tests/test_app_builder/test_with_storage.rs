@@ -1,7 +1,7 @@
 use crate::test_contracts;
 use crate::test_contracts::counter::{CounterQueryMsg, CounterResponseMsg};
 use cosmwasm_std::{to_json_binary, Empty, Order, Record, Storage, WasmMsg};
-use cw_multi_test::{AppBuilder, Executor};
+use cw_multi_test::{no_init, AppBuilder, Executor};
 use std::collections::BTreeMap;
 use std::iter;
 
@@ -43,7 +43,7 @@ fn building_app_with_custom_storage_should_work() {
     // build the application with custom storage
     let mut app = AppBuilder::default()
         .with_storage(MyStorage::default())
-        .build_no_init();
+        .build(no_init);
 
     // prepare user addresses
     let owner_addr = app.api().addr_make("owner");

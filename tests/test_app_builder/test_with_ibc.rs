@@ -1,6 +1,6 @@
 use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
 use cosmwasm_std::{Empty, IbcMsg, IbcQuery, QueryRequest};
-use cw_multi_test::{AppBuilder, Executor, Ibc};
+use cw_multi_test::{no_init, AppBuilder, Executor, Ibc};
 
 type MyIbcKeeper = MyKeeper<IbcMsg, IbcQuery, Empty>;
 
@@ -15,7 +15,7 @@ fn building_app_with_custom_ibc_should_work() {
     let ibc_keeper = MyIbcKeeper::new(EXECUTE_MSG, QUERY_MSG, NO_MESSAGE);
 
     // build the application with custom ibc keeper
-    let mut app = AppBuilder::default().with_ibc(ibc_keeper).build_no_init();
+    let mut app = AppBuilder::default().with_ibc(ibc_keeper).build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");

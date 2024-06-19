@@ -16,14 +16,14 @@ use std::fmt::Debug;
 ///
 /// ```
 /// # use cosmwasm_std::Empty;
-/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module};
+/// # use cw_multi_test::{no_init, BasicAppBuilder, FailingModule, Module};
 /// # type MyHandler = FailingModule<Empty, Empty, Empty>;
 /// # type MyExecC = Empty;
 /// # type MyQueryC = Empty;
 ///
 /// let mut app = BasicAppBuilder::<MyExecC, MyQueryC>::new_custom()
 ///                   .with_custom(MyHandler::default())
-///                   .build_no_init();
+///                   .build(no_init);
 /// ```
 /// This type alias is crucial for constructing a custom app with specific modules.
 /// It provides a streamlined approach to building and configuring an App tailored to
@@ -573,26 +573,5 @@ where
             block: self.block,
             storage,
         }
-    }
-
-    /// Builds the final [App] without initialization.
-    ///
-    /// At this point all component types have to be properly related to each other.
-    pub fn build_no_init(
-        self,
-    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>
-    where
-        BankT: Bank,
-        ApiT: Api,
-        StorageT: Storage,
-        CustomT: Module,
-        WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
-        StakingT: Staking,
-        DistrT: Distribution,
-        IbcT: Ibc,
-        GovT: Gov,
-        StargateT: Stargate,
-    {
-        self.build(|_, _, _| {})
     }
 }
