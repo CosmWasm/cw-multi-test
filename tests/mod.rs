@@ -4,6 +4,7 @@ mod test_api;
 mod test_app;
 mod test_app_builder;
 mod test_attributes;
+mod test_bank;
 mod test_contract_storage;
 mod test_module;
 mod test_prefixed_storage;
