@@ -5,8 +5,8 @@ use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, Custom
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
 use crate::{
-    custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
-    Module, Router, Staking, Wasm, WasmSudo,
+    custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
+    Router, Staking, Wasm, WasmSudo,
 };
 use crate::{AppBuilder, IntoAddr};
 use cosmwasm_std::testing::{mock_env, MockQuerier};
@@ -1738,7 +1738,7 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_with_data_works() {
-        let mut app = BasicApp::new(no_init);
+        let mut app = BasicApp::new(|_, _, _| {});
 
         let owner = app.api().addr_make("owner");
 
@@ -1768,7 +1768,7 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_with_reply_works() {
-        let mut app = BasicApp::new(no_init);
+        let mut app = BasicApp::new(|_, _, _| {});
 
         let owner = app.api().addr_make("owner");
 
@@ -1821,7 +1821,7 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn execute_wrapped_properly() {
-        let mut app = BasicApp::new(no_init);
+        let mut app = BasicApp::new(|_, _, _| {});
 
         let owner = app.api().addr_make("owner");
 

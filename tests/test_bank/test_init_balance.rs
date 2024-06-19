@@ -1,8 +1,8 @@
 use cosmwasm_std::{Coin, Uint128};
 use cw_multi_test::AppBuilder;
 
-const USER: &str = "USER";
-const NATIVE_DENOM: &str = "NativeDenom";
+const USER: &str = "user";
+const DENOM: &str = "denom";
 const AMOUNT: u128 = 100;
 
 #[test]
@@ -14,18 +14,17 @@ fn initializing_balance_should_work() {
                 storage,
                 &api.addr_make(USER),
                 vec![Coin {
-                    denom: NATIVE_DENOM.to_string(),
+                    denom: DENOM.to_string(),
                     amount: Uint128::new(100),
                 }],
             )
             .unwrap();
     });
-    let api = app.api();
-    let user_addr = api.addr_make(USER);
-    let balances = app.wrap().query_all_balances(user_addr).unwrap();
+    let balances = app
+        .wrap()
+        .query_all_balances(app.api().addr_make(USER))
+        .unwrap();
     assert_eq!(1, balances.len());
-    assert_eq!(
-        format!("{}{}", AMOUNT, NATIVE_DENOM),
-        balances[0].to_string()
-    );
+    assert_eq!(AMOUNT, balances[0].amount.u128());
+    assert_eq!(DENOM, balances[0].denom);
 }

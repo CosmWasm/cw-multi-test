@@ -16,7 +16,7 @@ use std::fmt::Debug;
 ///
 /// ```
 /// # use cosmwasm_std::Empty;
-/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module, no_init};
+/// # use cw_multi_test::{BasicAppBuilder, FailingModule, Module};
 /// # type MyHandler = FailingModule<Empty, Empty, Empty>;
 /// # type MyExecC = Empty;
 /// # type MyQueryC = Empty;
@@ -528,51 +528,6 @@ where
     pub fn with_block(mut self, block: BlockInfo) -> Self {
         self.block = block;
         self
-    }
-
-    /// Builds final `App`. At this point all components type have to be properly related to each
-    /// other. If there are some generics related compilation errors, make sure that all components
-    /// are properly relating to each other.
-    pub(crate) fn build_internal<F>(
-        self,
-        init_fn: F,
-    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>
-    where
-        BankT: Bank,
-        ApiT: Api,
-        StorageT: Storage,
-        CustomT: Module,
-        WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
-        StakingT: Staking,
-        DistrT: Distribution,
-        IbcT: Ibc,
-        GovT: Gov,
-        StargateT: Stargate,
-        F: FnOnce(
-            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-            &dyn Api,
-            &mut dyn Storage,
-        ),
-    {
-        let mut router = Router {
-            wasm: self.wasm,
-            bank: self.bank,
-            custom: self.custom,
-            staking: self.staking,
-            distribution: self.distribution,
-            ibc: self.ibc,
-            gov: self.gov,
-            stargate: self.stargate,
-        };
-        let api = self.api;
-        let mut storage = self.storage;
-        init_fn(&mut router, &api, &mut storage);
-        App {
-            router,
-            api,
-            block: self.block,
-            storage,
-        }
     }
 
     /// Builds final `App`. At this point all components type have to be properly related to each

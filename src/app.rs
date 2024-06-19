@@ -66,15 +66,6 @@ pub struct App<
     pub(crate) block: BlockInfo,
 }
 
-/// No-op application initialization function.
-pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
-    router: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-    api: &dyn Api,
-    storage: &mut dyn Storage,
-) {
-    let _ = (router, api, storage);
-}
-
 impl Default for BasicApp {
     fn default() -> Self {
         Self::new(|_, _, _| {})
@@ -96,11 +87,11 @@ impl BasicApp {
                 GovFailingModule,
                 StargateFailing,
             >,
-            &dyn Api,
+            &MockApi,
             &mut dyn Storage,
         ),
     {
-        AppBuilder::new().build_internal(init_fn)
+        AppBuilder::new().build(init_fn)
     }
 }
 
@@ -121,11 +112,11 @@ where
             GovFailingModule,
             StargateFailing,
         >,
-        &dyn Api,
+        &MockApi,
         &mut dyn Storage,
     ),
 {
-    AppBuilder::new_custom().build_internal(init_fn)
+    AppBuilder::new_custom().build(init_fn)
 }
 
 impl<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT> Querier
