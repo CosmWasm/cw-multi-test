@@ -1696,7 +1696,7 @@ mod custom_messages {
 
 mod protobuf_wrapped_data {
     use super::*;
-    use crate::BasicApp;
+    use crate::{no_init, BasicApp};
 
     #[test]
     fn instantiate_wrapped_properly() {
@@ -1739,7 +1739,7 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_with_data_works() {
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         let owner = app.api().addr_make("owner");
 
@@ -1769,7 +1769,7 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn instantiate_with_reply_works() {
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         let owner = app.api().addr_make("owner");
 
@@ -1822,7 +1822,7 @@ mod protobuf_wrapped_data {
 
     #[test]
     fn execute_wrapped_properly() {
-        let mut app = BasicApp::new(|_, _, _| {});
+        let mut app = BasicApp::new(no_init);
 
         let owner = app.api().addr_make("owner");
 
@@ -1833,7 +1833,7 @@ mod protobuf_wrapped_data {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "label", None)
             .unwrap();
 
-        // ensure the execute has the same wrapper as it should
+        // ensure that execute has the same wrapper as it should
         let msg = echo::Message::<Empty> {
             data: Some("hello".into()),
             ..echo::Message::default()
