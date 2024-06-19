@@ -574,4 +574,53 @@ where
         app.init_modules(init_fn);
         app
     }
+
+    /// Builds final `App`. At this point all components type have to be properly related to each
+    /// other. If there are some generics related compilation errors, make sure that all components
+    /// are properly relating to each other.
+    pub fn build_a<F>(
+        self,
+        init_fn: F,
+    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>
+    where
+        BankT: Bank,
+        ApiT: Api,
+        StorageT: Storage,
+        CustomT: Module,
+        WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
+        StakingT: Staking,
+        DistrT: Distribution,
+        IbcT: Ibc,
+        GovT: Gov,
+        StargateT: Stargate,
+        F: FnOnce(
+            &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
+            &ApiT,
+            &mut dyn Storage,
+        ),
+    {
+        let mut router = Router {
+            wasm: self.wasm,
+            bank: self.bank,
+            custom: self.custom,
+            staking: self.staking,
+            distribution: self.distribution,
+            ibc: self.ibc,
+            gov: self.gov,
+            stargate: self.stargate,
+        };
+
+        let api = self.api;
+
+        let mut storage = self.storage;
+
+        init_fn(&mut router, &api, &mut storage);
+
+        App {
+            router,
+            api,
+            block: self.block,
+            storage,
+        }
+    }
 }

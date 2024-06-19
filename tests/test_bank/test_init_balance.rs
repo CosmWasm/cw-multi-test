@@ -1,4 +1,3 @@
-use cosmwasm_std::testing::MockApi;
 use cosmwasm_std::{Coin, Uint128};
 use cw_multi_test::AppBuilder;
 
@@ -8,13 +7,12 @@ const AMOUNT: u128 = 100;
 
 #[test]
 fn initializing_balance_should_work() {
-    let app = AppBuilder::new().build(|router, api, storage| {
-        let _ = api;
+    let app = AppBuilder::new().build_a(|router, api, storage| {
         router
             .bank
             .init_balance(
                 storage,
-                &MockApi::default().addr_make(USER),
+                &api.addr_make(USER),
                 vec![Coin {
                     denom: NATIVE_DENOM.to_string(),
                     amount: Uint128::new(100),
