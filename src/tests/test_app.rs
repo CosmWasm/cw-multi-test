@@ -5,8 +5,8 @@ use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, Custom
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
 use crate::{
-    custom_app, next_block, App, AppResponse, Bank, CosmosRouter, Distribution, Executor, Module,
-    Router, Staking, Wasm, WasmSudo,
+    custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
+    Module, Router, Staking, Wasm, WasmSudo,
 };
 use crate::{AppBuilder, IntoAddr};
 use cosmwasm_std::testing::{mock_env, MockQuerier};
@@ -1652,7 +1652,6 @@ mod wasm_queries {
 
 mod custom_messages {
     use super::*;
-    use crate::no_init;
 
     #[test]
     fn triggering_custom_msg() {
@@ -1696,7 +1695,7 @@ mod custom_messages {
 
 mod protobuf_wrapped_data {
     use super::*;
-    use crate::{no_init, BasicApp};
+    use crate::BasicApp;
 
     #[test]
     fn instantiate_wrapped_properly() {
@@ -1833,7 +1832,7 @@ mod protobuf_wrapped_data {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "label", None)
             .unwrap();
 
-        // ensure that execute has the same wrapper as it should
+        // ensure the execute has the same wrapper as it should
         let msg = echo::Message::<Empty> {
             data: Some("hello".into()),
             ..echo::Message::default()
