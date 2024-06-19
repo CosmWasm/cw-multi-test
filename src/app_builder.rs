@@ -578,42 +578,6 @@ where
     /// Builds final `App`. At this point all components type have to be properly related to each
     /// other. If there are some generics related compilation errors, make sure that all components
     /// are properly relating to each other.
-    pub(crate) fn build_no_init(
-        self,
-    ) -> App<BankT, ApiT, StorageT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>
-    where
-        BankT: Bank,
-        ApiT: Api,
-        StorageT: Storage,
-        CustomT: Module,
-        WasmT: Wasm<CustomT::ExecT, CustomT::QueryT>,
-        StakingT: Staking,
-        DistrT: Distribution,
-        IbcT: Ibc,
-        GovT: Gov,
-        StargateT: Stargate,
-    {
-        let router = Router {
-            wasm: self.wasm,
-            bank: self.bank,
-            custom: self.custom,
-            staking: self.staking,
-            distribution: self.distribution,
-            ibc: self.ibc,
-            gov: self.gov,
-            stargate: self.stargate,
-        };
-        App {
-            router,
-            api: self.api,
-            block: self.block,
-            storage: self.storage,
-        }
-    }
-
-    /// Builds final `App`. At this point all components type have to be properly related to each
-    /// other. If there are some generics related compilation errors, make sure that all components
-    /// are properly relating to each other.
     pub fn build<F>(
         self,
         init_fn: F,
@@ -645,13 +609,9 @@ where
             gov: self.gov,
             stargate: self.stargate,
         };
-
         let api = self.api;
-
         let mut storage = self.storage;
-
         init_fn(&mut router, &api, &mut storage);
-
         App {
             router,
             api,

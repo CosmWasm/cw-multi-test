@@ -77,7 +77,7 @@ pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
 
 impl Default for BasicApp {
     fn default() -> Self {
-        AppBuilder::new().build_no_init()
+        Self::new(|_, _, _| {})
     }
 }
 
