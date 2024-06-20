@@ -8,6 +8,7 @@ mod test_bank;
 mod test_contract_storage;
 mod test_module;
 mod test_prefixed_storage;
+#[cfg(feature = "staking")]
 mod test_staking;
 mod test_wasm;
 

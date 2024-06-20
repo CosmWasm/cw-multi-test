@@ -1254,8 +1254,8 @@ mod test {
     use super::*;
     use crate::app::Router;
     use crate::bank::BankKeeper;
+    use crate::featured::staking::{DistributionKeeper, StakeKeeper};
     use crate::module::FailingModule;
-    use crate::staking::{DistributionKeeper, StakeKeeper};
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule, StargateFailing};
