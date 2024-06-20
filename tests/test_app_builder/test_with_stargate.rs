@@ -206,6 +206,7 @@ fn building_app_with_accepting_any_grpc_should_work() {
 }
 
 #[test]
+#[cfg(feature = "stargate")]
 fn default_failing_stargate_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_stargate(StargateFailing).build(no_init);

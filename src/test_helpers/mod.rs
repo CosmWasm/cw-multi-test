@@ -8,11 +8,14 @@ use serde::{Deserialize, Serialize};
 pub mod caller;
 pub mod echo;
 pub mod error;
+#[cfg(feature = "stargate")]
 pub mod gov;
 pub mod hackatom;
+#[cfg(feature = "stargate")]
 pub mod ibc;
 pub mod payout;
 pub mod reflect;
+#[cfg(feature = "stargate")]
 pub mod stargate;
 
 /// Custom message for testing purposes.

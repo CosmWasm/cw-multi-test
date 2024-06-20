@@ -134,6 +134,7 @@ mod contracts;
 pub mod custom_handler;
 pub mod error;
 mod executor;
+mod featured;
 mod gov;
 mod ibc;
 mod module;

@@ -657,9 +657,12 @@ where
             CosmosMsg::Distribution(msg) => self
                 .distribution
                 .execute(api, storage, self, block, sender, msg),
+            #[cfg(feature = "stargate")]
             CosmosMsg::Ibc(msg) => self.ibc.execute(api, storage, self, block, sender, msg),
+            #[cfg(feature = "stargate")]
             CosmosMsg::Gov(msg) => self.gov.execute(api, storage, self, block, sender, msg),
             #[allow(deprecated)]
+            #[cfg(feature = "stargate")]
             CosmosMsg::Stargate { type_url, value } => self
                 .stargate
                 .execute_stargate(api, storage, self, block, sender, type_url, value),
@@ -687,8 +690,10 @@ where
             QueryRequest::Bank(req) => self.bank.query(api, storage, &querier, block, req),
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
+            #[cfg(feature = "stargate")]
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req),
             #[allow(deprecated)]
+            #[cfg(feature = "stargate")]
             QueryRequest::Stargate { path, data } => self
                 .stargate
                 .query_stargate(api, storage, &querier, block, path, data),
