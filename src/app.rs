@@ -67,7 +67,7 @@ pub struct App<
 }
 
 /// No-op application initialization function.
-pub fn no_init<BankT, ApiT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
+pub fn no_init<ApiT, BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
     router: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
     api: &ApiT,
     storage: &mut dyn Storage,
