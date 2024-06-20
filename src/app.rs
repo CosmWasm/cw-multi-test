@@ -67,9 +67,9 @@ pub struct App<
 }
 
 /// No-op application initialization function.
-pub fn no_init<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
+pub fn no_init<ApiT, BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>(
     router: &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-    api: &dyn Api,
+    api: &ApiT,
     storage: &mut dyn Storage,
 ) {
     let _ = (router, api, storage);
@@ -96,7 +96,7 @@ impl BasicApp {
                 GovFailingModule,
                 StargateFailing,
             >,
-            &dyn Api,
+            &MockApi,
             &mut dyn Storage,
         ),
     {
@@ -121,7 +121,7 @@ where
             GovFailingModule,
             StargateFailing,
         >,
-        &dyn Api,
+        &MockApi,
         &mut dyn Storage,
     ),
 {
@@ -216,7 +216,7 @@ where
     where
         F: FnOnce(
             &mut Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-            &dyn Api,
+            &ApiT,
             &mut dyn Storage,
         ) -> T,
     {
@@ -228,7 +228,7 @@ where
     where
         F: FnOnce(
             &Router<BankT, CustomT, WasmT, StakingT, DistrT, IbcT, GovT, StargateT>,
-            &dyn Api,
+            &ApiT,
             &dyn Storage,
         ) -> T,
     {

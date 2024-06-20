@@ -16,8 +16,9 @@ fn building_app_with_custom_staking_should_work() {
     let stake_keeper = MyStakeKeeper::new(EXECUTE_MSG, QUERY_MSG, SUDO_MSG);
 
     // build the application with custom stake keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_staking(stake_keeper).build(no_init);
+    let mut app = AppBuilder::default()
+        .with_staking(stake_keeper)
+        .build(no_init);
 
     // prepare addresses
     let validator_addr = app.api().addr_make("validator");

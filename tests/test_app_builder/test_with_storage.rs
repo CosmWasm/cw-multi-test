@@ -41,8 +41,7 @@ fn building_app_with_custom_storage_should_work() {
     let label = "my-counter";
 
     // build the application with custom storage
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder
+    let mut app = AppBuilder::default()
         .with_storage(MyStorage::default())
         .build(no_init);
 
