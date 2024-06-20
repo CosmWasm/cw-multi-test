@@ -554,24 +554,25 @@ where
             &mut dyn Storage,
         ),
     {
-        let mut router = Router {
-            wasm: self.wasm,
-            bank: self.bank,
-            custom: self.custom,
-            staking: self.staking,
-            distribution: self.distribution,
-            ibc: self.ibc,
-            gov: self.gov,
-            stargate: self.stargate,
-        };
-        let api = self.api;
-        let mut storage = self.storage;
-        init_fn(&mut router, &api, &mut storage);
-        App {
-            router,
-            api,
+        // build the final application
+        let mut app = App {
+            router: Router {
+                wasm: self.wasm,
+                bank: self.bank,
+                custom: self.custom,
+                staking: self.staking,
+                distribution: self.distribution,
+                ibc: self.ibc,
+                gov: self.gov,
+                stargate: self.stargate,
+            },
+            api: self.api,
             block: self.block,
-            storage,
-        }
+            storage: self.storage,
+        };
+        // execute initialization provided by the caller
+        app.init_modules(init_fn);
+        // return already initialized application
+        app
     }
 }
