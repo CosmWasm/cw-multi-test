@@ -1,4 +1,4 @@
-use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
+use crate::test_app_builder::MyKeeper;
 use cosmwasm_std::{Empty, IbcMsg, IbcQuery, QueryRequest};
 use cw_multi_test::{no_init, AppBuilder, Executor, Ibc};
 
@@ -12,7 +12,7 @@ const QUERY_MSG: &str = "ibc query called";
 #[test]
 fn building_app_with_custom_ibc_should_work() {
     // build custom ibc keeper (no sudo handling for ibc)
-    let ibc_keeper = MyIbcKeeper::new(EXECUTE_MSG, QUERY_MSG, NO_MESSAGE);
+    let ibc_keeper = MyIbcKeeper::new(EXECUTE_MSG, QUERY_MSG, "");
 
     // build the application with custom ibc keeper
     let mut app = AppBuilder::default().with_ibc(ibc_keeper).build(no_init);

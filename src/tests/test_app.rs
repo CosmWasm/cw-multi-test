@@ -1,12 +1,13 @@
 use crate::custom_handler::CachingCustomHandler;
 use crate::error::{bail, AnyResult};
+use crate::featured::staking::{Distribution, Staking};
 use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomHelperMsg};
 use crate::transactions::{transactional, StorageTransaction};
 use crate::wasm::ContractData;
 use crate::{
-    custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Distribution, Executor,
-    Module, Router, Staking, Wasm, WasmSudo,
+    custom_app, next_block, no_init, App, AppResponse, Bank, CosmosRouter, Executor, Module,
+    Router, Wasm, WasmSudo,
 };
 use crate::{AppBuilder, IntoAddr};
 use cosmwasm_std::testing::{mock_env, MockQuerier};

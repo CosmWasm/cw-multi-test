@@ -1,9 +1,9 @@
 //! AppBuilder helps you set up your test blockchain environment step by step [App].
 
+use crate::featured::staking::{Distribution, DistributionKeeper, StakeKeeper, Staking};
 use crate::{
-    App, Bank, BankKeeper, Distribution, DistributionKeeper, FailingModule, Gov, GovFailingModule,
-    Ibc, IbcFailingModule, Module, Router, StakeKeeper, Staking, Stargate, StargateFailing, Wasm,
-    WasmKeeper,
+    App, Bank, BankKeeper, FailingModule, Gov, GovFailingModule, Ibc, IbcFailingModule, Module,
+    Router, Stargate, StargateFailing, Wasm, WasmKeeper,
 };
 use cosmwasm_std::testing::{mock_env, MockApi, MockStorage};
 use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
