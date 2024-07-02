@@ -1,7 +1,4 @@
-use anyhow::Result as AnyResult;
-use cosmwasm_std::{from_json, Api, Binary, CustomMsg, CustomQuery, Storage};
-use serde::de::DeserializeOwned;
-
+use crate::featured::staking::{Distribution, Staking};
 use crate::{
     ibc::{
         events::{
@@ -11,8 +8,11 @@ use crate::{
         types::{IbcPacketData, MockIbcQuery},
         IbcPacketRelayingMsg,
     },
-    App, AppResponse, Bank, Distribution, Gov, Ibc, Module, Staking, SudoMsg, Wasm,
+    App, AppResponse, Bank, Gov, Ibc, Module, SudoMsg, Wasm,
 };
+use anyhow::Result as AnyResult;
+use cosmwasm_std::{from_json, Api, Binary, CustomMsg, CustomQuery, Storage};
+use serde::de::DeserializeOwned;
 
 use super::{get_all_event_attr_value, get_event_attr_value, has_event};
 

@@ -678,7 +678,7 @@ where
     /// # Example
     ///
     /// ```
-    /// use cw_multi_test::{AppBuilder, no_init, WasmKeeper};
+    /// use cw_multi_test::{no_init, AppBuilder, WasmKeeper};
     ///
     /// // create wasm keeper
     /// let wasm_keeper = WasmKeeper::new();
@@ -696,7 +696,7 @@ where
     ///
     /// ```
     /// use cosmwasm_std::{Addr, Api, Storage};
-    /// use cw_multi_test::{AddressGenerator, AppBuilder, no_init, WasmKeeper};
+    /// use cw_multi_test::{no_init, AddressGenerator, AppBuilder, WasmKeeper};
     /// use cw_multi_test::error::AnyResult;
     /// # use cosmwasm_std::testing::MockApi;
     ///
@@ -735,7 +735,7 @@ where
     ///
     /// ```
     /// use cosmwasm_std::{Addr, Checksum};
-    /// use cw_multi_test::{AppBuilder, ChecksumGenerator, no_init, WasmKeeper};
+    /// use cw_multi_test::{no_init, AppBuilder, ChecksumGenerator, WasmKeeper};
     ///
     /// struct MyChecksumGenerator;
     ///
@@ -1553,8 +1553,8 @@ mod test {
     use super::*;
     use crate::app::Router;
     use crate::bank::BankKeeper;
+    use crate::featured::staking::{DistributionKeeper, StakeKeeper};
     use crate::module::FailingModule;
-    use crate::staking::{DistributionKeeper, StakeKeeper};
     use crate::test_helpers::{caller, error, payout};
     use crate::transactions::StorageTransaction;
     use crate::{GovFailingModule, IbcFailingModule, StargateFailing};

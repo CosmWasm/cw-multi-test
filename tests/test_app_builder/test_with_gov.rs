@@ -1,4 +1,4 @@
-use crate::test_app_builder::{MyKeeper, NO_MESSAGE};
+use crate::test_app_builder::MyKeeper;
 use cosmwasm_std::{Empty, GovMsg, VoteOption};
 use cw_multi_test::{no_init, AppBuilder, Executor, Gov};
 
@@ -11,11 +11,10 @@ const EXECUTE_MSG: &str = "gov execute called";
 #[test]
 fn building_app_with_custom_gov_should_work() {
     // build custom governance keeper (no query and sudo handling for gov module)
-    let gov_keeper = MyGovKeeper::new(EXECUTE_MSG, NO_MESSAGE, NO_MESSAGE);
+    let gov_keeper = MyGovKeeper::new(EXECUTE_MSG, "", "");
 
     // build the application with custom gov keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_gov(gov_keeper).build(no_init);
+    let mut app = AppBuilder::default().with_gov(gov_keeper).build(no_init);
 
     // prepare addresses
     let sender_addr = app.api().addr_make("sender");

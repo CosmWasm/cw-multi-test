@@ -1,14 +1,14 @@
-use anyhow::Result as AnyResult;
-use cosmwasm_std::{from_json, Api, CustomMsg, CustomQuery, IbcEndpoint, IbcOrder, Storage};
-use serde::de::DeserializeOwned;
-
+use crate::featured::staking::{Distribution, Staking};
 use crate::{
     ibc::{
         types::{Connection, MockIbcQuery},
         IbcPacketRelayingMsg,
     },
-    App, AppResponse, Bank, Distribution, Gov, Ibc, Module, Staking, Wasm,
+    App, AppResponse, Bank, Gov, Ibc, Module, Wasm,
 };
+use anyhow::Result as AnyResult;
+use cosmwasm_std::{from_json, Api, CustomMsg, CustomQuery, IbcEndpoint, IbcOrder, Storage};
+use serde::de::DeserializeOwned;
 
 use super::get_event_attr_value;
 

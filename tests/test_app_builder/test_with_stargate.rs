@@ -113,8 +113,9 @@ fn building_app_with_custom_stargate_should_work() {
 #[cfg(feature = "cosmwasm_2_0")]
 fn building_app_with_custom_any_grpc_should_work() {
     // build the application with custom stargate keeper
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_stargate(StargateKeeper).build(no_init);
+    let mut app = AppBuilder::default()
+        .with_stargate(StargateKeeper)
+        .build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");
@@ -144,8 +145,9 @@ fn building_app_with_custom_any_grpc_should_work() {
 
 #[test]
 fn building_app_with_accepting_stargate_should_work() {
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_stargate(StargateAccepting).build(no_init);
+    let mut app = AppBuilder::default()
+        .with_stargate(StargateAccepting)
+        .build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");
@@ -204,6 +206,7 @@ fn building_app_with_accepting_any_grpc_should_work() {
 }
 
 #[test]
+#[cfg(feature = "stargate")]
 fn default_failing_stargate_should_work() {
     let app_builder = AppBuilder::default();
     let mut app = app_builder.with_stargate(StargateFailing).build(no_init);
@@ -238,8 +241,9 @@ fn default_failing_stargate_should_work() {
 #[test]
 #[cfg(feature = "cosmwasm_2_0")]
 fn default_failing_any_grpc_should_work() {
-    let app_builder = AppBuilder::default();
-    let mut app = app_builder.with_stargate(StargateFailing).build(no_init);
+    let mut app = AppBuilder::default()
+        .with_stargate(StargateFailing)
+        .build(no_init);
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");

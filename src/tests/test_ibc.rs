@@ -20,7 +20,7 @@ fn default_ibc() {
 
 #[test]
 fn accepting_ibc() {
-    let mut app = AppBuilder::new()
+    let mut app = AppBuilder::default()
         .with_ibc(IbcAcceptingModule::new())
         .build(no_init);
 

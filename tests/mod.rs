@@ -4,10 +4,13 @@ mod test_api;
 mod test_app;
 mod test_app_builder;
 mod test_attributes;
+mod test_bank;
 mod test_contract_storage;
+#[cfg(feature = "stargate")]
 mod test_ibc;
 mod test_module;
 mod test_prefixed_storage;
+#[cfg(feature = "staking")]
 mod test_staking;
 mod test_wasm;
 

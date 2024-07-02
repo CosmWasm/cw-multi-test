@@ -1,5 +1,30 @@
 # Changelog
 
+## [v2.1.0-rc.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.1.0-rc.1) (2024-06-28)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.0.1...v2.1.0-rc.1)
+
+**Closed issues:**
+
+- `StakingSudo::ProcessQueue` is still necessary, despite deprecation warnings [\#127](https://github.com/CosmWasm/cw-multi-test/issues/127)
+- Cosmwasm Std Empty String Attribute Causes Failure [\#178](https://github.com/CosmWasm/cw-multi-test/issues/178)
+- Don't validate validator addresses [\#173](https://github.com/CosmWasm/cw-multi-test/issues/173)
+- Using `addr_make` inside `AppBuilder::build` [\#180](https://github.com/CosmWasm/cw-multi-test/issues/188)
+
+**Merged pull requests:**
+
+- Removed `cosmwasm-std` features from dependencies [\#191](https://github.com/CosmWasm/cw-multi-test/pull/191) ([DariuszDepta](https://github.com/DariuszDepta))
+- Enabled using `addr_make` inside `AppBuilder::build` [\#189](https://github.com/CosmWasm/cw-multi-test/pull/189) ([DariuszDepta](https://github.com/DariuszDepta))
+- Do not validate validator addresses [\#183](https://github.com/CosmWasm/cw-multi-test/pull/183) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactoring staking module, part 2 [\#186](https://github.com/CosmWasm/cw-multi-test/pull/186) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactoring staking module, part 1 [\#185](https://github.com/CosmWasm/cw-multi-test/pull/185) ([DariuszDepta](https://github.com/DariuszDepta))
+- Removed validation of empty attribute value [\#180](https://github.com/CosmWasm/cw-multi-test/pull/180) ([DariuszDepta](https://github.com/DariuszDepta))
+- Improved unstake handling [\#179](https://github.com/CosmWasm/cw-multi-test/pull/179) ([DariuszDepta](https://github.com/DariuszDepta))
+- Remove default features [\#175](https://github.com/CosmWasm/cw-multi-test/pull/175) ([DariuszDepta](https://github.com/DariuszDepta))
+- Feature-gates in pattern matching of CosmWasm 2.0 Enum Variants [\#170](https://github.com/CosmWasm/cw-multi-test/pull/170) ([AmitPr](https://github.com/AmitPr))
+- Upgraded dependencies [\#168](https://github.com/CosmWasm/cw-multi-test/pull/168) ([DariuszDepta](https://github.com/DariuszDepta))
+- Added lacking changelog items [\#192](https://github.com/CosmWasm/cw-multi-test/pull/192) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.0.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.0.1) (2024-04-22)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.0.0...v2.0.1)
@@ -28,6 +53,23 @@
 **Merged pull requests:**
 
 - V2: upgrading dependencies and refactoring [\#128](https://github.com/CosmWasm/cw-multi-test/pull/128) ([DariuszDepta](https://github.com/DariuszDepta))
+
+## [v1.2.0](https://github.com/CosmWasm/cw-multi-test/tree/v1.2.0) (2024-06-12)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v1.1.0...v1.2.0)
+
+**Merged pull requests:**
+
+- Backport: Removed validation of empty attribute value [\#181](https://github.com/CosmWasm/cw-multi-test/pull/181) ([DariuszDepta](https://github.com/DariuszDepta))
+
+## [v1.1.0](https://github.com/CosmWasm/cw-multi-test/tree/v1.1.0) (2024-04-23)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v1.0.0...v1.1.0)
+
+**Merged pull requests:**
+
+- Backport: Expose contract storage [\#155](https://github.com/CosmWasm/cw-multi-test/issues/155) ([DariuszDepta](https://github.com/DariuszDepta))
+- Backport: Expose prefixed storage [\#156](https://github.com/CosmWasm/cw-multi-test/issues/156) ([DariuszDepta](https://github.com/DariuszDepta))
 
 ## [v1.0.0](https://github.com/CosmWasm/cw-multi-test/tree/v1.0.0) (2024-03-22)
 
