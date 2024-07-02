@@ -3,7 +3,7 @@ name = "cw-multi-test"
 version = "2.0.1"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
-    "Dariusz Depta <DariuszDepta@users.noreply.github.com>"
+    "Dariusz Depta <DariuszDepta@users.noreply.github.com>",
 ]
 description = "Testing tools for multi-contract interactions"
 repository = "https://github.com/CosmWasm/cw-multi-test"
@@ -33,6 +33,12 @@ schemars = "0.8.21"
 serde = "1.0.203"
 sha2 = "0.10.8"
 thiserror = "1.0.61"
+
+serde_json = "1.0.40"
+cosmwasm-schema = "2.0.3"
+log = "0.4.20"
+cw20-ics20 = "2.0.0"
+hex = "0.4.3"
 
 [dev-dependencies]
 hex = "0.4.3"
