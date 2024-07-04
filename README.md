@@ -41,8 +41,8 @@ for various blockchain interaction tests.
 cw-multi-test = { version = "2.1.0", features = ["staking", "stargate", "cosmwasm_2_0"] }
 ```
 
-Since version 2.1.0 **MultiTest** has no default features enabled.
-The table below summarizes all features available in **MultiTest**.
+Since version 2.1.0, **CosmWasm MultiTest** has no default features enabled.
+The table below summarizes all available features:
 
 | Feature          | Description                                                                                        |
 |------------------|----------------------------------------------------------------------------------------------------|
