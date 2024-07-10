@@ -6,21 +6,13 @@
 [![license][apache-badge]][apache-url]
 
 [crates-badge]: https://img.shields.io/crates/v/cw-multi-test.svg
-
 [crates-url]: https://crates.io/crates/cw-multi-test
-
 [docs-badge]: https://docs.rs/cw-multi-test/badge.svg
-
 [docs-url]: https://docs.rs/cw-multi-test
-
 [codecov-badge]: https://codecov.io/gh/CosmWasm/cw-multi-test/branch/main/graph/badge.svg?token=IYY72ZVS3X
-
 [codecov-url]: https://codecov.io/gh/CosmWasm/cw-multi-test
-
 [apache-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
-
 [apache-url]: LICENSE
-
 [notice-url]: NOTICE
 
 **Testing tools for multi-contract interactions**
@@ -30,27 +22,38 @@
 **CosmWasm MultiTest** is a suite of testing tools designed for facilitating multi-contract
 interactions within the [CosmWasm](https://github.com/CosmWasm) ecosystem.
 Its primary focus is on providing developers with a robust framework for simulating
-complex contract interactions and bank operations. Currently, **CosmWasm MultiTest**
-is in the _alpha_ stage, and primarily used internally for testing
-[cw-plus](https://github.com/CosmWasm/cw-plus) contracts.
+complex contract interactions and bank operations.
 
-## Current Status
-
-### Internal Use and Refinement
-
-Internally, the **CosmWasm MultiTest** framework is an essential tool for the
-testing of cw-plus contracts. Its development is focused on ensuring the reliability
-and security of these contracts. The team is actively working on refactoring and enhancing
-**CosmWasm MultiTest** to provide a more stable and feature-rich version for broader
-community use in the future.
-
-### Framework Capabilities
+## Library Capabilities
 
 **CosmWasm MultiTest** enables comprehensive unit testing, including scenarios where contracts
-call other contracts and interact with the bank module. Its current implementation
+call other contracts and interact with several modules like bank and staking. Its current implementation
 effectively handles these interactions, providing a realistic testing environment for contract developers.
 The team is committed to extending **CosmWasm MultiTest**'s capabilities, making it a versatile tool
 for various blockchain interaction tests.
+
+## Feature flags
+
+**CosmWasm MultiTest** library provides several feature flags that can be enabled like shown below:
+
+```toml
+[dev-dependencies]
+cw-multi-test = { version = "2.1.0", features = ["staking", "stargate", "cosmwasm_2_0"] }
+```
+
+Since version 2.1.0, **CosmWasm MultiTest** has no default features enabled.
+The table below summarizes all available features:
+
+| Feature          | Description                                                                                        |
+|------------------|----------------------------------------------------------------------------------------------------|
+| **backtrace**    | Enables `backtrace` feature in **anyhow** dependency.                                              |
+| **staking**      | Enables `staking` feature in **cosmwasm-std** dependency.                                          |
+| **stargate**     | Enables `stargate` feature in **cosmwasm-std** dependency.                                         |
+| **cosmwasm_1_1** | Enables `cosmwasm_1_1` feature in **cosmwasm-std** dependency.                                     |
+| **cosmwasm_1_2** | Enables `cosmwasm_1_1` in **MultiTest** and `cosmwasm_1_2` feature in **cosmwasm-std** dependency. |
+| **cosmwasm_1_3** | Enables `cosmwasm_1_2` in **MultiTest** and `cosmwasm_1_3` feature in **cosmwasm-std** dependency. |
+| **cosmwasm_1_4** | Enables `cosmwasm_1_3` in **MultiTest** and `cosmwasm_1_4` feature in **cosmwasm-std** dependency. |
+| **cosmwasm_2_0** | Enables `cosmwasm_1_4` in **MultiTest** and `cosmwasm_2_0` feature in **cosmwasm-std** dependency. |
 
 ### IBC support
 
