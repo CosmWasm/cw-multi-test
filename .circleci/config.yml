@@ -68,7 +68,7 @@ jobs:
       - run:
           name: Remove Cargo.lock
           command: rm Cargo.lock
-      #  Remove the following command after upgrading dependencies in crates ahash and num-bigint
+      #  Remove the following command after dependencies in crates ahash and num-bigint are upgraded!
       - run:
           name: Temporarily update problematic crates
           command: cargo update -p ahash && cargo update -p num-bigint
