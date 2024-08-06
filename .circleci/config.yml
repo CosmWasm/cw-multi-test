@@ -59,15 +59,19 @@ jobs:
   build_minimal:
     docker:
       - image: rustlang/rust:nightly
-    working_directory: ~/project/
+    working_directory: ~/project
     steps:
       - checkout
       - run:
           name: Version information
           command: rustc --version; cargo --version; rustup --version; rustup target list --installed
-      #      - run:
-      #          name: Remove Cargo.lock
-      #          command: rm Cargo.lock
+      - run:
+          name: Remove Cargo.lock
+          command: rm Cargo.lock
+      #  Remove the following command after upgrading dependencies in crates ahash and num-bigint
+      - run:
+          name: Temporarily update problematic crates
+          command: cargo update -p ahash && cargo update -p num-bigint
       - restore_cache:
           keys:
             - cargocache-v2-multi-test:1.75-minimal-{{ checksum "Cargo.toml" }}
@@ -86,7 +90,7 @@ jobs:
   build_maximal:
     docker:
       - image: rust:1.75
-    working_directory: ~/project/
+    working_directory: ~/project
     steps:
       - checkout
       - run:
