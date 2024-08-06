@@ -155,7 +155,7 @@ jobs:
           name: Run tests with coverage
           command: |
             mkdir -p cov
-            docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin:0.31.1 \
+            docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin:0.31.0 \
               sh -c "cargo tarpaulin --workspace --all-features --force-clean --engine llvm --out xml --output-dir cov"
       - codecov/upload:
           file: cov/cobertura.xml
