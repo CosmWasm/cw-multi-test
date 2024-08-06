@@ -70,7 +70,7 @@ jobs:
           command: rm Cargo.lock
       - restore_cache:
           keys:
-            - cargocache-v2-multi-test:1.75-{{ checksum "Cargo.toml" }}
+            - cargocache-v2-multi-test:1.75-minimal-{{ checksum "Cargo.toml" }}
       - run:
           name: Build library for native target
           command: cargo build -Zminimal-versions --all-features
