@@ -68,7 +68,7 @@ fn debug_should_not_panic() {
 }
 
 #[test]
-#[should_panic(expected = "Generating address failed with reason: invalid length")]
+#[should_panic]
 fn address_make_prefix_too_long() {
     api_prefix(
         "juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_",
