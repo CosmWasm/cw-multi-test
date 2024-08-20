@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.1.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.1.1) (2024-08-20)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.1.0...v2.1.1)
+
+**Closed issues:**
+
+- Fix documentation metadata [\#203](https://github.com/CosmWasm/cw-multi-test/issues/203)
+
+**Merged pull requests:**
+
+- Fixed documentation metadata [\#204](https://github.com/CosmWasm/cw-multi-test/pull/204) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.1.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.1.0) (2024-07-05)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.0.1...v2.1.0)
