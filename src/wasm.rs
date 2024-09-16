@@ -591,8 +591,9 @@ where
 
         // no custom event here
         Ok(AppResponse {
-            data: None,
             events: vec![],
+            data: None,
+            msg_responses: vec![], //FIXME Populate this field if applicable.
         })
     }
 
@@ -930,6 +931,7 @@ where
         let app = AppResponse {
             events: app_events,
             data,
+            msg_responses: vec![], //FIXME Populate this field if applicable.
         };
         (app, messages)
     }
@@ -944,7 +946,11 @@ where
         response: AppResponse,
         messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
-        let AppResponse { mut events, data } = response;
+        let AppResponse {
+            mut events,
+            data,
+            msg_responses,
+        } = response;
 
         // recurse in all messages
         let data = messages.into_iter().try_fold(data, |data, resend| {
@@ -954,7 +960,11 @@ where
             Ok::<_, AnyError>(sub_res.data.or(data))
         })?;
 
-        Ok(AppResponse { events, data })
+        Ok(AppResponse {
+            events,
+            data,
+            msg_responses,
+        })
     }
 
     /// Creates a contract address and empty storage instance.

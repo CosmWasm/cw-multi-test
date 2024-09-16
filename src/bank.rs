@@ -203,7 +203,11 @@ impl Module for BankKeeper {
                     Addr::unchecked(to_address),
                     amount,
                 )?;
-                Ok(AppResponse { events, data: None })
+                Ok(AppResponse {
+                    events,
+                    data: None,
+                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                })
             }
             BankMsg::Burn { amount } => {
                 // burn doesn't seem to emit any events
