@@ -95,12 +95,18 @@ where
     let res = Response::new();
     if let Reply {
         id,
-        result: SubMsgResult::Ok(SubMsgResponse {
-            data: Some(data), ..
-        }),
+        result:
+            SubMsgResult::Ok(SubMsgResponse {
+                data: Some(data),
+                #[cfg(feature = "cosmwasm_2_0")]
+                msg_responses,
+                ..
+            }),
         ..
     } = msg
     {
+        #[cfg(feature = "cosmwasm_2_0")]
+        let data = msg_responses[0].value.clone();
         // We parse out the WasmMsg::Execute wrapper...
         // TODO: Handle all of Execute, Instantiate, and BankMsg replies differently.
         let parsed_data = if id < EXECUTE_REPLY_BASE_ID {
