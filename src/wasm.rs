@@ -488,16 +488,12 @@ where
         creator: Addr,
         code: Box<dyn Contract<ExecC, QueryC>>,
     ) -> u64 {
-        // prepare the next identifier for the contract 'source' code
+        // prepare the next identifier for the contract's code
         let source_id = self.code_base.len();
         // prepare the contract's Wasm blob checksum
-        let checksum = if let Some(checksum) = code.checksum() {
-            // if the contract has a checksum then use it
-            checksum
-        } else {
-            // otherwise calculate the checksum of the contract 'source' code based on code_id
-            self.checksum_generator.checksum(&creator, code_id)
-        };
+        let checksum = code
+            .checksum()
+            .unwrap_or(self.checksum_generator.checksum(&creator, code_id));
         // store the 'source' code of the contract
         self.code_base.push(code);
         // store the additional code attributes like creator address and checksum

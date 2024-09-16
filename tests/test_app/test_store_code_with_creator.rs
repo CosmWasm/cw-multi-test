@@ -1,3 +1,5 @@
+#![cfg(feature = "cosmwasm_1_2")]
+
 use crate::test_contracts::counter;
 use cw_multi_test::{no_init, AppBuilder};
 use cw_multi_test::{MockApiBech32, MockApiBech32m};
