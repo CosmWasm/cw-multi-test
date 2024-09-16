@@ -2,8 +2,8 @@
 
 use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
-    from_json, Binary, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env, MessageInfo,
-    QuerierWrapper, Reply, Response, SubMsg,
+    from_json, Binary, Checksum, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env,
+    MessageInfo, QuerierWrapper, Reply, Response, SubMsg,
 };
 use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display};
@@ -33,6 +33,11 @@ where
 
     /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
+
+    /// Returns the _simulated_ checksum of the contract's Wasm blob.
+    fn checksum(&self) -> Option<Checksum> {
+        None
+    }
 }
 
 #[rustfmt::skip]
@@ -156,6 +161,7 @@ pub struct ContractWrapper<
     sudo_fn: Option<PermissionedClosure<T4, C, E4, Q>>,
     reply_fn: Option<ReplyClosure<C, E5, Q>>,
     migrate_fn: Option<PermissionedClosure<T6, C, E6, Q>>,
+    checksum: Option<Checksum>,
 }
 
 impl<T1, T2, T3, E1, E2, E3, C, Q> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q>
@@ -182,6 +188,7 @@ where
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
+            checksum: None,
         }
     }
 
@@ -199,6 +206,7 @@ where
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
+            checksum: None,
         }
     }
 }
@@ -237,6 +245,7 @@ where
             sudo_fn: Some(Box::new(sudo_fn)),
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
+            checksum: None,
         }
     }
 
@@ -256,6 +265,7 @@ where
             sudo_fn: Some(customize_permissioned_fn(sudo_fn)),
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
+            checksum: None,
         }
     }
 
@@ -274,6 +284,7 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: Some(Box::new(reply_fn)),
             migrate_fn: self.migrate_fn,
+            checksum: None,
         }
     }
 
@@ -292,6 +303,7 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: Some(customize_permissioned_fn(reply_fn)),
             migrate_fn: self.migrate_fn,
+            checksum: None,
         }
     }
 
@@ -311,6 +323,7 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: Some(Box::new(migrate_fn)),
+            checksum: None,
         }
     }
 
@@ -330,7 +343,14 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: Some(customize_permissioned_fn(migrate_fn)),
+            checksum: None,
         }
+    }
+
+    /// Populates [ContractWrapper] with the _simulated_ checksum of the contract's Wasm blob.
+    pub fn with_checksum(mut self, checksum: Checksum) -> Self {
+        self.checksum = Some(checksum);
+        self
     }
 }
 
@@ -533,5 +553,10 @@ where
             Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
             None => bail!("migrate is not implemented for contract"),
         }
+    }
+
+    /// Returns the _simulated_ checksum of the contract's Wasm blob.
+    fn checksum(&self) -> Option<Checksum> {
+        self.checksum
     }
 }
