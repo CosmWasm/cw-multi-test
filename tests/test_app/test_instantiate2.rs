@@ -48,7 +48,7 @@ fn instantiate2_works() {
     assert_ne!(parsed.contract_address, JUNO_2); // must differ
 
     // comparing with the result from `cosmwasm_std::instantiate2_address` is done here
-    additional_check(&app, code_id, &sender, &parsed.contract_address);
+    compare_with_cosmwasm_vm_address(&app, code_id, &sender, &parsed.contract_address);
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn instantiate2_works_with_checksum_provided_in_contract() {
     assert_ne!(parsed.contract_address, JUNO_1); // must differ
 
     // comparing with the result from `cosmwasm_std::instantiate2_address` is done here
-    additional_check(&app, code_id, &sender, &parsed.contract_address);
+    compare_with_cosmwasm_vm_address(&app, code_id, &sender, &parsed.contract_address);
 }
 
 #[test]
@@ -182,10 +182,9 @@ fn instantiate2_fails_for_duplicated_addresses() {
     assert_eq!(contract_addr_1, contract_addr_2);
 }
 
-/// Utility function proving that the predictable address
-/// from contract instantiation is exactly the same as the address
-/// returned from the function cosmwasm_std::instantiate2_address.
-fn additional_check(app: &App, code_id: u64, sender: &Addr, expected_addr: &str) {
+/// Utility function proving that the predictable address from contract instantiation
+/// is exactly the same as the address returned from the function `cosmwasm_std::instantiate2_address`.
+fn compare_with_cosmwasm_vm_address(app: &App, code_id: u64, sender: &Addr, expected_addr: &str) {
     // get the code info of the contract
     let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
 
