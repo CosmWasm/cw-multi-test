@@ -34,7 +34,7 @@ where
     /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
-    /// Returns the _simulated_ checksum of the contract's Wasm blob.
+    /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
         None
     }
@@ -347,7 +347,7 @@ where
         }
     }
 
-    /// Populates [ContractWrapper] with the _simulated_ checksum of the contract's Wasm blob.
+    /// Populates [ContractWrapper] with the provided checksum of the contract's Wasm blob.
     pub fn with_checksum(mut self, checksum: Checksum) -> Self {
         self.checksum = Some(checksum);
         self
@@ -555,7 +555,7 @@ where
         }
     }
 
-    /// Returns the _simulated_ checksum of the contract's Wasm blob.
+    /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
         self.checksum
     }

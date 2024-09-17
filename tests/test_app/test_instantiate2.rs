@@ -44,15 +44,15 @@ fn instantiate2_works() {
     assert!(parsed.data.is_none());
 
     // check the resulting predictable contract's address
-    assert_eq!(parsed.contract_address, JUNO_1);
-    // check the resulting predictable contract's address
-    assert_ne!(parsed.contract_address, JUNO_2);
+    assert_eq!(parsed.contract_address, JUNO_1); // must be equal
+    assert_ne!(parsed.contract_address, JUNO_2); // must differ
 
+    // comparing with the result from `cosmwasm_std::instantiate2_address` is done here
     additional_check(&app, code_id, &sender, &parsed.contract_address);
 }
 
 #[test]
-fn instantiate2_works_with_checksum_simulated_in_contract() {
+fn instantiate2_works_with_checksum_provided_in_contract() {
     // prepare the chain with custom API and custom address generator
     let mut app = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("juno"))
@@ -82,9 +82,10 @@ fn instantiate2_works_with_checksum_simulated_in_contract() {
     assert!(parsed.data.is_none());
 
     // check the resulting predictable contract's address
-    assert_eq!(parsed.contract_address, JUNO_2);
-    assert_ne!(parsed.contract_address, JUNO_1);
+    assert_eq!(parsed.contract_address, JUNO_2); // must be equal
+    assert_ne!(parsed.contract_address, JUNO_1); // must differ
 
+    // comparing with the result from `cosmwasm_std::instantiate2_address` is done here
     additional_check(&app, code_id, &sender, &parsed.contract_address);
 }
 
