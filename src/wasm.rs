@@ -337,90 +337,6 @@ where
     }
 }
 
-impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC> {
-    /// Returns a handler to code of the contract with specified code id.
-    pub fn contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
-        let code_data = self.code_data(code_id)?;
-        Ok(self.code_base[code_data.source_id].borrow())
-    }
-
-    /// Returns code data of the contract with specified code id.
-    fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
-        if code_id < 1 {
-            bail!(Error::invalid_code_id());
-        }
-        Ok(self
-            .code_data
-            .get(&code_id)
-            .ok_or_else(|| Error::unregistered_code_id(code_id))?)
-    }
-
-    /// Validates all attributes.
-    ///
-    /// In `wasmd`, before version v0.45.0 empty attribute values were not allowed.
-    /// Since `wasmd` v0.45.0 empty attribute values are allowed,
-    /// so the value is not validated anymore.
-    fn verify_attributes(attributes: &[Attribute]) -> AnyResult<()> {
-        for attr in attributes {
-            let key = attr.key.trim();
-            let val = attr.value.trim();
-            if key.is_empty() {
-                bail!(Error::empty_attribute_key(val));
-            }
-            if key.starts_with('_') {
-                bail!(Error::reserved_attribute_key(key));
-            }
-        }
-        Ok(())
-    }
-
-    fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
-    where
-        T: CustomMsg,
-    {
-        Self::verify_attributes(&response.attributes)?;
-
-        for event in &response.events {
-            Self::verify_attributes(&event.attributes)?;
-            let ty = event.ty.trim();
-            if ty.len() < 2 {
-                bail!(Error::event_type_too_short(ty));
-            }
-        }
-
-        Ok(response)
-    }
-
-    fn save_code(
-        &mut self,
-        code_id: u64,
-        creator: Addr,
-        code: Box<dyn Contract<ExecC, QueryC>>,
-    ) -> u64 {
-        // prepare the next identifier for the contract 'source' code
-        let source_id = self.code_base.len();
-        // calculate the checksum of the contract 'source' code based on code_id
-        let checksum = self.checksum_generator.checksum(&creator, code_id);
-        // store the 'source' code of the contract
-        self.code_base.push(code);
-        // store the additional code attributes like creator address and checksum
-        self.code_data.insert(
-            code_id,
-            CodeData {
-                creator,
-                checksum,
-                source_id,
-            },
-        );
-        code_id
-    }
-
-    /// Returns the next code identifier.
-    fn next_code_id(&self) -> Option<u64> {
-        self.code_data.keys().last().unwrap_or(&0u64).checked_add(1)
-    }
-}
-
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC>
 where
     ExecC: CustomMsg + DeserializeOwned + 'static,
@@ -513,7 +429,91 @@ where
         self
     }
 
-    /// Executes contract's `query` entry-point.
+    /// Returns a handler to code of the contract with specified code id.
+    pub fn contract_code(&self, code_id: u64) -> AnyResult<&dyn Contract<ExecC, QueryC>> {
+        let code_data = self.code_data(code_id)?;
+        Ok(self.code_base[code_data.source_id].borrow())
+    }
+
+    /// Returns code data of the contract with specified code id.
+    fn code_data(&self, code_id: u64) -> AnyResult<&CodeData> {
+        if code_id < 1 {
+            bail!(Error::invalid_code_id());
+        }
+        Ok(self
+            .code_data
+            .get(&code_id)
+            .ok_or_else(|| Error::unregistered_code_id(code_id))?)
+    }
+
+    /// Validates all attributes.
+    ///
+    /// In `wasmd`, before version v0.45.0 empty attribute values were not allowed.
+    /// Since `wasmd` v0.45.0 empty attribute values are allowed,
+    /// so the value is not validated anymore.
+    fn verify_attributes(attributes: &[Attribute]) -> AnyResult<()> {
+        for attr in attributes {
+            let key = attr.key.trim();
+            let val = attr.value.trim();
+            if key.is_empty() {
+                bail!(Error::empty_attribute_key(val));
+            }
+            if key.starts_with('_') {
+                bail!(Error::reserved_attribute_key(key));
+            }
+        }
+        Ok(())
+    }
+
+    fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
+    where
+        T: CustomMsg,
+    {
+        Self::verify_attributes(&response.attributes)?;
+
+        for event in &response.events {
+            Self::verify_attributes(&event.attributes)?;
+            let ty = event.ty.trim();
+            if ty.len() < 2 {
+                bail!(Error::event_type_too_short(ty));
+            }
+        }
+
+        Ok(response)
+    }
+
+    fn save_code(
+        &mut self,
+        code_id: u64,
+        creator: Addr,
+        code: Box<dyn Contract<ExecC, QueryC>>,
+    ) -> u64 {
+        // prepare the next identifier for the contract's code
+        let source_id = self.code_base.len();
+        // prepare the contract's Wasm blob checksum
+        let checksum = code
+            .checksum()
+            .unwrap_or(self.checksum_generator.checksum(&creator, code_id));
+        // store the 'source' code of the contract
+        self.code_base.push(code);
+        // store the additional code attributes like creator address and checksum
+        self.code_data.insert(
+            code_id,
+            CodeData {
+                creator,
+                checksum,
+                source_id,
+            },
+        );
+        code_id
+    }
+
+    /// Returns the next contract's code identifier.
+    fn next_code_id(&self) -> Option<u64> {
+        self.code_data.keys().last().unwrap_or(&0u64).checked_add(1)
+    }
+
+    /// Executes the contract's `query` entry-point.
     pub fn query_smart(
         &self,
         address: Addr,

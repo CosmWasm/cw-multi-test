@@ -70,5 +70,14 @@ mod test_contracts {
         pub fn contract() -> Box<dyn Contract<Empty>> {
             Box::new(ContractWrapper::new_with_empty(execute, instantiate, query))
         }
+
+        #[cfg(feature = "cosmwasm_1_2")]
+        pub fn contract_with_checksum() -> Box<dyn Contract<Empty>> {
+            Box::new(
+                ContractWrapper::new_with_empty(execute, instantiate, query).with_checksum(
+                    cosmwasm_std::Checksum::generate(&[1, 2, 3, 4, 5, 6, 7, 8, 9]),
+                ),
+            )
+        }
     }
 }
