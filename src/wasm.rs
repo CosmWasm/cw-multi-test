@@ -78,9 +78,7 @@ struct CodeData {
     source_id: usize,
 }
 
-/// Acts as the interface for interacting with WebAssembly (Wasm) modules.
-/// This trait is crucial for testing smart contracts written in languages that compile to WebAssembly,
-/// which is common in the Cosmos and CosmWasm ecosystems.
+/// This trait implements the interface of the Wasm module.
 pub trait Wasm<ExecC, QueryC> {
     /// Handles all `WasmMsg` messages.
     fn execute(
