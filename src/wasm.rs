@@ -928,7 +928,7 @@ where
         let app_response = AppResponse {
             events: app_events,
             data,
-            msg_responses: vec![], //FIXME Populate this field if applicable.
+            msg_responses: vec![],
         };
         (app_response, messages)
     }
