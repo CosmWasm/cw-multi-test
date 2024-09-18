@@ -382,9 +382,7 @@ fn reflect_success() {
         msg: b"{}".into(),
         funds: vec![],
     });
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let res = app
         .execute_contract(random_addr, reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -473,9 +471,7 @@ fn reflect_error() {
         to_address: random_addr.clone().into(),
         amount: coins(7, "eth"),
     });
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let res = app
         .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -509,8 +505,8 @@ fn reflect_error() {
         to_address: random_addr.clone().into(),
         amount: coins(3, "btc"),
     });
-    let msgs = reflect::Message {
-        messages: vec![msg, msg2],
+    let msgs = reflect::ExecMessage {
+        sub_msg: vec![msg, msg2],
     };
     let err = app
         .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
@@ -637,9 +633,7 @@ fn reflect_sub_message_reply_works() {
         },
         123,
     );
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let res = app
         .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -671,9 +665,7 @@ fn reflect_sub_message_reply_works() {
         },
         456,
     );
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let _res = app
         .execute_contract(random, reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -1258,8 +1250,8 @@ mod reply_data_overwrite {
             events: vec![Event::new("echo").add_attribute("called", "true")],
             ..echo::ExecMessage::default()
         };
-        let reflect_msg = reflect::Message {
-            messages: vec![SubMsg::new(WasmMsg::Execute {
+        let reflect_msg = reflect::ExecMessage {
+            sub_msg: vec![SubMsg::new(WasmMsg::Execute {
                 contract_addr: echo_addr.to_string(),
                 msg: to_json_binary(&echo_msg).unwrap(),
                 funds: vec![],

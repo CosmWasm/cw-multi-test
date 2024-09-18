@@ -19,34 +19,34 @@ pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
 
 #[cw_serde]
 #[derive(Default)]
-pub struct InitMessage<ExecC>
+pub struct InitMessage<C>
 where
-    ExecC: CustomMsg + 'static,
+    C: CustomMsg + 'static,
 {
     pub data: Option<String>,
-    pub sub_msg: Option<Vec<SubMsg<ExecC>>>,
+    pub sub_msg: Option<Vec<SubMsg<C>>>,
 }
 
 #[cw_serde]
 #[derive(Default)]
-pub struct ExecMessage<ExecC>
+pub struct ExecMessage<C>
 where
-    ExecC: CustomMsg + 'static,
+    C: CustomMsg + 'static,
 {
     pub data: Option<String>,
-    pub sub_msg: Vec<SubMsg<ExecC>>,
+    pub sub_msg: Vec<SubMsg<C>>,
     pub attributes: Vec<Attribute>,
     pub events: Vec<Event>,
 }
 
-fn instantiate<ExecC>(
+fn instantiate<C>(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: InitMessage<ExecC>,
-) -> StdResult<Response<ExecC>>
+    msg: InitMessage<C>,
+) -> StdResult<Response<C>>
 where
-    ExecC: CustomMsg + 'static,
+    C: CustomMsg + 'static,
 {
     println!("\nECHO ==INSTANTIATE== entry");
     println!("ECHO ==INSTANTIATE== {:?}", msg);
@@ -61,14 +61,14 @@ where
     Ok(response)
 }
 
-fn execute<ExecC>(
+fn execute<C>(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: ExecMessage<ExecC>,
-) -> StdResult<Response<ExecC>>
+    msg: ExecMessage<C>,
+) -> StdResult<Response<C>>
 where
-    ExecC: CustomMsg + 'static,
+    C: CustomMsg + 'static,
 {
     println!("\nECHO ==EXECUTE== entry");
     println!("ECHO ==EXECUTE== {:?}", msg);
@@ -88,9 +88,9 @@ fn query(_deps: Deps, _env: Env, msg: Empty) -> StdResult<Binary> {
     to_json_binary(&msg)
 }
 
-fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<ExecC>>
+fn reply<C>(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<C>>
 where
-    ExecC: CustomMsg + 'static,
+    C: CustomMsg + 'static,
 {
     println!("\nECHO ==REPLY== entry");
     println!("ECHO ==REPLY== {:?}", msg);

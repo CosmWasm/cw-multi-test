@@ -1,23 +1,27 @@
-use crate::test_helpers::{payout, CustomHelperMsg, COUNT};
+//! # Reflecting contract
+
+use crate::test_helpers::{payout, CustomHelperMsg};
 use crate::{Contract, ContractWrapper};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
-    StdError, SubMsg,
+    StdError, StdResult, SubMsg,
 };
-use cw_storage_plus::Map;
-use serde::{Deserialize, Serialize};
+use cw_storage_plus::{Item, Map};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct Message {
-    pub messages: Vec<SubMsg<CustomHelperMsg>>,
+#[cw_serde]
+#[derive(Default)]
+pub struct ExecMessage {
+    pub sub_msg: Vec<SubMsg<CustomHelperMsg>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cw_serde]
 pub enum QueryMsg {
     Count {},
     Reply { id: u64 },
 }
 
+const COUNTER: Item<u32> = Item::new("counter");
 const REFLECT: Map<u64, Reply> = Map::new("reflect");
 
 fn instantiate(
@@ -25,8 +29,8 @@ fn instantiate(
     _env: Env,
     _info: MessageInfo,
     _msg: Empty,
-) -> Result<Response<CustomHelperMsg>, StdError> {
-    COUNT.save(deps.storage, &0)?;
+) -> StdResult<Response<CustomHelperMsg>> {
+    COUNTER.save(deps.storage, &0)?;
     Ok(Response::default())
 }
 
@@ -34,17 +38,16 @@ fn execute(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: Message,
-) -> Result<Response<CustomHelperMsg>, StdError> {
-    COUNT.update::<_, StdError>(deps.storage, |old| Ok(old + 1))?;
-
-    Ok(Response::new().add_submessages(msg.messages))
+    msg: ExecMessage,
+) -> StdResult<Response<CustomHelperMsg>> {
+    COUNTER.update::<_, StdError>(deps.storage, |value| Ok(value + 1))?;
+    Ok(Response::new().add_submessages(msg.sub_msg))
 }
 
-fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
+fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Count {} => {
-            let count = COUNT.load(deps.storage)?;
+            let count = COUNTER.load(deps.storage)?;
             let res = payout::CountResponse { count };
             to_json_binary(&res)
         }
@@ -55,7 +58,7 @@ fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, StdError> {
     }
 }
 
-fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<CustomHelperMsg>, StdError> {
+fn reply(deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<CustomHelperMsg>> {
     REFLECT.save(deps.storage, msg.id, &msg)?;
     // add custom event here to test
     let event = Event::new("custom")
@@ -65,6 +68,5 @@ fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<CustomHelperMs
 }
 
 pub fn contract() -> Box<dyn Contract<CustomHelperMsg>> {
-    let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
-    Box::new(contract)
+    Box::new(ContractWrapper::new(execute, instantiate, query).with_reply(reply))
 }
