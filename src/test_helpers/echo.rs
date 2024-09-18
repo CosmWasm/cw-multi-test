@@ -36,7 +36,7 @@ where
 #[derive(Default)]
 pub struct InitMessage<ExecC>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     pub data: Option<String>,
     pub sub_msg: Option<Vec<SubMsg<ExecC>>>,
@@ -50,7 +50,7 @@ fn instantiate<ExecC>(
     msg: InitMessage<ExecC>,
 ) -> Result<Response<ExecC>, StdError>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     let mut res = Response::new();
     if let Some(data) = msg.data {
@@ -70,7 +70,7 @@ fn execute<ExecC>(
     msg: Message<ExecC>,
 ) -> Result<Response<ExecC>, StdError>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     let mut resp = Response::new();
 
@@ -91,7 +91,7 @@ fn query(_deps: Deps, _env: Env, msg: Empty) -> Result<Binary, StdError> {
 #[allow(clippy::unnecessary_wraps, deprecated)]
 fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<ExecC>, StdError>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     let res = Response::new();
     if let Reply {
