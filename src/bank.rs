@@ -205,8 +205,7 @@ impl Module for BankKeeper {
                 )?;
                 Ok(AppResponse {
                     events,
-                    data: None,
-                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                    ..Default::default()
                 })
             }
             BankMsg::Burn { amount } => {

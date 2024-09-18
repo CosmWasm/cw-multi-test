@@ -579,20 +579,19 @@ where
         let admin = new_admin.map(|a| api.addr_validate(&a)).transpose()?;
 
         // check admin status
-        let mut data = self.contract_data(storage, &contract_addr)?;
-        if data.admin != Some(sender) {
-            bail!("Only admin can update the contract admin: {:?}", data.admin);
+        let mut contract_data = self.contract_data(storage, &contract_addr)?;
+        if contract_data.admin != Some(sender) {
+            bail!(
+                "Only admin can update the contract admin: {:?}",
+                contract_data.admin
+            );
         }
         // update admin field
-        data.admin = admin;
-        self.save_contract(storage, &contract_addr, &data)?;
+        contract_data.admin = admin;
+        self.save_contract(storage, &contract_addr, &contract_data)?;
 
         // no custom event here
-        Ok(AppResponse {
-            events: vec![],
-            data: None,
-            msg_responses: vec![], //FIXME Populate this field if applicable.
-        })
+        Ok(AppResponse::default())
     }
 
     // this returns the contract address as well, so we can properly resend the data
@@ -926,12 +925,12 @@ where
         });
         app_events.extend(wasm_events);
 
-        let app = AppResponse {
+        let app_response = AppResponse {
             events: app_events,
             data,
             msg_responses: vec![], //FIXME Populate this field if applicable.
         };
-        (app, messages)
+        (app_response, messages)
     }
 
     fn process_response(

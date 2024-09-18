@@ -681,8 +681,7 @@ impl Module for StakeKeeper {
                 )?;
                 Ok(AppResponse {
                     events,
-                    data: None,
-                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                    ..Default::default()
                 })
             }
             StakingMsg::Undelegate { validator, amount } => {
@@ -720,8 +719,7 @@ impl Module for StakeKeeper {
                 UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
                 Ok(AppResponse {
                     events,
-                    data: None,
-                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                    ..Default::default()
                 })
             }
             StakingMsg::Redelegate {
@@ -754,8 +752,7 @@ impl Module for StakeKeeper {
 
                 Ok(AppResponse {
                     events,
-                    data: None,
-                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                    ..Default::default()
                 })
             }
             m => bail!("Unsupported staking message: {:?}", m),
@@ -991,8 +988,7 @@ impl Module for DistributionKeeper {
                     )];
                 Ok(AppResponse {
                     events,
-                    data: None,
-                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                    ..Default::default()
                 })
             }
             DistributionMsg::SetWithdrawAddress { address } => {
@@ -1004,8 +1000,7 @@ impl Module for DistributionKeeper {
                     // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
                     events: vec![Event::new("set_withdraw_address")
                         .add_attribute("withdraw_address", address)],
-                    data: None,
-                    msg_responses: vec![], //FIXME Populate this field if applicable.
+                    ..Default::default()
                 })
             }
             m => bail!("Unsupported distribution message: {:?}", m),
