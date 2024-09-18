@@ -128,16 +128,15 @@ where
 }
 
 pub fn contract() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(execute::<Empty>, instantiate::<Empty>, query)
-        .with_reply(reply::<Empty>);
-    Box::new(contract)
+    Box::new(
+        ContractWrapper::new(execute::<Empty>, instantiate::<Empty>, query)
+            .with_reply(reply::<Empty>),
+    )
 }
 
 pub fn custom_contract<C>() -> Box<dyn Contract<C>>
 where
     C: CustomMsg + DeserializeOwned + 'static,
 {
-    let contract =
-        ContractWrapper::new(execute::<C>, instantiate::<C>, query).with_reply(reply::<C>);
-    Box::new(contract)
+    Box::new(ContractWrapper::new(execute::<C>, instantiate::<C>, query).with_reply(reply::<C>))
 }
