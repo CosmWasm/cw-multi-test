@@ -343,14 +343,14 @@ fn reflect_success() {
     });
 
     // set up payout contract
-    let payout_id = app.store_code(payout::contract());
+    let payout_code_id = app.store_code(payout::contract());
 
     let msg = payout::InstantiateMessage {
         payout: coin(5, "eth"),
     };
     let payout_addr = app
         .instantiate_contract(
-            payout_id,
+            payout_code_id,
             owner_addr.clone(),
             &msg,
             &coins(23, "eth"),
@@ -360,10 +360,10 @@ fn reflect_success() {
         .unwrap();
 
     // set up reflect contract
-    let reflect_id = app.store_code(reflect::contract());
+    let reflect_code_id = app.store_code(reflect::contract());
 
     let reflect_addr = app
-        .instantiate_contract(reflect_id, owner_addr, &Empty {}, &[], "Reflect", None)
+        .instantiate_contract(reflect_code_id, owner_addr, &Empty {}, &[], "Reflect", None)
         .unwrap();
 
     // reflect account is empty
@@ -377,7 +377,7 @@ fn reflect_success() {
     assert_eq!(0, query_res.count);
 
     // reflecting payout message pays reflect contract
-    let msg = SubMsg::new(WasmMsg::Execute {
+    let msg = SubMsg::<Empty>::new(WasmMsg::Execute {
         contract_addr: payout_addr.clone().into(),
         msg: b"{}".into(),
         funds: vec![],
@@ -467,7 +467,7 @@ fn reflect_error() {
     let random_addr = app.api().addr_make("random");
 
     // sending 7 eth works
-    let msg = SubMsg::new(BankMsg::Send {
+    let msg = SubMsg::<Empty>::new(BankMsg::Send {
         to_address: random_addr.clone().into(),
         amount: coins(7, "eth"),
     });
@@ -497,11 +497,11 @@ fn reflect_error() {
     assert_eq!(1, query_res.count);
 
     // sending 8 eth, then 3 btc should fail both
-    let msg = SubMsg::new(BankMsg::Send {
+    let msg = SubMsg::<Empty>::new(BankMsg::Send {
         to_address: random_addr.clone().into(),
         amount: coins(8, "eth"),
     });
-    let msg2 = SubMsg::new(BankMsg::Send {
+    let msg2 = SubMsg::<Empty>::new(BankMsg::Send {
         to_address: random_addr.clone().into(),
         amount: coins(3, "btc"),
     });
@@ -626,7 +626,7 @@ fn reflect_sub_message_reply_works() {
     res.unwrap_err();
 
     // reflect sends 7 eth, success
-    let msg = SubMsg::reply_always(
+    let msg = SubMsg::<Empty>::reply_always(
         BankMsg::Send {
             to_address: random.clone().into(),
             amount: coins(7, "eth"),
@@ -658,7 +658,7 @@ fn reflect_sub_message_reply_works() {
     AppResponse::from(reply).assert_event(&Event::new("transfer").add_attribute("amount", "7eth"));
 
     // reflect sends 300 btc, failure, but error caught by sub-message (so shows success)
-    let msg = SubMsg::reply_always(
+    let msg = SubMsg::<Empty>::reply_always(
         BankMsg::Send {
             to_address: random.clone().into(),
             amount: coins(300, "btc"),
@@ -1250,7 +1250,7 @@ mod reply_data_overwrite {
             events: vec![Event::new("echo").add_attribute("called", "true")],
             ..echo::ExecMessage::default()
         };
-        let reflect_msg = reflect::ExecMessage {
+        let reflect_msg = reflect::ExecMessage::<Empty> {
             sub_msg: vec![SubMsg::new(WasmMsg::Execute {
                 contract_addr: echo_addr.to_string(),
                 msg: to_json_binary(&echo_msg).unwrap(),
@@ -1273,43 +1273,43 @@ mod reply_data_overwrite {
 
     #[test]
     fn multiple_submsg() {
-        let mut app = App::default();
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract = app
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
+        let response = chain
             .execute_contract(
                 owner,
-                contract.clone(),
+                echo_contract_addr.clone(),
                 &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
                     sub_msg: vec![
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             None,
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 1,
                         ),
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             "First",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             "Second",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 3,
                         ),
                         make_echo_reply_always_submsg(
-                            contract,
+                            echo_contract_addr,
                             None,
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 4,
@@ -1348,7 +1348,7 @@ mod reply_data_overwrite {
                         make_echo_reply_never_submsg(contract.clone(), "Second", vec![]),
                         make_echo_reply_never_submsg(contract, None, vec![]),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1359,44 +1359,44 @@ mod reply_data_overwrite {
 
     #[test]
     fn multiple_submsg_mixed() {
-        let mut app = App::default();
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract = app
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
+        let response = chain
             .execute_contract(
                 owner,
-                contract.clone(),
+                echo_contract_addr.clone(),
                 &echo::ExecMessage {
                     sub_msg: vec![
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             None,
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 1,
                         ),
-                        make_echo_reply_never_submsg(contract.clone(), "Hidden", vec![]),
+                        make_echo_reply_never_submsg(echo_contract_addr.clone(), "Hidden", vec![]),
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             "Shown",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             None,
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 3,
                         ),
-                        make_echo_reply_never_submsg(contract, "Lost", vec![]),
+                        make_echo_reply_never_submsg(echo_contract_addr, "Lost", vec![]),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1407,33 +1407,33 @@ mod reply_data_overwrite {
 
     #[test]
     fn nested_submsg() {
-        let mut app = App::default();
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract = app
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
+        let response = chain
             .execute_contract(
                 owner,
-                contract.clone(),
+                echo_contract_addr.clone(),
                 &echo::ExecMessage {
-                    data: Some("Orig".to_owned()),
+                    data: "ORIGINAL".to_string().into(),
                     sub_msg: vec![make_echo_reply_always_submsg(
-                        contract.clone(),
+                        echo_contract_addr.clone(),
                         None,
                         vec![make_echo_reply_always_submsg(
-                            contract.clone(),
-                            "First",
+                            echo_contract_addr.clone(),
+                            "FIRST",
                             vec![make_echo_reply_always_submsg(
-                                contract.clone(),
-                                "Second",
+                                echo_contract_addr.clone(),
+                                "SECOND",
                                 vec![make_echo_reply_always_submsg(
-                                    contract,
+                                    echo_contract_addr,
                                     None,
                                     vec![],
                                     EXECUTE_REPLY_BASE_ID + 4,
@@ -1444,13 +1444,13 @@ mod reply_data_overwrite {
                         )],
                         EXECUTE_REPLY_BASE_ID + 1,
                     )],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Second".into()));
+        assert_eq!(response.data, Some(b"SECOND".into()));
     }
 }
 
