@@ -11,9 +11,7 @@ use cosmwasm_std::{
 
 use cosmwasm_schema::cw_serde;
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
-use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use std::fmt::Debug;
 
 // Choosing a reply id less than ECHO_EXECUTE_BASE_ID indicates an Instantiate message reply by convention.
 // An Execute message reply otherwise.
@@ -23,7 +21,7 @@ pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
 #[derive(Default)]
 pub struct Message<ExecC>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     pub data: Option<String>,
     pub sub_msg: Vec<SubMsg<ExecC>>,
