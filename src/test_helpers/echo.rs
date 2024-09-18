@@ -126,14 +126,7 @@ where
     Ok(response)
 }
 
-pub fn contract() -> Box<dyn Contract<Empty>> {
-    Box::new(
-        ContractWrapper::new(execute::<Empty>, instantiate::<Empty>, query)
-            .with_reply(reply::<Empty>),
-    )
-}
-
-pub fn custom_contract<C>() -> Box<dyn Contract<C>>
+pub fn contract<C>() -> Box<dyn Contract<C>>
 where
     C: CustomMsg + DeserializeOwned + 'static,
 {

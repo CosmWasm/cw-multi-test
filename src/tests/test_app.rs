@@ -1244,7 +1244,7 @@ mod reply_data_overwrite {
             .unwrap();
 
         // set up echo contract
-        let echo_id = app.store_code(echo::custom_contract());
+        let echo_id = app.store_code(echo::contract());
 
         let echo_addr = app
             .instantiate_contract(echo_id, owner.clone(), &Empty {}, &[], "Echo", None)
@@ -1698,7 +1698,7 @@ mod custom_messages {
         let sender = app.api().addr_make("sender");
         let owner = app.api().addr_make("owner");
 
-        let contract_id = app.store_code(echo::custom_contract());
+        let contract_id = app.store_code(echo::contract());
 
         let contract = app
             .instantiate_contract(contract_id, owner, &Empty {}, &[], "Echo", None)
