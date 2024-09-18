@@ -14,7 +14,7 @@ fn custom_handler_works() {
     let mut storage = MockStorage::default();
 
     // create custom handler
-    let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::new();
+    let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::default();
 
     // prepare user addresses
     let sender_addr = app.api().addr_make("sender");
@@ -70,7 +70,7 @@ fn custom_handler_has_no_sudo() {
     let mut storage = MockStorage::default();
 
     // create custom handler
-    let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::new();
+    let custom_handler = CachingCustomHandler::<CustomHelperMsg, CustomHelperMsg>::default();
 
     // run sudo function
     assert_eq!(

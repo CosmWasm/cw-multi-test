@@ -8,18 +8,19 @@ use cosmwasm_std::{
     to_json_binary, Attribute, Binary, CustomMsg, Deps, DepsMut, Empty, Env, Event, MessageInfo,
     Reply, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
+
+use cosmwasm_schema::cw_serde;
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
-use derivative::Derivative;
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
 // Choosing a reply id less than ECHO_EXECUTE_BASE_ID indicates an Instantiate message reply by convention.
 // An Execute message reply otherwise.
 pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
-#[derivative(Default(bound = "", new = "true"))]
+#[cw_serde]
+#[derive(Default)]
 pub struct Message<ExecC>
 where
     ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
@@ -31,8 +32,8 @@ where
 }
 
 // This can take some data... but happy to accept {}
-#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
-#[derivative(Default(bound = "", new = "true"))]
+#[cw_serde]
+#[derive(Default)]
 pub struct InitMessage<ExecC>
 where
     ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
