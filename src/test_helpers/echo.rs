@@ -6,7 +6,7 @@
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_json_binary, Attribute, Binary, CustomMsg, Deps, DepsMut, Empty, Env, Event, MessageInfo,
-    Reply, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
+    Reply, Response, StdError, StdResult, SubMsg, SubMsgResponse, SubMsgResult,
 };
 
 use cosmwasm_schema::cw_serde;
@@ -16,6 +16,16 @@ use serde::de::DeserializeOwned;
 // Choosing a reply id less than ECHO_EXECUTE_BASE_ID indicates an Instantiate message reply by convention.
 // An Execute message reply otherwise.
 pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
+
+#[cw_serde]
+#[derive(Default)]
+pub struct InitMessage<ExecC>
+where
+    ExecC: CustomMsg + 'static,
+{
+    pub data: Option<String>,
+    pub sub_msg: Option<Vec<SubMsg<ExecC>>>,
+}
 
 #[cw_serde]
 #[derive(Default)]
@@ -29,24 +39,12 @@ where
     pub events: Vec<Event>,
 }
 
-// This can take some data... but happy to accept {}
-#[cw_serde]
-#[derive(Default)]
-pub struct InitMessage<ExecC>
-where
-    ExecC: CustomMsg + 'static,
-{
-    pub data: Option<String>,
-    pub sub_msg: Option<Vec<SubMsg<ExecC>>>,
-}
-
-#[allow(clippy::unnecessary_wraps)]
 fn instantiate<ExecC>(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     msg: InitMessage<ExecC>,
-) -> Result<Response<ExecC>, StdError>
+) -> StdResult<Response<ExecC>>
 where
     ExecC: CustomMsg + 'static,
 {
@@ -60,38 +58,34 @@ where
     Ok(res)
 }
 
-#[allow(clippy::unnecessary_wraps)]
 fn execute<ExecC>(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
     msg: Message<ExecC>,
-) -> Result<Response<ExecC>, StdError>
+) -> StdResult<Response<ExecC>>
 where
     ExecC: CustomMsg + 'static,
 {
-    let mut resp = Response::new();
-
+    let mut res = Response::new();
     if let Some(data) = msg.data {
-        resp = resp.set_data(data.into_bytes());
+        res = res.set_data(data.into_bytes());
     }
-
-    Ok(resp
+    Ok(res
         .add_submessages(msg.sub_msg)
         .add_attributes(msg.attributes)
         .add_events(msg.events))
 }
 
-fn query(_deps: Deps, _env: Env, msg: Empty) -> Result<Binary, StdError> {
+fn query(_deps: Deps, _env: Env, msg: Empty) -> StdResult<Binary> {
     to_json_binary(&msg)
 }
 
-#[allow(clippy::unnecessary_wraps, deprecated)]
-fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<ExecC>, StdError>
+fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<ExecC>>
 where
     ExecC: CustomMsg + 'static,
 {
-    let res = Response::new();
+    #[allow(deprecated)]
     if let Reply {
         id,
         result:
@@ -115,13 +109,14 @@ where
                 .data
         };
 
+        let res = Response::default();
         if let Some(data) = parsed_data {
             Ok(res.set_data(data))
         } else {
             Ok(res)
         }
     } else {
-        Ok(res)
+        Ok(Response::default())
     }
 }
 
