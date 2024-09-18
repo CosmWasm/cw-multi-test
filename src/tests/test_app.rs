@@ -1031,10 +1031,10 @@ mod reply_data_overwrite {
         SubMsg::reply_always(
             CosmosMsg::Wasm(WasmMsg::Execute {
                 contract_addr: contract.into(),
-                msg: to_json_binary(&echo::Message {
+                msg: to_json_binary(&echo::ExecMessage {
                     data,
                     sub_msg,
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 })
                 .unwrap(),
                 funds: vec![],
@@ -1051,10 +1051,10 @@ mod reply_data_overwrite {
         let data = data.into().map(|s| s.to_owned());
         SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: contract.into(),
-            msg: to_json_binary(&echo::Message {
+            msg: to_json_binary(&echo::ExecMessage {
                 data,
                 sub_msg,
-                ..echo::Message::default()
+                ..echo::ExecMessage::default()
             })
             .unwrap(),
             funds: vec![],
@@ -1077,9 +1077,9 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract,
-                &echo::Message::<Empty> {
+                &echo::ExecMessage::<Empty> {
                     data: Some("Data".to_owned()),
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1104,7 +1104,7 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     data: Some("First".to_owned()),
                     sub_msg: vec![make_echo_submsg(
                         contract,
@@ -1112,7 +1112,7 @@ mod reply_data_overwrite {
                         vec![],
                         EXECUTE_REPLY_BASE_ID,
                     )],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1137,10 +1137,10 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     data: Some("First".to_owned()),
                     sub_msg: vec![make_echo_submsg_no_reply(contract, "Second", vec![])],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1165,10 +1165,10 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     data: Some("First".to_owned()),
                     sub_msg: vec![make_echo_submsg(contract, None, vec![], 1)],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1193,14 +1193,14 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     sub_msg: vec![make_echo_submsg(
                         contract,
                         "Second",
                         vec![],
                         EXECUTE_REPLY_BASE_ID,
                     )],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1240,10 +1240,10 @@ mod reply_data_overwrite {
         // reflect will call echo
         // echo will set the data
         // top-level app will not display the data
-        let echo_msg = echo::Message::<Empty> {
+        let echo_msg = echo::ExecMessage::<Empty> {
             data: Some("my echo".into()),
             events: vec![Event::new("echo").add_attribute("called", "true")],
-            ..echo::Message::default()
+            ..echo::ExecMessage::default()
         };
         let reflect_msg = reflect::Message {
             messages: vec![SubMsg::new(WasmMsg::Execute {
@@ -1282,7 +1282,7 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
                     sub_msg: vec![
                         make_echo_submsg(contract.clone(), None, vec![], EXECUTE_REPLY_BASE_ID + 1),
@@ -1300,7 +1300,7 @@ mod reply_data_overwrite {
                         ),
                         make_echo_submsg(contract, None, vec![], EXECUTE_REPLY_BASE_ID + 4),
                     ],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1325,7 +1325,7 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
                     sub_msg: vec![
                         make_echo_submsg_no_reply(contract.clone(), None, vec![]),
@@ -1333,7 +1333,7 @@ mod reply_data_overwrite {
                         make_echo_submsg_no_reply(contract.clone(), "Second", vec![]),
                         make_echo_submsg_no_reply(contract, None, vec![]),
                     ],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1358,7 +1358,7 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     sub_msg: vec![
                         make_echo_submsg(contract.clone(), None, vec![], EXECUTE_REPLY_BASE_ID + 1),
                         make_echo_submsg_no_reply(contract.clone(), "Hidden", vec![]),
@@ -1371,7 +1371,7 @@ mod reply_data_overwrite {
                         make_echo_submsg(contract.clone(), None, vec![], EXECUTE_REPLY_BASE_ID + 3),
                         make_echo_submsg_no_reply(contract, "Lost", vec![]),
                     ],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1396,7 +1396,7 @@ mod reply_data_overwrite {
             .execute_contract(
                 owner,
                 contract.clone(),
-                &echo::Message {
+                &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
                     sub_msg: vec![make_echo_submsg(
                         contract.clone(),
@@ -1419,7 +1419,7 @@ mod reply_data_overwrite {
                         )],
                         EXECUTE_REPLY_BASE_ID + 1,
                     )],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1449,13 +1449,13 @@ mod response_validation {
             .execute_contract(
                 owner,
                 contract,
-                &echo::Message::<Empty> {
+                &echo::ExecMessage::<Empty> {
                     data: None,
                     attributes: vec![
                         Attribute::new("   ", "value"),
                         Attribute::new("proper", "proper_val"),
                     ],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1479,13 +1479,13 @@ mod response_validation {
             .execute_contract(
                 owner,
                 contract,
-                &echo::Message::<Empty> {
+                &echo::ExecMessage::<Empty> {
                     data: None,
                     attributes: vec![
                         Attribute::new("key", "   "),
                         Attribute::new("proper", "proper_val"),
                     ],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1508,12 +1508,12 @@ mod response_validation {
             .execute_contract(
                 owner,
                 contract,
-                &echo::Message::<Empty> {
+                &echo::ExecMessage::<Empty> {
                     data: None,
                     events: vec![Event::new("event")
                         .add_attribute("   ", "value")
                         .add_attribute("proper", "proper_val")],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1537,12 +1537,12 @@ mod response_validation {
             .execute_contract(
                 owner,
                 contract,
-                &echo::Message::<Empty> {
+                &echo::ExecMessage::<Empty> {
                     data: None,
                     events: vec![Event::new("event")
                         .add_attribute("key", "   ")
                         .add_attribute("proper", "proper_val")],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1565,10 +1565,10 @@ mod response_validation {
             .execute_contract(
                 owner,
                 contract,
-                &echo::Message::<Empty> {
+                &echo::ExecMessage::<Empty> {
                     data: None,
                     events: vec![Event::new(" e "), Event::new("event")],
-                    ..echo::Message::default()
+                    ..echo::ExecMessage::default()
                 },
                 &[],
             )
@@ -1674,7 +1674,7 @@ mod custom_messages {
         app.execute_contract(
             sender,
             contract,
-            &echo::Message {
+            &echo::ExecMessage {
                 sub_msg: vec![SubMsg::new(CosmosMsg::Custom(CustomHelperMsg::SetAge {
                     age: 20,
                 }))],
@@ -1784,7 +1784,7 @@ mod protobuf_wrapped_data {
             .unwrap();
 
         // another echo contract
-        let msg = echo::Message::<Empty> {
+        let msg = echo::ExecMessage::<Empty> {
             data: Some("Passed to contract instantiation, returned as reply, and then returned as response".into()),
             ..Default::default()
         };
@@ -1833,9 +1833,9 @@ mod protobuf_wrapped_data {
             .unwrap();
 
         // ensure the execute has the same wrapper as it should
-        let msg = echo::Message::<Empty> {
+        let msg = echo::ExecMessage::<Empty> {
             data: Some("hello".into()),
-            ..echo::Message::default()
+            ..echo::ExecMessage::default()
         };
         // execute_contract now decodes a protobuf wrapper, so we get the top-level response
         let exec_res = app.execute_contract(owner, echo_addr, &msg, &[]).unwrap();

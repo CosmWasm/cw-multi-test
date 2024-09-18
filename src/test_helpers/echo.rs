@@ -1,3 +1,5 @@
+//! # Echo contract
+//!
 //! Very simple echoing contract which just returns incoming string if any,
 //! but performing sub call of given message to test response.
 //!
@@ -29,7 +31,7 @@ where
 
 #[cw_serde]
 #[derive(Default)]
-pub struct Message<ExecC>
+pub struct ExecMessage<ExecC>
 where
     ExecC: CustomMsg + 'static,
 {
@@ -62,7 +64,7 @@ fn execute<ExecC>(
     _deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: Message<ExecC>,
+    msg: ExecMessage<ExecC>,
 ) -> StdResult<Response<ExecC>>
 where
     ExecC: CustomMsg + 'static,
