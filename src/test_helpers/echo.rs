@@ -102,11 +102,12 @@ where
             SubMsgResult::Ok(SubMsgResponse {
                 events: _,
                 data: Some(data),
-                msg_responses: _,
+                msg_responses,
             }),
         ..
     } = msg
     {
+        println!("ECHO ==REPLY== msg_responses: {:?}", msg_responses);
         // We parse out the WasmMsg::Execute wrapper...
         // TODO: Handle all of Execute, Instantiate, and BankMsg replies differently.
         let parsed_data = if id < EXECUTE_REPLY_BASE_ID {

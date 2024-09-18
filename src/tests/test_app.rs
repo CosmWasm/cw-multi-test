@@ -1116,6 +1116,7 @@ mod reply_data_overwrite {
 
         // the returned data should be the data payload of the submessage
         assert_eq!(response.data, Some(b"SECOND".into()));
+        println!("msg_responses: {:?}", response.msg_responses);
     }
 
     #[test]
