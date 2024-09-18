@@ -50,14 +50,18 @@ fn instantiate<ExecC>(
 where
     ExecC: CustomMsg + 'static,
 {
-    let mut res = Response::new();
+    println!("\nDDD: =INSTANTIATE=\n");
+    let mut response = Response::new();
     if let Some(data) = msg.data {
-        res = res.set_data(data.into_bytes());
+        println!("DDD: =I= there is some data: {}", data);
+        response = response.set_data(data.into_bytes());
     }
     if let Some(msgs) = msg.sub_msg {
-        res = res.add_submessages(msgs);
+        println!("DDD: =I= there are some submessages: {:?}", msgs);
+        response = response.add_submessages(msgs);
     }
-    Ok(res)
+    println!("DDD: =I= response: {:?}", response);
+    Ok(response)
 }
 
 fn execute<ExecC>(
@@ -69,14 +73,19 @@ fn execute<ExecC>(
 where
     ExecC: CustomMsg + 'static,
 {
-    let mut res = Response::new();
+    println!("\nDDD: ==EXECUTE==\n");
+    println!("DDD: =E= msg: {:?}", msg);
+    let mut response = Response::new();
     if let Some(data) = msg.data {
-        res = res.set_data(data.into_bytes());
+        println!("DDD: =E= there is some data: {}", data);
+        response = response.set_data(data.into_bytes());
     }
-    Ok(res
+    response = response
         .add_submessages(msg.sub_msg)
         .add_attributes(msg.attributes)
-        .add_events(msg.events))
+        .add_events(msg.events);
+    println!("DDD: =E= response: {:?}", response);
+    Ok(response)
 }
 
 fn query(_deps: Deps, _env: Env, msg: Empty) -> StdResult<Binary> {
@@ -87,6 +96,9 @@ fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<Exe
 where
     ExecC: CustomMsg + 'static,
 {
+    println!("\nDDD: ==REPLY==\n");
+    println!("DDD: =R= msg: {:?}", msg);
+    let mut response = Response::default();
     #[allow(deprecated)]
     if let Reply {
         id,
@@ -99,6 +111,7 @@ where
         ..
     } = msg
     {
+        println!("DDD: =R= data: {:?}", data);
         // We parse out the WasmMsg::Execute wrapper...
         // TODO: Handle all of Execute, Instantiate, and BankMsg replies differently.
         let parsed_data = if id < EXECUTE_REPLY_BASE_ID {
@@ -110,16 +123,12 @@ where
                 .map_err(|e| StdError::generic_err(e.to_string()))?
                 .data
         };
-
-        let res = Response::default();
         if let Some(data) = parsed_data {
-            Ok(res.set_data(data))
-        } else {
-            Ok(res)
+            response = response.set_data(data);
         }
-    } else {
-        Ok(Response::default())
     }
+    println!("DDD: =R= response: {:?}", response);
+    Ok(response)
 }
 
 pub fn contract() -> Box<dyn Contract<Empty>> {

@@ -1021,192 +1021,205 @@ mod custom_handler {
 mod reply_data_overwrite {
     use super::*;
 
-    fn make_echo_submsg(
-        contract: Addr,
+    fn make_echo_exec_msg(
+        contract_addr: Addr,
+        data: impl Into<Option<&'static str>>,
+        sub_msg: Vec<SubMsg>,
+    ) -> CosmosMsg {
+        let data = data.into().map(|s| s.to_string());
+        CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: contract_addr.into(),
+            msg: to_json_binary(&echo::ExecMessage {
+                data,
+                sub_msg,
+                ..Default::default()
+            })
+            .unwrap(),
+            funds: vec![],
+        })
+    }
+
+    fn make_echo_reply_always_submsg(
+        contract_addr: Addr,
         data: impl Into<Option<&'static str>>,
         sub_msg: Vec<SubMsg>,
         id: u64,
     ) -> SubMsg {
-        let data = data.into().map(|s| s.to_owned());
-        SubMsg::reply_always(
-            CosmosMsg::Wasm(WasmMsg::Execute {
-                contract_addr: contract.into(),
-                msg: to_json_binary(&echo::ExecMessage {
-                    data,
-                    sub_msg,
-                    ..echo::ExecMessage::default()
-                })
-                .unwrap(),
-                funds: vec![],
-            }),
-            id,
-        )
+        SubMsg::reply_always(make_echo_exec_msg(contract_addr, data, sub_msg), id)
     }
 
-    fn make_echo_submsg_no_reply(
-        contract: Addr,
+    fn make_echo_reply_never_submsg(
+        contract_addr: Addr,
         data: impl Into<Option<&'static str>>,
         sub_msg: Vec<SubMsg>,
     ) -> SubMsg {
-        let data = data.into().map(|s| s.to_owned());
-        SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: contract.into(),
-            msg: to_json_binary(&echo::ExecMessage {
-                data,
-                sub_msg,
-                ..echo::ExecMessage::default()
-            })
-            .unwrap(),
-            funds: vec![],
-        }))
+        SubMsg::reply_never(make_echo_exec_msg(contract_addr, data, sub_msg))
     }
 
     #[test]
     fn no_submsg() {
-        let mut app = App::default();
+        // create a chain with default settings
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        // prepare the owner address
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        // store the echo contract on chain
+        let code_id = chain.store_code(echo::contract());
 
-        let contract = app
+        // instantiate the echo contract
+        let contract_addr = chain
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
-            .execute_contract(
-                owner,
-                contract,
-                &echo::ExecMessage::<Empty> {
-                    data: Some("Data".to_owned()),
-                    ..echo::ExecMessage::default()
-                },
-                &[],
-            )
+        // prepare the message to be executed by echo contract
+        // send only data payload without any submessages
+        let msg = echo::ExecMessage::<Empty> {
+            data: "PAYLOAD".to_string().into(),
+            ..Default::default()
+        };
+
+        // execute the message
+        let response = chain
+            .execute_contract(owner, contract_addr, &msg, &[])
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Data".into()));
+        // the returned data should be the same as the one being previously sent
+        assert_eq!(response.data, Some(b"PAYLOAD".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
     fn single_submsg() {
-        let mut app = App::default();
+        // create a chain with default settings
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        // prepare the owner address
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        // store the echo contract on chain
+        let code_id = chain.store_code(echo::contract());
 
-        let contract = app
+        // instantiate the echo contract
+        let contract_addr = chain
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
-            .execute_contract(
-                owner,
-                contract.clone(),
-                &echo::ExecMessage {
-                    data: Some("First".to_owned()),
-                    sub_msg: vec![make_echo_submsg(
-                        contract,
-                        "Second",
-                        vec![],
-                        EXECUTE_REPLY_BASE_ID,
-                    )],
-                    ..echo::ExecMessage::default()
-                },
-                &[],
-            )
+        // prepare the message to be executed by echo contract
+        let msg = echo::ExecMessage::<Empty> {
+            data: "FIRST".to_string().into(),
+            sub_msg: vec![make_echo_reply_always_submsg(
+                contract_addr.clone(),
+                "SECOND",
+                vec![],
+                EXECUTE_REPLY_BASE_ID,
+            )],
+            ..Default::default()
+        };
+
+        // execute the message
+        let response = chain
+            .execute_contract(owner, contract_addr, &msg, &[])
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Second".into()));
+        // the returned data should be the data payload of the submessage
+        assert_eq!(response.data, Some(b"SECOND".into()));
     }
 
     #[test]
     fn single_submsg_no_reply() {
-        let mut app = App::default();
+        // create a chain with default settings
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        // prepare the owner address
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        // store the echo contract on chain
+        let code_id = chain.store_code(echo::contract());
 
-        let contract = app
+        // instantiate the echo contract
+        let contract_addr = chain
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
-            .execute_contract(
-                owner,
-                contract.clone(),
-                &echo::ExecMessage {
-                    data: Some("First".to_owned()),
-                    sub_msg: vec![make_echo_submsg_no_reply(contract, "Second", vec![])],
-                    ..echo::ExecMessage::default()
-                },
-                &[],
-            )
+        // prepare the message to be executed by echo contract
+        let msg = echo::ExecMessage::<Empty> {
+            data: "FIRST".to_string().into(),
+            sub_msg: vec![make_echo_reply_never_submsg(
+                contract_addr.clone(),
+                "SECOND",
+                vec![],
+            )],
+            ..Default::default()
+        };
+
+        // execute the message
+        let response = chain
+            .execute_contract(owner, contract_addr, &msg, &[])
             .unwrap();
 
-        assert_eq!(response.data, Some(b"First".into()));
+        // the returned data should be the data payload of the original message
+        assert_eq!(response.data, Some(b"FIRST".into()));
     }
 
     #[test]
     fn single_no_submsg_data() {
-        let mut app = App::default();
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let code_id = chain.store_code(echo::contract());
 
-        let contract = app
+        let contract_addr = chain
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
-            .execute_contract(
-                owner,
-                contract.clone(),
-                &echo::ExecMessage {
-                    data: Some("First".to_owned()),
-                    sub_msg: vec![make_echo_submsg(contract, None, vec![], 1)],
-                    ..echo::ExecMessage::default()
-                },
-                &[],
-            )
+        let msg = echo::ExecMessage {
+            data: "FIRST".to_string().into(),
+            sub_msg: vec![make_echo_reply_always_submsg(
+                contract_addr.clone(),
+                None,
+                vec![],
+                1,
+            )],
+            ..Default::default()
+        };
+
+        let response = chain
+            .execute_contract(owner, contract_addr, &msg, &[])
             .unwrap();
 
-        assert_eq!(response.data, Some(b"First".into()));
+        assert_eq!(response.data, Some(b"FIRST".into()));
     }
 
     #[test]
     fn single_no_top_level_data() {
-        let mut app = App::default();
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let code_id = chain.store_code(echo::contract());
 
-        let contract = app
+        let contract_addr = chain
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
-            .execute_contract(
-                owner,
-                contract.clone(),
-                &echo::ExecMessage {
-                    sub_msg: vec![make_echo_submsg(
-                        contract,
-                        "Second",
-                        vec![],
-                        EXECUTE_REPLY_BASE_ID,
-                    )],
-                    ..echo::ExecMessage::default()
-                },
-                &[],
-            )
+        let msg = echo::ExecMessage {
+            data: None,
+            sub_msg: vec![make_echo_reply_always_submsg(
+                contract_addr.clone(),
+                "SECOND",
+                vec![],
+                EXECUTE_REPLY_BASE_ID,
+            )],
+            ..echo::ExecMessage::default()
+        };
+
+        let response = chain
+            .execute_contract(owner, contract_addr, &msg, &[])
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Second".into()));
+        assert_eq!(response.data, Some(b"SECOND".into()));
     }
 
     #[test]
@@ -1285,20 +1298,30 @@ mod reply_data_overwrite {
                 &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
                     sub_msg: vec![
-                        make_echo_submsg(contract.clone(), None, vec![], EXECUTE_REPLY_BASE_ID + 1),
-                        make_echo_submsg(
+                        make_echo_reply_always_submsg(
+                            contract.clone(),
+                            None,
+                            vec![],
+                            EXECUTE_REPLY_BASE_ID + 1,
+                        ),
+                        make_echo_reply_always_submsg(
                             contract.clone(),
                             "First",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
-                        make_echo_submsg(
+                        make_echo_reply_always_submsg(
                             contract.clone(),
                             "Second",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 3,
                         ),
-                        make_echo_submsg(contract, None, vec![], EXECUTE_REPLY_BASE_ID + 4),
+                        make_echo_reply_always_submsg(
+                            contract,
+                            None,
+                            vec![],
+                            EXECUTE_REPLY_BASE_ID + 4,
+                        ),
                     ],
                     ..echo::ExecMessage::default()
                 },
@@ -1328,10 +1351,10 @@ mod reply_data_overwrite {
                 &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
                     sub_msg: vec![
-                        make_echo_submsg_no_reply(contract.clone(), None, vec![]),
-                        make_echo_submsg_no_reply(contract.clone(), "First", vec![]),
-                        make_echo_submsg_no_reply(contract.clone(), "Second", vec![]),
-                        make_echo_submsg_no_reply(contract, None, vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), None, vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), "First", vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), "Second", vec![]),
+                        make_echo_reply_never_submsg(contract, None, vec![]),
                     ],
                     ..echo::ExecMessage::default()
                 },
@@ -1360,16 +1383,26 @@ mod reply_data_overwrite {
                 contract.clone(),
                 &echo::ExecMessage {
                     sub_msg: vec![
-                        make_echo_submsg(contract.clone(), None, vec![], EXECUTE_REPLY_BASE_ID + 1),
-                        make_echo_submsg_no_reply(contract.clone(), "Hidden", vec![]),
-                        make_echo_submsg(
+                        make_echo_reply_always_submsg(
+                            contract.clone(),
+                            None,
+                            vec![],
+                            EXECUTE_REPLY_BASE_ID + 1,
+                        ),
+                        make_echo_reply_never_submsg(contract.clone(), "Hidden", vec![]),
+                        make_echo_reply_always_submsg(
                             contract.clone(),
                             "Shown",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
-                        make_echo_submsg(contract.clone(), None, vec![], EXECUTE_REPLY_BASE_ID + 3),
-                        make_echo_submsg_no_reply(contract, "Lost", vec![]),
+                        make_echo_reply_always_submsg(
+                            contract.clone(),
+                            None,
+                            vec![],
+                            EXECUTE_REPLY_BASE_ID + 3,
+                        ),
+                        make_echo_reply_never_submsg(contract, "Lost", vec![]),
                     ],
                     ..echo::ExecMessage::default()
                 },
@@ -1398,16 +1431,16 @@ mod reply_data_overwrite {
                 contract.clone(),
                 &echo::ExecMessage {
                     data: Some("Orig".to_owned()),
-                    sub_msg: vec![make_echo_submsg(
+                    sub_msg: vec![make_echo_reply_always_submsg(
                         contract.clone(),
                         None,
-                        vec![make_echo_submsg(
+                        vec![make_echo_reply_always_submsg(
                             contract.clone(),
                             "First",
-                            vec![make_echo_submsg(
+                            vec![make_echo_reply_always_submsg(
                                 contract.clone(),
                                 "Second",
-                                vec![make_echo_submsg(
+                                vec![make_echo_reply_always_submsg(
                                     contract,
                                     None,
                                     vec![],
