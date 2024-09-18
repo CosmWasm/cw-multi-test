@@ -63,7 +63,7 @@ impl From<SubMsgResponse> for AppResponse {
             events: reply.events,
             #[allow(deprecated)]
             data: reply.data,
-            msg_responses: vec![], //FIXME Populate this field if applicable.
+            msg_responses: reply.msg_responses,
         }
     }
 }

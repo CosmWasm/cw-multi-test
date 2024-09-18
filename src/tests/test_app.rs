@@ -683,7 +683,6 @@ fn reflect_sub_message_reply_works() {
     let res: Reply = app.wrap().query_wasm_smart(&reflect_addr, &query).unwrap();
     assert_eq!(res.id, 456);
     assert!(res.result.is_err());
-    // TODO: check error?
 }
 
 #[test]

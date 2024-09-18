@@ -95,9 +95,12 @@ where
     let res = Response::new();
     if let Reply {
         id,
-        result: SubMsgResult::Ok(SubMsgResponse {
-            data: Some(data), ..
-        }),
+        result:
+            SubMsgResult::Ok(SubMsgResponse {
+                events: _,
+                data: Some(data),
+                msg_responses: _,
+            }),
         ..
     } = msg
     {
