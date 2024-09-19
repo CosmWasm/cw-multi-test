@@ -831,7 +831,7 @@ where
                         SubMsgResponse {
                             events: r.events.clone(),
                             data: r.data,
-                            msg_responses: vec![],
+                            msg_responses: r.msg_responses.clone(),
                         },
                     ),
                 };
