@@ -886,8 +886,9 @@ where
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
 
-    // this captures all the events and data from the contract call.
-    // it does not handle the messages
+    /// Captures all the events, data and sub messages from the contract call.
+    ///
+    /// This function does not handle the messages.
     fn build_app_response(
         &self,
         contract: &Addr,
@@ -928,7 +929,7 @@ where
         let app_response = AppResponse {
             events: app_events,
             data,
-            msg_responses: vec![],
+            ..Default::default()
         };
         (app_response, messages)
     }
@@ -941,26 +942,40 @@ where
         block: &BlockInfo,
         contract: Addr,
         response: AppResponse,
-        messages: Vec<SubMsg<ExecC>>,
+        sub_messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
+        // unpack the provided response
         let AppResponse {
             mut events,
             data,
-            msg_responses,
+            msg_responses: mut msg_responses_x,
         } = response;
-
-        // recurse in all messages
-        let data = messages.into_iter().try_fold(data, |data, resend| {
-            let sub_res =
-                self.execute_submsg(api, router, storage, block, contract.clone(), resend)?;
-            events.extend_from_slice(&sub_res.events);
-            Ok::<_, AnyError>(sub_res.data.or(data))
-        })?;
-
+        // recurse in all sub messages
+        let data = sub_messages
+            .into_iter()
+            .try_fold(data, |data, sub_message| {
+                // execute the sub message
+                let sub_response = self.execute_submsg(
+                    api,
+                    router,
+                    storage,
+                    block,
+                    contract.clone(),
+                    sub_message,
+                )?;
+                // COLLECT and append all events from the processed sub message
+                events.extend_from_slice(&sub_response.events);
+                // COLLECT and append all msg responses from the processed sub message
+                msg_responses_x.extend_from_slice(&sub_response.msg_responses);
+                // REPLACE the data with value from the processes sub message (if not empty)
+                Ok::<_, AnyError>(sub_response.data.or(data))
+            })?;
+        // return the response with updated data, events and msg responses taken from all processed sub messages
+        // note that events and msg responses are collected, but data is replaced
         Ok(AppResponse {
             events,
             data,
-            msg_responses,
+            msg_responses: msg_responses_x,
         })
     }
 

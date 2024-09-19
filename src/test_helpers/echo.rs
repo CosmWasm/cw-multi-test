@@ -1,6 +1,6 @@
 //! # Echo contract
 //!
-//! Simple echoing contract which just returns incoming data if any.
+//! Simple echoing contract which just returns incoming data.
 
 use crate::{Contract, ContractWrapper};
 use cosmwasm_schema::cw_serde;
@@ -48,8 +48,6 @@ fn instantiate<C>(
 where
     C: CustomMsg + 'static,
 {
-    println!("\nECHO ==INSTANTIATE== entry");
-    println!("ECHO ==INSTANTIATE== {:?}", msg);
     let mut response = Response::new();
     if let Some(data) = msg.data {
         response = response.set_data(data.into_bytes());
@@ -57,7 +55,6 @@ where
     if let Some(msgs) = msg.sub_msg {
         response = response.add_submessages(msgs);
     }
-    println!("ECHO ==INSTANTIATE== {:?}", response);
     Ok(response)
 }
 
@@ -70,8 +67,6 @@ fn execute<C>(
 where
     C: CustomMsg + 'static,
 {
-    println!("\nECHO ==EXECUTE== entry");
-    println!("ECHO ==EXECUTE== {:?}", msg);
     let mut response = Response::new();
     if let Some(data) = msg.data {
         response = response.set_data(data.into_bytes());
@@ -80,7 +75,6 @@ where
         .add_submessages(msg.sub_msg)
         .add_attributes(msg.attributes)
         .add_events(msg.events);
-    println!("ECHO ==EXECUTE== {:?}", response);
     Ok(response)
 }
 
@@ -92,8 +86,6 @@ fn reply<C>(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<C>>
 where
     C: CustomMsg + 'static,
 {
-    println!("\nECHO ==REPLY== entry");
-    println!("ECHO ==REPLY== {:?}", msg);
     let mut response = Response::default();
     #[allow(deprecated)]
     if let Reply {
@@ -102,19 +94,18 @@ where
             SubMsgResult::Ok(SubMsgResponse {
                 events: _,
                 data: Some(data),
-                msg_responses,
+                msg_responses: _,
             }),
         ..
     } = msg
     {
-        println!("ECHO ==REPLY== msg_responses: {:?}", msg_responses);
-        // We parse out the WasmMsg::Execute wrapper...
-        // TODO: Handle all of Execute, Instantiate, and BankMsg replies differently.
         let parsed_data = if id < EXECUTE_REPLY_BASE_ID {
+            // parse out the WasmMsg::Execute wrapper for instantiate reply
             parse_instantiate_response_data(data.as_slice())
                 .map_err(|e| StdError::generic_err(e.to_string()))?
                 .data
         } else {
+            // parse out the WasmMsg::Execute wrapper for execute reply
             parse_execute_response_data(data.as_slice())
                 .map_err(|e| StdError::generic_err(e.to_string()))?
                 .data
@@ -123,7 +114,6 @@ where
             response = response.set_data(data);
         }
     }
-    println!("ECHO ==REPLY== {:?}", response);
     Ok(response)
 }
 

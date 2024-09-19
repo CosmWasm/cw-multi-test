@@ -1304,7 +1304,7 @@ mod reply_data_overwrite {
                 owner,
                 echo_contract_addr.clone(),
                 &echo::ExecMessage {
-                    data: Some("Orig".to_owned()),
+                    data: "ORIGINAL".to_string().into(),
                     sub_msg: vec![
                         make_echo_reply_always_submsg(
                             echo_contract_addr.clone(),
@@ -1314,13 +1314,13 @@ mod reply_data_overwrite {
                         ),
                         make_echo_reply_always_submsg(
                             echo_contract_addr.clone(),
-                            "First",
+                            "FIRST",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
                         make_echo_reply_always_submsg(
                             echo_contract_addr.clone(),
-                            "Second",
+                            "SECOND",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 3,
                         ),
@@ -1337,7 +1337,7 @@ mod reply_data_overwrite {
             )
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Second".into()));
+        assert_eq!(response.data, Some(b"SECOND".into()));
     }
 
     #[test]
@@ -1397,10 +1397,10 @@ mod reply_data_overwrite {
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 1,
                         ),
-                        make_echo_reply_never_submsg(echo_contract_addr.clone(), "Hidden", vec![]),
+                        make_echo_reply_never_submsg(echo_contract_addr.clone(), "FIRST", vec![]),
                         make_echo_reply_always_submsg(
                             echo_contract_addr.clone(),
-                            "Shown",
+                            "SECOND",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
@@ -1410,7 +1410,7 @@ mod reply_data_overwrite {
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 3,
                         ),
-                        make_echo_reply_never_submsg(echo_contract_addr, "Lost", vec![]),
+                        make_echo_reply_never_submsg(echo_contract_addr, "THIRD", vec![]),
                     ],
                     ..Default::default()
                 },
@@ -1418,7 +1418,7 @@ mod reply_data_overwrite {
             )
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Shown".into()));
+        assert_eq!(response.data, Some(b"SECOND".into()));
     }
 
     #[test]
