@@ -929,6 +929,17 @@ mod custom_handler {
             Ok(AppResponse::default())
         }
 
+        fn query(
+            &self,
+            _api: &dyn Api,
+            _storage: &dyn Storage,
+            _querier: &dyn Querier,
+            _block: &BlockInfo,
+            _request: Self::QueryT,
+        ) -> AnyResult<Binary> {
+            bail!("query not implemented for CustomHandler")
+        }
+
         fn sudo<ExecC, QueryC>(
             &self,
             _api: &dyn Api,
@@ -942,17 +953,6 @@ mod custom_handler {
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
             bail!("sudo not implemented for CustomHandler")
-        }
-
-        fn query(
-            &self,
-            _api: &dyn Api,
-            _storage: &dyn Storage,
-            _querier: &dyn Querier,
-            _block: &BlockInfo,
-            _request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            bail!("query not implemented for CustomHandler")
         }
     }
 
@@ -1057,23 +1057,23 @@ mod reply_data_overwrite {
         let owner = chain.api().addr_make("owner");
 
         // store the echo contract on chain
-        let code_id = chain.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
         // instantiate the echo contract
-        let contract_addr = chain
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
         // prepare the message to be executed by echo contract
         // send only data payload without any submessages
-        let msg = echo::ExecMessage::<Empty> {
+        let echo_exec_msg = echo::ExecMessage::<Empty> {
             data: "PAYLOAD".to_string().into(),
             ..Default::default()
         };
 
         // execute the message
         let response = chain
-            .execute_contract(owner, contract_addr, &msg, &[])
+            .execute_contract(owner, echo_contract_addr, &echo_exec_msg, &[])
             .unwrap();
 
         // the returned data should be the same as the one being previously sent
@@ -1090,18 +1090,18 @@ mod reply_data_overwrite {
         let owner = chain.api().addr_make("owner");
 
         // store the echo contract on chain
-        let code_id = chain.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
         // instantiate the echo contract
-        let contract_addr = chain
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
         // prepare the message to be executed by echo contract
-        let msg = echo::ExecMessage::<Empty> {
+        let echo_exec_msg = echo::ExecMessage::<Empty> {
             data: "FIRST".to_string().into(),
             sub_msg: vec![make_echo_reply_always_submsg(
-                contract_addr.clone(),
+                echo_contract_addr.clone(),
                 "SECOND",
                 vec![],
                 EXECUTE_REPLY_BASE_ID,
@@ -1111,12 +1111,12 @@ mod reply_data_overwrite {
 
         // execute the message
         let response = chain
-            .execute_contract(owner, contract_addr, &msg, &[])
+            .execute_contract(owner, echo_contract_addr, &echo_exec_msg, &[])
             .unwrap();
 
         // the returned data should be the data payload of the submessage
         assert_eq!(response.data, Some(b"SECOND".into()));
-        println!("msg_responses: {:?}", response.msg_responses);
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1128,18 +1128,18 @@ mod reply_data_overwrite {
         let owner = chain.api().addr_make("owner");
 
         // store the echo contract on chain
-        let code_id = chain.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
         // instantiate the echo contract
-        let contract_addr = chain
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
         // prepare the message to be executed by echo contract
-        let msg = echo::ExecMessage::<Empty> {
+        let echo_exec_msg = echo::ExecMessage::<Empty> {
             data: "FIRST".to_string().into(),
             sub_msg: vec![make_echo_reply_never_submsg(
-                contract_addr.clone(),
+                echo_contract_addr.clone(),
                 "SECOND",
                 vec![],
             )],
@@ -1148,11 +1148,12 @@ mod reply_data_overwrite {
 
         // execute the message
         let response = chain
-            .execute_contract(owner, contract_addr, &msg, &[])
+            .execute_contract(owner, echo_contract_addr, &echo_exec_msg, &[])
             .unwrap();
 
         // the returned data should be the data payload of the original message
         assert_eq!(response.data, Some(b"FIRST".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1160,18 +1161,20 @@ mod reply_data_overwrite {
         // create a chain with default settings
         let mut chain = App::default();
 
+        // prepare the owner address
         let owner = chain.api().addr_make("owner");
 
-        let code_id = chain.store_code(echo::contract());
+        // store the echo contract on chain
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract_addr = chain
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let msg = echo::ExecMessage {
+        let echo_exec_msg = echo::ExecMessage {
             data: "FIRST".to_string().into(),
             sub_msg: vec![make_echo_reply_always_submsg(
-                contract_addr.clone(),
+                echo_contract_addr.clone(),
                 None,
                 vec![],
                 1,
@@ -1180,10 +1183,11 @@ mod reply_data_overwrite {
         };
 
         let response = chain
-            .execute_contract(owner, contract_addr, &msg, &[])
+            .execute_contract(owner, echo_contract_addr, &echo_exec_msg, &[])
             .unwrap();
 
         assert_eq!(response.data, Some(b"FIRST".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1193,28 +1197,29 @@ mod reply_data_overwrite {
 
         let owner = chain.api().addr_make("owner");
 
-        let code_id = chain.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract_addr = chain
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let msg = echo::ExecMessage {
+        let echo_exec_msg = echo::ExecMessage {
             data: None,
             sub_msg: vec![make_echo_reply_always_submsg(
-                contract_addr.clone(),
+                echo_contract_addr.clone(),
                 "SECOND",
                 vec![],
                 EXECUTE_REPLY_BASE_ID,
             )],
-            ..echo::ExecMessage::default()
+            ..Default::default()
         };
 
         let response = chain
-            .execute_contract(owner, contract_addr, &msg, &[])
+            .execute_contract(owner, echo_contract_addr, &echo_exec_msg, &[])
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1240,8 +1245,6 @@ mod reply_data_overwrite {
             )
             .unwrap();
 
-        println!("reflect: {}", reflect_contract_addr);
-
         // store the echo contract on chain
         let echo_code_id = chain.store_code(echo::contract());
 
@@ -1249,8 +1252,6 @@ mod reply_data_overwrite {
         let echo_contract_addr = chain
             .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
-
-        println!("echo: {}", echo_contract_addr);
 
         // firstly reflect contract will call echo contract, then the echo contract will return the data,
         // but there is no submessage, so no reply entrypoint of reflect contract will be called,
@@ -1278,6 +1279,7 @@ mod reply_data_overwrite {
 
         // ensure the data in response is empty
         assert_eq!(response.data, None);
+        assert_eq!(response.msg_responses, vec![]);
         // ensure expected events are returned
         assert_eq!(response.events.len(), 2);
         let make_event = |contract_addr: &Addr| {
@@ -1289,8 +1291,10 @@ mod reply_data_overwrite {
 
     #[test]
     fn multiple_submsg() {
+        // create a chain with default settings
         let mut chain = App::default();
 
+        // prepare user addresses
         let owner = chain.api().addr_make("owner");
 
         let echo_code_id = chain.store_code(echo::contract());
@@ -1331,13 +1335,14 @@ mod reply_data_overwrite {
                             EXECUTE_REPLY_BASE_ID + 4,
                         ),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1371,6 +1376,7 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"Orig".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1419,6 +1425,7 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1467,6 +1474,7 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
+        assert_eq!(response.msg_responses, vec![]);
     }
 }
 
@@ -1496,7 +1504,7 @@ mod response_validation {
                         Attribute::new("   ", "value"),
                         Attribute::new("proper", "proper_val"),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1526,7 +1534,7 @@ mod response_validation {
                         Attribute::new("key", "   "),
                         Attribute::new("proper", "proper_val"),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1554,7 +1562,7 @@ mod response_validation {
                     events: vec![Event::new("event")
                         .add_attribute("   ", "value")
                         .add_attribute("proper", "proper_val")],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1583,7 +1591,7 @@ mod response_validation {
                     events: vec![Event::new("event")
                         .add_attribute("key", "   ")
                         .add_attribute("proper", "proper_val")],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1609,7 +1617,7 @@ mod response_validation {
                 &echo::ExecMessage::<Empty> {
                     data: None,
                     events: vec![Event::new(" e "), Event::new("event")],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1873,7 +1881,7 @@ mod protobuf_wrapped_data {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "label", None)
             .unwrap();
 
-        // ensure the execute has the same wrapper as it should
+        // ensure message has the same wrapper as it should
         let msg = echo::ExecMessage::<Empty> {
             data: Some("hello".into()),
             ..echo::ExecMessage::default()
