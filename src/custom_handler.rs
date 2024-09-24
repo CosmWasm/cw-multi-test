@@ -26,6 +26,14 @@ where
     ExecC: Clone,
     QueryC: Clone,
 {
+    /// Creates a new [CachingCustomHandlerState].
+    pub fn new() -> Self {
+        Self {
+            execs: Rc::new(RefCell::new(vec![])),
+            queries: Rc::new(RefCell::new(vec![])),
+        }
+    }
+
     /// Returns a slice of processed custom messages.
     pub fn execs(&self) -> impl Deref<Target = [ExecC]> + '_ {
         Ref::map(self.execs.borrow(), Vec::as_slice)
@@ -61,6 +69,13 @@ where
     ExecC: Clone,
     QueryC: Clone,
 {
+    /// Creates a new [CachingCustomHandler].
+    pub fn new() -> Self {
+        Self {
+            state: CachingCustomHandlerState::new(),
+        }
+    }
+
     /// Returns the cached state.
     pub fn state(&self) -> CachingCustomHandlerState<ExecC, QueryC> {
         self.state.clone()
