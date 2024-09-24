@@ -1656,7 +1656,7 @@ mod custom_messages {
 
     #[test]
     fn triggering_custom_msg() {
-        let custom_handler = CachingCustomHandler::<CustomHelperMsg, Empty>::new();
+        let custom_handler = CachingCustomHandler::<CustomHelperMsg, Empty>::default();
         let custom_handler_state = custom_handler.state();
 
         let mut app = AppBuilder::new_custom()

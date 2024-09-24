@@ -19,11 +19,17 @@ pub mod reflect;
 pub mod stargate;
 
 /// Custom message for testing purposes.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 #[serde(rename = "snake_case")]
 pub enum CustomHelperMsg {
-    SetName { name: String },
-    SetAge { age: u32 },
+    SetName {
+        name: String,
+    },
+    SetAge {
+        age: u32,
+    },
+    #[default]
+    NoOp,
 }
 
 impl CustomMsg for CustomHelperMsg {}
