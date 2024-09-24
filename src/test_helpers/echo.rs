@@ -9,7 +9,6 @@ use cosmwasm_std::{
     Reply, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
-use derivative::Derivative;
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Debug;
@@ -18,8 +17,7 @@ use std::fmt::Debug;
 // An Execute message reply otherwise.
 pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
-#[derivative(Default(bound = "", new = "true"))]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Message<ExecC>
 where
     ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
@@ -31,8 +29,7 @@ where
 }
 
 // This can take some data... but happy to accept {}
-#[derive(Debug, Clone, Serialize, Deserialize, Derivative)]
-#[derivative(Default(bound = "", new = "true"))]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct InitMessage<ExecC>
 where
     ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
