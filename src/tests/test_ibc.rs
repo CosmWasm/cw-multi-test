@@ -1,3 +1,5 @@
+#![cfg(feature = "stargate")]
+
 use crate::test_helpers::ibc;
 use crate::{no_init, App, AppBuilder, Executor, IbcAcceptingModule};
 use cosmwasm_std::Empty;

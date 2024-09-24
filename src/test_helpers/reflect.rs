@@ -1,18 +1,18 @@
 use crate::test_helpers::{payout, CustomHelperMsg, COUNT};
 use crate::{Contract, ContractWrapper};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
     StdError, SubMsg,
 };
 use cw_storage_plus::Map;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cw_serde]
 pub struct Message {
     pub messages: Vec<SubMsg<CustomHelperMsg>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cw_serde]
 pub enum QueryMsg {
     Count {},
     Reply { id: u64 },
