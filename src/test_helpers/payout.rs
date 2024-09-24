@@ -1,4 +1,3 @@
-use crate::test_helpers::COUNT;
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     to_json_binary, BankMsg, Binary, Coin, CustomMsg, Deps, DepsMut, Empty, Env, MessageInfo,
@@ -29,6 +28,7 @@ pub struct CountResponse {
     pub count: u32,
 }
 
+const COUNT: Item<u32> = Item::new("count");
 const PAYOUT: Item<InstantiateMessage> = Item::new("payout");
 
 fn instantiate(
