@@ -12,8 +12,8 @@ use std::rc::Rc;
 #[derive(Default, Clone)]
 pub struct CachingCustomHandlerState<ExecC, QueryC>
 where
-    ExecC: Clone,
-    QueryC: Clone,
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
 {
     /// Cache for processes custom messages.
     execs: Rc<RefCell<Vec<ExecC>>>,
@@ -23,15 +23,12 @@ where
 
 impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC>
 where
-    ExecC: Clone,
-    QueryC: Clone,
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
 {
     /// Creates a new [CachingCustomHandlerState].
     pub fn new() -> Self {
-        Self {
-            execs: Rc::new(RefCell::new(vec![])),
-            queries: Rc::new(RefCell::new(vec![])),
-        }
+        Default::default()
     }
 
     /// Returns a slice of processed custom messages.
@@ -57,8 +54,8 @@ where
 #[derive(Default, Clone)]
 pub struct CachingCustomHandler<ExecC, QueryC>
 where
-    ExecC: Clone,
-    QueryC: Clone,
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
 {
     /// Cached state.
     state: CachingCustomHandlerState<ExecC, QueryC>,
@@ -66,14 +63,12 @@ where
 
 impl<ExecC, QueryC> CachingCustomHandler<ExecC, QueryC>
 where
-    ExecC: Clone,
-    QueryC: Clone,
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
 {
     /// Creates a new [CachingCustomHandler].
     pub fn new() -> Self {
-        Self {
-            state: CachingCustomHandlerState::new(),
-        }
+        Default::default()
     }
 
     /// Returns the cached state.
@@ -84,8 +79,8 @@ where
 
 impl<Exec, Query> Module for CachingCustomHandler<Exec, Query>
 where
-    Exec: Clone,
-    Query: Clone,
+    Exec: Default + Clone,
+    Query: Default + Clone,
 {
     type ExecT = Exec;
     type QueryT = Query;
