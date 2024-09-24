@@ -4,23 +4,23 @@
 //! Additionally, it bypasses all events and attributes send to it.
 
 use crate::{Contract, ContractWrapper};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, Attribute, Binary, CustomMsg, Deps, DepsMut, Empty, Env, Event, MessageInfo,
     Reply, Response, StdError, SubMsg, SubMsgResponse, SubMsgResult,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
-use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::fmt::Debug;
+use serde::de::DeserializeOwned;
 
 // Choosing a reply id less than ECHO_EXECUTE_BASE_ID indicates an Instantiate message reply by convention.
 // An Execute message reply otherwise.
 pub const EXECUTE_REPLY_BASE_ID: u64 = i64::MAX as u64;
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cw_serde]
+#[derive(Default)]
 pub struct Message<ExecC>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     pub data: Option<String>,
     pub sub_msg: Vec<SubMsg<ExecC>>,
@@ -28,17 +28,16 @@ where
     pub events: Vec<Event>,
 }
 
-// This can take some data... but happy to accept {}
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[cw_serde]
+#[derive(Default)]
 pub struct InitMessage<ExecC>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     pub data: Option<String>,
     pub sub_msg: Option<Vec<SubMsg<ExecC>>>,
 }
 
-#[allow(clippy::unnecessary_wraps)]
 fn instantiate<ExecC>(
     _deps: DepsMut,
     _env: Env,
@@ -46,7 +45,7 @@ fn instantiate<ExecC>(
     msg: InitMessage<ExecC>,
 ) -> Result<Response<ExecC>, StdError>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     let mut res = Response::new();
     if let Some(data) = msg.data {
@@ -58,7 +57,6 @@ where
     Ok(res)
 }
 
-#[allow(clippy::unnecessary_wraps)]
 fn execute<ExecC>(
     _deps: DepsMut,
     _env: Env,
@@ -66,7 +64,7 @@ fn execute<ExecC>(
     msg: Message<ExecC>,
 ) -> Result<Response<ExecC>, StdError>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     let mut resp = Response::new();
 
@@ -84,12 +82,12 @@ fn query(_deps: Deps, _env: Env, msg: Empty) -> Result<Binary, StdError> {
     to_json_binary(&msg)
 }
 
-#[allow(clippy::unnecessary_wraps, deprecated)]
 fn reply<ExecC>(_deps: DepsMut, _env: Env, msg: Reply) -> Result<Response<ExecC>, StdError>
 where
-    ExecC: Debug + PartialEq + Clone + JsonSchema + 'static,
+    ExecC: CustomMsg + 'static,
 {
     let res = Response::new();
+    #[allow(deprecated)]
     if let Reply {
         id,
         result: SubMsgResult::Ok(SubMsgResponse {

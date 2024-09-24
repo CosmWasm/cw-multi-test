@@ -1,9 +1,8 @@
 #![cfg(test)]
 
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::CustomMsg;
 use cw_storage_plus::Item;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 pub mod caller;
 pub mod echo;
@@ -19,7 +18,8 @@ pub mod reflect;
 pub mod stargate;
 
 /// Custom message for testing purposes.
-#[derive(Debug, Default, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+#[cw_serde]
+#[derive(Default)]
 #[serde(rename = "snake_case")]
 pub enum CustomHelperMsg {
     SetName {

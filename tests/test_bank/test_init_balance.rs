@@ -1,7 +1,6 @@
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Coin, CustomMsg, CustomQuery, Uint128};
 use cw_multi_test::{custom_app, App, AppBuilder, BasicApp};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 const USER: &str = "user";
 const DENOM: &str = "denom";
@@ -52,15 +51,13 @@ fn initializing_balance_without_builder_should_work() {
 
 #[test]
 fn initializing_balance_custom_app_should_work() {
-    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-    #[serde(rename = "snake_case")]
+    #[cw_serde]
     pub enum CustomHelperMsg {
         HelperMsg,
     }
     impl CustomMsg for CustomHelperMsg {}
 
-    #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
-    #[serde(rename = "snake_case")]
+    #[cw_serde]
     pub enum CustomHelperQuery {
         HelperQuery,
     }

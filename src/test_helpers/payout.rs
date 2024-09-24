@@ -1,30 +1,29 @@
 use crate::test_helpers::COUNT;
 use crate::{Contract, ContractWrapper};
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, BankMsg, Binary, Coin, CustomMsg, Deps, DepsMut, Empty, Env, MessageInfo,
     Response, StdError,
 };
 use cw_storage_plus::Item;
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cw_serde]
 pub struct InstantiateMessage {
     pub payout: Coin,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cw_serde]
 pub struct SudoMsg {
     pub set_count: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cw_serde]
 pub enum QueryMsg {
     Count {},
     Payout {},
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cw_serde]
 pub struct CountResponse {
     pub count: u32,
 }

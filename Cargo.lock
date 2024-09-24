@@ -419,6 +419,7 @@ version = "2.2.0"
 dependencies = [
  "anyhow",
  "bech32",
+ "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
  "cw-utils",
