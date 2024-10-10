@@ -1428,6 +1428,40 @@ mod reply_data_overwrite {
 
         assert_eq!(response.data, Some(b"Second".into()));
     }
+
+    #[test]
+    #[cfg(feature = "cosmwasm_2_0")]
+    fn sub_msg_msg_responses() {
+        let mut app = App::default();
+
+        let owner = app.api().addr_make("owner");
+
+        let code_id = app.store_code(echo::contract());
+
+        let contract = app
+            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+            .unwrap();
+
+        let response = app
+            .execute_contract(
+                owner,
+                contract.clone(),
+                &echo::Message {
+                    data: Some("Orig".to_owned()),
+                    sub_msg: vec![make_echo_submsg(
+                        contract.clone(),
+                        "First",
+                        vec![],
+                        EXECUTE_REPLY_BASE_ID + 1,
+                    )],
+                    ..echo::Message::default()
+                },
+                &[],
+            )
+            .unwrap();
+
+        assert_eq!(response.data, Some(b"First".into()));
+    }
 }
 
 mod response_validation {
