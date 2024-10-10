@@ -372,19 +372,17 @@ fn reflect_success() {
     // reflect count is 1
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(0, query_res.count);
 
     // reflecting payout message pays reflect contract
-    let msg = SubMsg::new(WasmMsg::Execute {
+    let msg = SubMsg::<Empty>::new(WasmMsg::Execute {
         contract_addr: payout_addr.clone().into(),
         msg: b"{}".into(),
         funds: vec![],
     });
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let res = app
         .execute_contract(random_addr, reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -430,7 +428,7 @@ fn reflect_success() {
     // reflect count updated
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(1, query_res.count);
 }
@@ -469,13 +467,11 @@ fn reflect_error() {
     let random_addr = app.api().addr_make("random");
 
     // sending 7 eth works
-    let msg = SubMsg::new(BankMsg::Send {
+    let msg = SubMsg::<Empty>::new(BankMsg::Send {
         to_address: random_addr.clone().into(),
         amount: coins(7, "eth"),
     });
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let res = app
         .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -496,21 +492,21 @@ fn reflect_error() {
     // reflect count should be updated to 1
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(1, query_res.count);
 
     // sending 8 eth, then 3 btc should fail both
-    let msg = SubMsg::new(BankMsg::Send {
+    let msg = SubMsg::<Empty>::new(BankMsg::Send {
         to_address: random_addr.clone().into(),
         amount: coins(8, "eth"),
     });
-    let msg2 = SubMsg::new(BankMsg::Send {
+    let msg2 = SubMsg::<Empty>::new(BankMsg::Send {
         to_address: random_addr.clone().into(),
         amount: coins(3, "btc"),
     });
-    let msgs = reflect::Message {
-        messages: vec![msg, msg2],
+    let msgs = reflect::ExecMessage {
+        sub_msg: vec![msg, msg2],
     };
     let err = app
         .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
@@ -527,7 +523,7 @@ fn reflect_error() {
     // failure should not update reflect count
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(1, query_res.count);
 }
@@ -625,21 +621,19 @@ fn reflect_sub_message_reply_works() {
         .unwrap();
 
     // no reply written beforehand
-    let query = reflect::QueryMsg::Reply { id: 123 };
+    let query = reflect::QueryMessage::Reply { id: 123 };
     let res: StdResult<Reply> = app.wrap().query_wasm_smart(&reflect_addr, &query);
     res.unwrap_err();
 
     // reflect sends 7 eth, success
-    let msg = SubMsg::reply_always(
+    let msg = SubMsg::<Empty>::reply_always(
         BankMsg::Send {
             to_address: random.clone().into(),
             amount: coins(7, "eth"),
         },
         123,
     );
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let res = app
         .execute_contract(random.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap();
@@ -664,22 +658,20 @@ fn reflect_sub_message_reply_works() {
     AppResponse::from(reply).assert_event(&Event::new("transfer").add_attribute("amount", "7eth"));
 
     // reflect sends 300 btc, failure, but error caught by sub-message (so shows success)
-    let msg = SubMsg::reply_always(
+    let msg = SubMsg::<Empty>::reply_always(
         BankMsg::Send {
             to_address: random.clone().into(),
             amount: coins(300, "btc"),
         },
         456,
     );
-    let msgs = reflect::Message {
-        messages: vec![msg],
-    };
+    let msgs = reflect::ExecMessage { sub_msg: vec![msg] };
     let _res = app
         .execute_contract(random, reflect_addr.clone(), &msgs, &[])
         .unwrap();
 
     // ensure error was written
-    let query = reflect::QueryMsg::Reply { id: 456 };
+    let query = reflect::QueryMessage::Reply { id: 456 };
     let res: Reply = app.wrap().query_wasm_smart(&reflect_addr, &query).unwrap();
     assert_eq!(res.id, 456);
     assert!(res.result.is_err());
@@ -938,6 +930,17 @@ mod custom_handler {
             Ok(AppResponse::default())
         }
 
+        fn query(
+            &self,
+            _api: &dyn Api,
+            _storage: &dyn Storage,
+            _querier: &dyn Querier,
+            _block: &BlockInfo,
+            _request: Self::QueryT,
+        ) -> AnyResult<Binary> {
+            bail!("query not implemented for CustomHandler")
+        }
+
         fn sudo<ExecC, QueryC>(
             &self,
             _api: &dyn Api,
@@ -951,17 +954,6 @@ mod custom_handler {
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
             bail!("sudo not implemented for CustomHandler")
-        }
-
-        fn query(
-            &self,
-            _api: &dyn Api,
-            _storage: &dyn Storage,
-            _querier: &dyn Querier,
-            _block: &BlockInfo,
-            _request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            bail!("query not implemented for CustomHandler")
         }
     }
 
@@ -1238,16 +1230,16 @@ mod reply_data_overwrite {
             .instantiate_contract(echo_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        // reflect will call echo
-        // echo will set the data
-        // top-level app will not display the data
+        // Reflect will call echo contract.
+        // Echo contract will set the data.
+        // Top-level app will not display the data.
         let echo_msg = echo::Message::<Empty> {
             data: Some("my echo".into()),
             events: vec![Event::new("echo").add_attribute("called", "true")],
             ..echo::Message::default()
         };
-        let reflect_msg = reflect::Message {
-            messages: vec![SubMsg::new(WasmMsg::Execute {
+        let reflect_msg = reflect::ExecMessage {
+            sub_msg: vec![SubMsg::<Empty>::reply_never(WasmMsg::Execute {
                 contract_addr: echo_addr.to_string(),
                 msg: to_json_binary(&echo_msg).unwrap(),
                 funds: vec![],
@@ -1732,7 +1724,7 @@ mod protobuf_wrapped_data {
 
         let count: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&parsed.contract_address, &reflect::QueryMsg::Count {})
+            .query_wasm_smart(&parsed.contract_address, &reflect::QueryMessage::Count)
             .unwrap();
         assert_eq!(count.count, 0);
     }
@@ -1833,7 +1825,7 @@ mod protobuf_wrapped_data {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "label", None)
             .unwrap();
 
-        // ensure the execute has the same wrapper as it should
+        // ensure that execute has the same wrapper as it should
         let msg = echo::Message::<Empty> {
             data: Some("hello".into()),
             ..echo::Message::default()
