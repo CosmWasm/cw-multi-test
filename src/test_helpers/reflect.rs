@@ -1,11 +1,11 @@
-use crate::test_helpers::{payout, CustomHelperMsg, COUNT};
+use crate::test_helpers::{payout, CustomHelperMsg};
 use crate::{Contract, ContractWrapper};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     to_json_binary, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, Reply, Response,
     StdError, SubMsg,
 };
-use cw_storage_plus::Map;
+use cw_storage_plus::{Item, Map};
 
 #[cw_serde]
 pub struct Message {
@@ -18,6 +18,7 @@ pub enum QueryMsg {
     Reply { id: u64 },
 }
 
+const COUNT: Item<u32> = Item::new("count");
 const REFLECT: Map<u64, Reply> = Map::new("reflect");
 
 fn instantiate(

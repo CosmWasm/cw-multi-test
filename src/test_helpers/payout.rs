@@ -1,4 +1,3 @@
-use crate::test_helpers::COUNT;
 use crate::{Contract, ContractWrapper};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
@@ -28,6 +27,7 @@ pub struct CountResponse {
     pub count: u32,
 }
 
+const COUNT: Item<u32> = Item::new("count");
 const PAYOUT: Item<InstantiateMessage> = Item::new("payout");
 
 fn instantiate(
