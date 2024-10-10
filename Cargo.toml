@@ -3,7 +3,7 @@ name = "cw-multi-test"
 version = "2.2.0"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
-    "Dariusz Depta <DariuszDepta@users.noreply.github.com>"
+    "Dariusz Depta <depta@engos.de>"
 ]
 description = "Testing tools for multi-contract interactions"
 repository = "https://github.com/CosmWasm/cw-multi-test"
@@ -29,7 +29,7 @@ cosmwasm_2_1 = ["cosmwasm_2_0", "cosmwasm-std/cosmwasm_2_1"]
 [dependencies]
 anyhow = "1.0.89"
 bech32 = "0.11.0"
-cosmwasm-schema = "2.1.3"
+cosmwasm-schema = "2.1.4"
 cosmwasm-std = "2.1.4"
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
@@ -43,4 +43,4 @@ thiserror = "1.0.64"
 [dev-dependencies]
 hex = "0.4.3"
 hex-literal = "0.4.1"
-once_cell = "1.19.0"
+once_cell = "1.20.2"
