@@ -1,3 +1,5 @@
+#![cfg(feature = "stargate")]
+
 use crate::{Contract, ContractWrapper};
 use cosmwasm_std::{
     Binary, CosmosMsg, Deps, DepsMut, Empty, Env, GovMsg, MessageInfo, Response, StdResult,
