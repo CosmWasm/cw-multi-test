@@ -372,7 +372,7 @@ fn reflect_success() {
     // reflect count is 1
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
         .unwrap();
     assert_eq!(0, query_res.count);
 
@@ -428,7 +428,7 @@ fn reflect_success() {
     // reflect count updated
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
         .unwrap();
     assert_eq!(1, query_res.count);
 }
@@ -492,7 +492,7 @@ fn reflect_error() {
     // reflect count should be updated to 1
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
         .unwrap();
     assert_eq!(1, query_res.count);
 
@@ -523,7 +523,7 @@ fn reflect_error() {
     // failure should not update reflect count
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMsg::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
         .unwrap();
     assert_eq!(1, query_res.count);
 }
@@ -621,7 +621,7 @@ fn reflect_sub_message_reply_works() {
         .unwrap();
 
     // no reply written beforehand
-    let query = reflect::QueryMsg::Reply { id: 123 };
+    let query = reflect::QueryMessage::Reply { id: 123 };
     let res: StdResult<Reply> = app.wrap().query_wasm_smart(&reflect_addr, &query);
     res.unwrap_err();
 
@@ -671,7 +671,7 @@ fn reflect_sub_message_reply_works() {
         .unwrap();
 
     // ensure error was written
-    let query = reflect::QueryMsg::Reply { id: 456 };
+    let query = reflect::QueryMessage::Reply { id: 456 };
     let res: Reply = app.wrap().query_wasm_smart(&reflect_addr, &query).unwrap();
     assert_eq!(res.id, 456);
     assert!(res.result.is_err());
@@ -1780,7 +1780,7 @@ mod protobuf_wrapped_data {
 
         let count: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&parsed.contract_address, &reflect::QueryMsg::Count {})
+            .query_wasm_smart(&parsed.contract_address, &reflect::QueryMessage::Count {})
             .unwrap();
         assert_eq!(count.count, 0);
     }

@@ -19,7 +19,7 @@ where
 }
 
 #[cw_serde]
-pub enum QueryMsg {
+pub enum QueryMessage {
     Count,
     Reply { id: u64 },
 }
@@ -58,13 +58,13 @@ where
     Ok(Response::new().add_submessages(msg.sub_msg))
 }
 
-fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+fn query(deps: Deps, _env: Env, msg: QueryMessage) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Count => {
+        QueryMessage::Count => {
             let count = COUNTER.load(deps.storage)?;
             to_json_binary(&ReflectResponse { count })
         }
-        QueryMsg::Reply { id } => {
+        QueryMessage::Reply { id } => {
             let reply = REFLECT.load(deps.storage, id)?;
             to_json_binary(&reply)
         }
