@@ -1369,13 +1369,14 @@ mod reply_data_overwrite {
                         make_echo_reply_never_submsg(contract.clone(), "Second", vec![]),
                         make_echo_reply_never_submsg(contract, None, vec![]),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
             .unwrap();
 
         assert_eq!(response.data, Some(b"Orig".into()));
+        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
