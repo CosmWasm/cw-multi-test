@@ -1381,50 +1381,51 @@ mod reply_data_overwrite {
 
     #[test]
     fn multiple_submsg_mixed() {
-        let mut app = App::default();
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract = app
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
+        let response = chain
             .execute_contract(
                 owner,
-                contract.clone(),
+                echo_contract_addr.clone(),
                 &echo::ExecMessage {
                     sub_msg: vec![
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             None,
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 1,
                         ),
-                        make_echo_reply_never_submsg(contract.clone(), "Hidden", vec![]),
+                        make_echo_reply_never_submsg(echo_contract_addr.clone(), "FIRST", vec![]),
                         make_echo_reply_always_submsg(
-                            contract.clone(),
-                            "Shown",
+                            echo_contract_addr.clone(),
+                            "SECOND",
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 2,
                         ),
                         make_echo_reply_always_submsg(
-                            contract.clone(),
+                            echo_contract_addr.clone(),
                             None,
                             vec![],
                             EXECUTE_REPLY_BASE_ID + 3,
                         ),
-                        make_echo_reply_never_submsg(contract, "Lost", vec![]),
+                        make_echo_reply_never_submsg(echo_contract_addr, "THIRD", vec![]),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Shown".into()));
+        assert_eq!(response.data, Some(b"SECOND".into()));
+        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
