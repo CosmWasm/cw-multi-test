@@ -1224,59 +1224,69 @@ mod reply_data_overwrite {
 
     #[test]
     fn single_submsg_reply_returns_none() {
+        // create a chain with default settings
+        let mut chain = App::default();
+
         // prepare user addresses
         let owner = addr_make("owner");
 
-        // set personal balance
-        let init_funds = coins(100, "tgd");
-        let mut app = custom_app::<CustomHelperMsg, Empty, _>(|router, _, storage| {
-            router
-                .bank
-                .init_balance(storage, &owner, init_funds)
-                .unwrap();
-        });
+        // store reflect contract on chain
+        let reflect_code_id = chain.store_code(reflect::contract());
 
-        // set up reflect contract
-        let reflect_id = app.store_code(reflect::contract());
-
-        let reflect_addr = app
-            .instantiate_contract(reflect_id, owner.clone(), &Empty {}, &[], "Reflect", None)
+        // instantiate reflect contract
+        let reflect_contract_addr = chain
+            .instantiate_contract(
+                reflect_code_id,
+                owner.clone(),
+                &Empty {},
+                &[],
+                "Reflect",
+                None,
+            )
             .unwrap();
 
-        // set up echo contract
-        let echo_id = app.store_code(echo::contract());
+        // store the echo contract on chain
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let echo_addr = app
-            .instantiate_contract(echo_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        // instantiate the echo contract
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        // Reflect will call echo contract.
-        // Echo contract will set the data.
-        // Top-level app will not display the data.
+        // firstly reflect contract will call echo contract, then the echo contract will return the data,
+        // but there is no submessage, so no reply entrypoint of reflect contract will be called,
+        // finally the top-level app (this test) will not display any data
+
+        // prepare the echo execute message
         let echo_msg = echo::ExecMessage::<Empty> {
-            data: Some("my echo".into()),
-            events: vec![Event::new("echo").add_attribute("called", "true")],
-            ..echo::ExecMessage::default()
+            data: Some("ORIGINAL".into()),
+            ..Default::default()
         };
-        let reflect_msg = reflect::ExecMessage {
-            sub_msg: vec![SubMsg::<Empty>::reply_never(WasmMsg::Execute {
-                contract_addr: echo_addr.to_string(),
+
+        // prepare reflect execute message
+        let reflect_msg = reflect::ExecMessage::<Empty> {
+            sub_msg: vec![SubMsg::reply_never(WasmMsg::Execute {
+                contract_addr: echo_contract_addr.to_string(),
                 msg: to_json_binary(&echo_msg).unwrap(),
                 funds: vec![],
             })],
         };
 
-        let res = app
-            .execute_contract(owner, reflect_addr.clone(), &reflect_msg, &[])
+        // execute reflect message
+        let response = chain
+            .execute_contract(owner, reflect_contract_addr.clone(), &reflect_msg, &[])
             .unwrap();
 
-        // ensure data is empty
-        assert_eq!(res.data, None);
-        // ensure expected events
-        assert_eq!(res.events.len(), 3, "{:?}", res.events);
-        res.assert_event(&Event::new("execute").add_attribute("_contract_address", &reflect_addr));
-        res.assert_event(&Event::new("execute").add_attribute("_contract_address", &echo_addr));
-        res.assert_event(&Event::new("wasm-echo"));
+        // ensure the data in response is empty
+        assert_eq!(response.data, None);
+        //TODO assert_eq!(response.msg_responses, vec![]);
+        // ensure expected events are returned
+        assert_eq!(response.events.len(), 2);
+        let make_event = |contract_addr: &Addr| {
+            Event::new("execute").add_attribute("_contract_address", contract_addr)
+        };
+        response.assert_event(&make_event(&reflect_contract_addr));
+        response.assert_event(&make_event(&echo_contract_addr));
     }
 
     #[test]
