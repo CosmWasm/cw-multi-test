@@ -1192,34 +1192,34 @@ mod reply_data_overwrite {
 
     #[test]
     fn single_no_top_level_data() {
-        let mut app = App::default();
+        // create a chain with default settings
+        let mut chain = App::default();
 
-        let owner = app.api().addr_make("owner");
+        let owner = chain.api().addr_make("owner");
 
-        let code_id = app.store_code(echo::contract());
+        let echo_code_id = chain.store_code(echo::contract());
 
-        let contract = app
-            .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "Echo", None)
+        let echo_contract_addr = chain
+            .instantiate_contract(echo_code_id, owner.clone(), &Empty {}, &[], "Echo", None)
             .unwrap();
 
-        let response = app
-            .execute_contract(
-                owner,
-                contract.clone(),
-                &echo::ExecMessage {
-                    sub_msg: vec![make_echo_reply_always_submsg(
-                        contract,
-                        "Second",
-                        vec![],
-                        EXECUTE_REPLY_BASE_ID,
-                    )],
-                    ..echo::ExecMessage::default()
-                },
-                &[],
-            )
+        let echo_exec_msg = echo::ExecMessage {
+            data: None,
+            sub_msg: vec![make_echo_reply_always_submsg(
+                echo_contract_addr.clone(),
+                "SECOND",
+                vec![],
+                EXECUTE_REPLY_BASE_ID,
+            )],
+            ..Default::default()
+        };
+
+        let response = chain
+            .execute_contract(owner, echo_contract_addr, &echo_exec_msg, &[])
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Second".into()));
+        assert_eq!(response.data, Some(b"SECOND".into()));
+        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
