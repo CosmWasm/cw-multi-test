@@ -1504,7 +1504,7 @@ mod response_validation {
                         Attribute::new("   ", "value"),
                         Attribute::new("proper", "proper_val"),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1534,7 +1534,7 @@ mod response_validation {
                         Attribute::new("key", "   "),
                         Attribute::new("proper", "proper_val"),
                     ],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1562,7 +1562,7 @@ mod response_validation {
                     events: vec![Event::new("event")
                         .add_attribute("   ", "value")
                         .add_attribute("proper", "proper_val")],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1591,7 +1591,7 @@ mod response_validation {
                     events: vec![Event::new("event")
                         .add_attribute("key", "   ")
                         .add_attribute("proper", "proper_val")],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1617,7 +1617,7 @@ mod response_validation {
                 &echo::ExecMessage::<Empty> {
                     data: None,
                     events: vec![Event::new(" e "), Event::new("event")],
-                    ..echo::ExecMessage::default()
+                    ..Default::default()
                 },
                 &[],
             )
@@ -1881,7 +1881,7 @@ mod protobuf_wrapped_data {
             .instantiate_contract(code_id, owner.clone(), &Empty {}, &[], "label", None)
             .unwrap();
 
-        // ensure that execute has the same wrapper as it should
+        // ensure message has the same wrapper as it should
         let msg = echo::ExecMessage::<Empty> {
             data: Some("hello".into()),
             ..echo::ExecMessage::default()
