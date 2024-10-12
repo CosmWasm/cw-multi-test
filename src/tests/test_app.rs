@@ -372,7 +372,7 @@ fn reflect_success() {
     // reflect count is 1
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(0, query_res.count);
 
@@ -428,7 +428,7 @@ fn reflect_success() {
     // reflect count updated
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(1, query_res.count);
 }
@@ -492,7 +492,7 @@ fn reflect_error() {
     // reflect count should be updated to 1
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(1, query_res.count);
 
@@ -523,7 +523,7 @@ fn reflect_error() {
     // failure should not update reflect count
     let query_res: payout::CountResponse = app
         .wrap()
-        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count {})
+        .query_wasm_smart(&reflect_addr, &reflect::QueryMessage::Count)
         .unwrap();
     assert_eq!(1, query_res.count);
 }
@@ -1780,7 +1780,7 @@ mod protobuf_wrapped_data {
 
         let count: payout::CountResponse = app
             .wrap()
-            .query_wasm_smart(&parsed.contract_address, &reflect::QueryMessage::Count {})
+            .query_wasm_smart(&parsed.contract_address, &reflect::QueryMessage::Count)
             .unwrap();
         assert_eq!(count.count, 0);
     }
