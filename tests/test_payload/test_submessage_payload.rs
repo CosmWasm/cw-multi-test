@@ -31,7 +31,7 @@ fn assert_balance(app: &App, amount: u128, addr: &Addr) {
 }
 
 #[test]
-fn non_empty_payload_should_work() {
+fn submessage_payload_should_work() {
     // Prepare addresses for Alice, Bob and Cecil accounts.
     let alice_addr = "alice".into_addr();
     let bob_addr = "bob".into_addr();
@@ -179,17 +179,42 @@ fn non_empty_payload_should_work() {
     assert_eq!(4, payload.id);
     assert_eq!("BURN", payload.action);
 
-    // Now, Bob should have 1pao more, because Alice sent him 10pao.
+    // No changes for Bob.
     assert_balance(&app, 211, &bob_addr);
 
-    // Now, Cecil should have 2pao more, because Alice sent him 10pao.
+    // No changes for Cecil.
     assert_balance(&app, 302, &cecil_addr);
 
     // No changes for Alice.
     assert_balance(&app, 10, &alice_addr);
 
-    // Now the contract should have 0pao.
+    // Now the contract should have 67pao.
     assert_balance(&app, 67, &contract_addr);
+
+    //---------------------------------------------------------------------------------------------
+    // Alice burns 10pao in her contract.
+    // This time without filling the payload field in the submessage.
+    //---------------------------------------------------------------------------------------------
+
+    let msg = test_contracts::payloader::ExecuteMessage::BurnNoPayload(10, DENOM.to_string());
+    let response = app
+        .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
+        .unwrap();
+    let payload = from_json::<Payload>(response.data.unwrap()).unwrap();
+    assert_eq!(5, payload.id);
+    assert_eq!("EMPTY", payload.action);
+
+    // No changes for Bob.
+    assert_balance(&app, 211, &bob_addr);
+
+    // No changes for Cecil.
+    assert_balance(&app, 302, &cecil_addr);
+
+    // No changes for Alice.
+    assert_balance(&app, 10, &alice_addr);
+
+    // Now the contract should have 57pao.
+    assert_balance(&app, 57, &contract_addr);
 
     //---------------------------------------------------------------------------------------------
     // Alice executes a variant without reply.
@@ -203,4 +228,16 @@ fn non_empty_payload_should_work() {
     let payload = from_json::<Payload>(response.data.unwrap()).unwrap();
     assert_eq!(0, payload.id);
     assert_eq!("EXECUTE", payload.action);
+
+    // No changes for Bob.
+    assert_balance(&app, 211, &bob_addr);
+
+    // No changes for Cecil.
+    assert_balance(&app, 302, &cecil_addr);
+
+    // No changes for Alice.
+    assert_balance(&app, 10, &alice_addr);
+
+    // Now changes for the contract.
+    assert_balance(&app, 57, &contract_addr);
 }

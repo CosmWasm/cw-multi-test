@@ -1,4 +1,4 @@
-mod test_non_empty_payload;
+mod test_submessage_payload;
 
 mod test_contracts {
     pub mod payloader {
@@ -13,6 +13,7 @@ mod test_contracts {
             Send(String, u128, String),
             SendMulti(String, u128, String, u128, String),
             Burn(u128, String),
+            BurnNoPayload(u128, String),
             Nop,
         }
 
@@ -103,6 +104,18 @@ mod test_contracts {
                         reply_on: ReplyOn::Always,
                     });
                 }
+                ExecuteMessage::BurnNoPayload(amount, denom) => {
+                    let msg_send = BankMsg::Burn {
+                        amount: vec![Coin::new(Uint128::new(amount), denom.clone())],
+                    };
+                    response = response.add_submessage(SubMsg {
+                        id: 5,
+                        payload: Binary::default(),
+                        msg: msg_send.into(),
+                        gas_limit: None,
+                        reply_on: ReplyOn::Always,
+                    });
+                }
                 ExecuteMessage::Nop => {}
             }
             Ok(response)
@@ -115,8 +128,15 @@ mod test_contracts {
         pub fn reply(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response> {
             #[allow(deprecated)]
             let Reply { id, payload, .. } = msg;
-            let mut payload = from_json::<Payload>(payload.clone())?;
-            payload.id = id;
+            let payload = if let Ok(mut payload) = from_json::<Payload>(payload.clone()) {
+                payload.id = id;
+                payload
+            } else {
+                Payload {
+                    id,
+                    action: "EMPTY".to_string(),
+                }
+            };
             Ok(Response::new().set_data(to_json_binary(&payload)?))
         }
     }
