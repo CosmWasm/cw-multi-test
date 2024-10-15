@@ -948,17 +948,17 @@ where
         response: AppResponse,
         sub_messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
-        // unpack the provided response
+        // Unpack the provided response.
         let AppResponse {
             mut events,
             data,
-            msg_responses: mut msg_responses_x,
+            mut msg_responses,
         } = response;
-        // recurse in all sub messages
+        // Recurse in all submessages.
         let data = sub_messages
             .into_iter()
             .try_fold(data, |data, sub_message| {
-                // execute the sub message
+                // Execute the submessage.
                 let sub_response = self.execute_submsg(
                     api,
                     router,
@@ -967,19 +967,20 @@ where
                     contract.clone(),
                     sub_message,
                 )?;
-                // COLLECT and append all events from the processed sub message
+                // COLLECT and append all events from the processed submessage.
                 events.extend_from_slice(&sub_response.events);
-                // COLLECT and append all msg responses from the processed sub message
-                msg_responses_x.extend_from_slice(&sub_response.msg_responses);
-                // REPLACE the data with value from the processes sub message (if not empty)
+                // COLLECT and append all message responses from the processed submessage.
+                msg_responses.extend_from_slice(&sub_response.msg_responses);
+                // REPLACE the data with value from the processes submessage (if not empty).
                 Ok::<_, AnyError>(sub_response.data.or(data))
             })?;
-        // return the response with updated data, events and msg responses taken from all processed sub messages
-        // note that events and msg responses are collected, but data is replaced
+        // Return the response with updated data, events and message responses taken from
+        // all processed sub messages. Note that events and message responses are collected,
+        // but the data is replaced with the data from the last processes submessage.
         Ok(AppResponse {
             events,
             data,
-            msg_responses: msg_responses_x,
+            msg_responses,
         })
     }
 
