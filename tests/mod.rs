@@ -9,6 +9,7 @@ mod test_contract_storage;
 mod test_module;
 mod test_payload;
 mod test_prefixed_storage;
+mod test_responses;
 #[cfg(feature = "staking")]
 mod test_staking;
 mod test_wasm;

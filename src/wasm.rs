@@ -579,19 +579,19 @@ where
         let admin = new_admin.map(|a| api.addr_validate(&a)).transpose()?;
 
         // check admin status
-        let mut data = self.contract_data(storage, &contract_addr)?;
-        if data.admin != Some(sender) {
-            bail!("Only admin can update the contract admin: {:?}", data.admin);
+        let mut contract_data = self.contract_data(storage, &contract_addr)?;
+        if contract_data.admin != Some(sender) {
+            bail!(
+                "Only admin can update the contract admin: {:?}",
+                contract_data.admin
+            );
         }
         // update admin field
-        data.admin = admin;
-        self.save_contract(storage, &contract_addr, &data)?;
+        contract_data.admin = admin;
+        self.save_contract(storage, &contract_addr, &contract_data)?;
 
         // no custom event here
-        Ok(AppResponse {
-            data: None,
-            events: vec![],
-        })
+        Ok(AppResponse::default())
     }
 
     // this returns the contract address as well, so we can properly resend the data
@@ -835,7 +835,7 @@ where
                         SubMsgResponse {
                             events: r.events.clone(),
                             data: r.data,
-                            msg_responses: vec![],
+                            msg_responses: r.msg_responses.clone(),
                         },
                     ),
                 };
@@ -890,8 +890,9 @@ where
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
 
-    // this captures all the events and data from the contract call.
-    // it does not handle the messages
+    /// Captures all the events, data and sub messages from the contract call.
+    ///
+    /// This function does not handle the messages.
     fn build_app_response(
         &self,
         contract: &Addr,
@@ -929,11 +930,12 @@ where
         });
         app_events.extend(wasm_events);
 
-        let app = AppResponse {
+        let app_response = AppResponse {
             events: app_events,
             data,
+            ..Default::default()
         };
-        (app, messages)
+        (app_response, messages)
     }
 
     fn process_response(
@@ -944,19 +946,42 @@ where
         block: &BlockInfo,
         contract: Addr,
         response: AppResponse,
-        messages: Vec<SubMsg<ExecC>>,
+        sub_messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
-        let AppResponse { mut events, data } = response;
-
-        // recurse in all messages
-        let data = messages.into_iter().try_fold(data, |data, resend| {
-            let sub_res =
-                self.execute_submsg(api, router, storage, block, contract.clone(), resend)?;
-            events.extend_from_slice(&sub_res.events);
-            Ok::<_, AnyError>(sub_res.data.or(data))
-        })?;
-
-        Ok(AppResponse { events, data })
+        // Unpack the provided response.
+        let AppResponse {
+            mut events,
+            data,
+            mut msg_responses,
+        } = response;
+        // Recurse in all submessages.
+        let data = sub_messages
+            .into_iter()
+            .try_fold(data, |data, sub_message| {
+                // Execute the submessage.
+                let sub_response = self.execute_submsg(
+                    api,
+                    router,
+                    storage,
+                    block,
+                    contract.clone(),
+                    sub_message,
+                )?;
+                // COLLECT and append all events from the processed submessage.
+                events.extend_from_slice(&sub_response.events);
+                // COLLECT and append all message responses from the processed submessage.
+                msg_responses.extend_from_slice(&sub_response.msg_responses);
+                // REPLACE the data with value from the processes submessage (if not empty).
+                Ok::<_, AnyError>(sub_response.data.or(data))
+            })?;
+        // Return the response with updated data, events and message responses taken from
+        // all processed sub messages. Note that events and message responses are collected,
+        // but the data is replaced with the data from the last processes submessage.
+        Ok(AppResponse {
+            events,
+            data,
+            msg_responses,
+        })
     }
 
     /// Creates a contract address and empty storage instance.
