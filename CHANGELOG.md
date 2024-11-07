@@ -1,5 +1,36 @@
 # Changelog
 
+## [v2.2.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.2.0) (2024-11-07)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.1.1...v2.2.0)
+
+**Key highlights:**
+
+- Added `cosmwasm_2_1` feature that supports CosmWasm 2.1 (see [\#209](https://github.com/CosmWasm/cw-multi-test/issues/209) for details).
+- Fixed handling the payload for submessages (see [\#223](https://github.com/CosmWasm/cw-multi-test/pull/223) for details).
+- Added `checksum` function to `Contract` trait (see [\#207](https://github.com/CosmWasm/cw-multi-test/issues/207) for details). 
+
+**Closed issues:**
+
+- Unifying `instantiate2` implementation [\#207](https://github.com/CosmWasm/cw-multi-test/issues/207)
+- Add `cosmwasm_2_1` feature flag [\#209](https://github.com/CosmWasm/cw-multi-test/issues/209)
+
+**Merged pull requests:**
+
+- Added `cosmwasm_2_1` feature flag [\#210](https://github.com/CosmWasm/cw-multi-test/pull/210) ([DariuszDepta](https://github.com/DariuszDepta))
+- Unifying `instantiate2` implementation [\#212](https://github.com/CosmWasm/cw-multi-test/pull/212) ([DariuszDepta](https://github.com/DariuszDepta))
+- Removed `derivative` crate dependency [\#214](https://github.com/CosmWasm/cw-multi-test/pull/214) ([DariuszDepta](https://github.com/DariuszDepta))
+- Use `cw_serde` where appropriate [\#215](https://github.com/CosmWasm/cw-multi-test/pull/215) ([DariuszDepta](https://github.com/DariuszDepta))
+- Fix `SubMsg` payload not forwarded [\#216](https://github.com/CosmWasm/cw-multi-test/pull/216) ([DariuszDepta](https://github.com/DariuszDepta))
+- Upgraded dependencies [\#217](https://github.com/CosmWasm/cw-multi-test/pull/217) ([DariuszDepta](https://github.com/DariuszDepta))
+- Replaced `todo!` with `unimplemented!` [\#218](https://github.com/CosmWasm/cw-multi-test/pull/218) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactoring of storage in test helpers [\#219](https://github.com/CosmWasm/cw-multi-test/pull/219) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactored reflect test helper [\#220](https://github.com/CosmWasm/cw-multi-test/pull/220) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactoring: echo test helper [\#221](https://github.com/CosmWasm/cw-multi-test/pull/221) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactoring `test_app` [\#222](https://github.com/CosmWasm/cw-multi-test/pull/222) ([DariuszDepta](https://github.com/DariuszDepta))
+- Fixed payload for submessages [\#223](https://github.com/CosmWasm/cw-multi-test/pull/223) ([DariuszDepta](https://github.com/DariuszDepta))
+- Upgraded dependencies [\#224](https://github.com/CosmWasm/cw-multi-test/pull/224) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.1.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.1.1) (2024-08-20)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.1.0...v2.1.1)
