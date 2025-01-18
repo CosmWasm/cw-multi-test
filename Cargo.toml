@@ -27,18 +27,18 @@ cosmwasm_2_0 = ["cosmwasm_1_4", "cosmwasm-std/cosmwasm_2_0"]
 cosmwasm_2_1 = ["cosmwasm_2_0", "cosmwasm-std/cosmwasm_2_1"]
 
 [dependencies]
-anyhow = "1.0.93"
+anyhow = "1.0.95"
 bech32 = "0.11.0"
-cosmwasm-schema = "2.1.4"
-cosmwasm-std = "2.1.4"
+cosmwasm-schema = "2.1.5"
+cosmwasm-std = "2.1.5"
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
-itertools = "0.13.0"
-prost = "0.13.3"
+itertools = "0.14.0"
+prost = "0.13.4"
 schemars = "0.8.21"
-serde = "1.0.214"
+serde = "1.0.217"
 sha2 = "0.10.8"
-thiserror = "2.0.0"
+thiserror = "2.0.11"
 
 [dev-dependencies]
 hex = "0.4.3"

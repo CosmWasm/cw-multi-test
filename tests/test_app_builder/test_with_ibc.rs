@@ -38,9 +38,12 @@ fn building_app_with_custom_ibc_should_work() {
     assert_eq!(
         format!("Generic error: Querier contract error: {}", QUERY_MSG),
         app.wrap()
-            .query::<IbcQuery>(&QueryRequest::Ibc(IbcQuery::ListChannels {
-                port_id: Some("my-port".to_string())
-            }))
+            .query::<IbcQuery>(&QueryRequest::Ibc(
+                #[allow(deprecated)]
+                IbcQuery::ListChannels {
+                    port_id: Some("my-port".to_string())
+                }
+            ))
             .unwrap_err()
             .to_string()
     );
