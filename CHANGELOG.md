@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.3.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.0) (2025-01-20)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.2.1...v2.3.0)
+
+**Key highlights:**
+
+- Dependency upgrade (see [\#229](https://github.com/CosmWasm/cw-multi-test/pull/229) for details).
+
+**Merged pull requests:**
+
+- Upgraded CW dependencies [\#229](https://github.com/CosmWasm/cw-multi-test/pull/229) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.2.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.2.1) (2025-01-17)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.2.0...v2.2.1)
