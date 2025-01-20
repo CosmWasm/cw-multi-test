@@ -38,6 +38,7 @@ where
     StorageT: Storage,
     CustomT: Module,
 {
+    #[allow(deprecated)]
     app.wrap().query_all_balances(addr).unwrap()
 }
 
@@ -56,6 +57,7 @@ where
     StakingT: Staking,
     DistrT: Distribution,
 {
+    #[allow(deprecated)]
     let query = BankQuery::AllBalances {
         address: rcpt.into(),
     };
@@ -84,6 +86,7 @@ where
     StakingT: Staking,
     DistrT: Distribution,
 {
+    #[allow(deprecated)]
     let query = BankQuery::AllBalances {
         address: rcpt.into(),
     }

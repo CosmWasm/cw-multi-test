@@ -231,6 +231,7 @@ impl Module for BankKeeper {
     ) -> AnyResult<Binary> {
         let bank_storage = prefixed_read(storage, NAMESPACE_BANK);
         match request {
+            #[allow(deprecated)]
             BankQuery::AllBalances { address } => {
                 let address = api.addr_validate(&address)?;
                 let amount = self.get_balance(&bank_storage, &address)?;
@@ -305,6 +306,7 @@ mod test {
         store: &dyn Storage,
         rcpt: &Addr,
     ) -> Vec<Coin> {
+        #[allow(deprecated)]
         let req = BankQuery::AllBalances {
             address: rcpt.clone().into(),
         };
@@ -342,6 +344,7 @@ mod test {
         assert_eq!(poor, vec![]);
 
         // proper queries work
+        #[allow(deprecated)]
         let req = BankQuery::AllBalances {
             address: owner.clone().into(),
         };
@@ -349,6 +352,7 @@ mod test {
         let res: AllBalanceResponse = from_json(raw).unwrap();
         assert_eq!(res.amount, norm);
 
+        #[allow(deprecated)]
         let req = BankQuery::AllBalances {
             address: rcpt.clone().into(),
         };
@@ -396,6 +400,7 @@ mod test {
         bank.sudo(&api, &mut store, &router, &block, msg).unwrap();
 
         // Check that the recipient account has the expected balance
+        #[allow(deprecated)]
         let req = BankQuery::AllBalances {
             address: rcpt.into(),
         };
