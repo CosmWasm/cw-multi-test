@@ -5,7 +5,7 @@ use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
 
 const DENOM: &str = "pao";
 
-pub fn payloader_contract() -> Box<dyn Contract<Empty>> {
+pub fn responder_contract() -> Box<dyn Contract<Empty>> {
     Box::new(
         ContractWrapper::new_with_empty(
             test_contracts::responder::execute,
@@ -60,7 +60,7 @@ fn submessage_responses_from_bank_send_should_work() {
     assert_balance(&app, 10, &bob_addr);
 
     // Alice stores the code of the responder contract on chain.
-    let code_id = app.store_code_with_creator(alice_addr.clone(), payloader_contract());
+    let code_id = app.store_code_with_creator(alice_addr.clone(), responder_contract());
 
     // Alice instantiates the responder contract, transferring some coins to it.
     let contract_addr = app
@@ -138,7 +138,7 @@ fn submessage_responses_from_bank_burn_should_work() {
     assert_balance(&app, 1000, &alice_addr);
 
     // Alice stores the code of the responder contract on chain.
-    let code_id = app.store_code_with_creator(alice_addr.clone(), payloader_contract());
+    let code_id = app.store_code_with_creator(alice_addr.clone(), responder_contract());
 
     // Alice instantiates the responder contract, transferring some coins to it.
     let contract_addr = app
