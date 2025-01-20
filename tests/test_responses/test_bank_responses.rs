@@ -32,7 +32,7 @@ fn assert_balance(app: &App, amount: u128, addr: &Addr) {
 }
 
 #[test]
-fn submessage_responses_from_bank_should_work() {
+fn submessage_responses_from_bank_send_should_work() {
     //---------------------------------------------------------------------------------------------
     // Chain initialization
     //---------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ fn submessage_responses_from_bank_should_work() {
     // Alice stores the code of the responder contract on chain.
     let code_id = app.store_code_with_creator(alice_addr.clone(), payloader_contract());
 
-    // Alice instantiates the responder contract, transferring some coins.
+    // Alice instantiates the responder contract, transferring some coins to it.
     let contract_addr = app
         .instantiate_contract(
             code_id,
@@ -83,7 +83,7 @@ fn submessage_responses_from_bank_should_work() {
     //---------------------------------------------------------------------------------------------
     // Alice sends 100 coins to Bob using the `responder` contract.
     // Responder contract utilizes BankMsg::Send submessage for this task.
-    // The result from processing BankMsg::Send message by the chain is sent back to the contract
+    // The result from processing BankMsg::Send message by the chain is sent back to the contract,
     // utilizing the reply entry-point. The msg_responses field sent from the chain
     // if transferred to the caller to verify if processing the submessage returns proper values.
     //---------------------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ fn submessage_responses_from_bank_should_work() {
     assert_eq!(1, responder_response.id.unwrap());
     // BankMsg::Send should respond with single response.
     assert_eq!(1, responder_response.msg_responses.len());
-    // The type of the response should be specific for the BankMsg::Send message
+    // The type of the response should be specific to the BankMsg::Send message
     assert_eq!(
         "/cosmos.bank.v1beta1.MsgSendResponse",
         responder_response.msg_responses[0].type_url
@@ -113,6 +113,6 @@ fn submessage_responses_from_bank_should_work() {
     assert_balance(&app, 110, &bob_addr);
     // No changes for Alice.
     assert_balance(&app, 100, &alice_addr);
-    // Now the contract should have 800 coins.
+    // Now the contract should have 800 coins, 100 less, because they were sent to Bob.
     assert_balance(&app, 800, &contract_addr);
 }
