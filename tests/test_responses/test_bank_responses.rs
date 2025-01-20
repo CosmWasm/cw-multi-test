@@ -116,3 +116,64 @@ fn submessage_responses_from_bank_send_should_work() {
     // Now the contract should have 800 coins, 100 less, because they were sent to Bob.
     assert_balance(&app, 800, &contract_addr);
 }
+
+#[test]
+fn submessage_responses_from_bank_burn_should_work() {
+    //---------------------------------------------------------------------------------------------
+    // Chain initialization
+    //---------------------------------------------------------------------------------------------
+
+    // Prepare addresses for Alice and Bob.
+    let alice_addr = "alice".into_addr();
+
+    // Initialize the chain with initial balances for Alice.
+    let mut app = App::new(|router, _api, storage| {
+        router
+            .bank
+            .init_balance(storage, &alice_addr, coins(1000))
+            .unwrap();
+    });
+
+    // Check the balance for Alice.
+    assert_balance(&app, 1000, &alice_addr);
+
+    // Alice stores the code of the responder contract on chain.
+    let code_id = app.store_code_with_creator(alice_addr.clone(), payloader_contract());
+
+    // Alice instantiates the responder contract, transferring some coins to it.
+    let contract_addr = app
+        .instantiate_contract(
+            code_id,
+            alice_addr.clone(),
+            &Empty {},
+            &coins(90),
+            "responder",
+            None,
+        )
+        .unwrap();
+
+    // Alice should now have only 100 coins, because 900 coins were sent to the instantiated contract.
+    assert_balance(&app, 910, &alice_addr);
+
+    // The contract should have 900 coins.
+    assert_balance(&app, 90, &contract_addr);
+
+    //---------------------------------------------------------------------------------------------
+    // Alice burns 17 coins using the `responder` contract.
+    // `responder` contract utilizes BankMsg::Burn submessage for this task.
+    // The result from processing BankMsg::Burn message by the chain is sent back to the contract,
+    // utilizing the reply entry-point. The msg_responses field sent from the chain
+    // if transferred to the caller to verify if processing the submessage returns proper values.
+    //---------------------------------------------------------------------------------------------
+
+    let msg = test_contracts::responder::ExecuteMessage::BankBurn(17, DENOM.to_string());
+    let app_response = app
+        .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
+        .unwrap();
+    let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
+
+    // The identifier of the reply message should be 2.
+    assert_eq!(2, responder_response.id.unwrap());
+    // BankMsg::Burn should respond with no response messages.
+    assert_eq!(0, responder_response.msg_responses.len());
+}
