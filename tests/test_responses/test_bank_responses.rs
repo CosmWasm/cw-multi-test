@@ -98,6 +98,10 @@ fn submessage_responses_from_bank_send_should_work() {
     let app_response = app
         .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
         .unwrap();
+
+    // There should be no submessage responses in the top level message.
+    assert_eq!(app_response.msg_responses, vec![]);
+
     let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
 
     // The identifier of the reply message should be 1.
@@ -172,6 +176,10 @@ fn submessage_responses_from_bank_burn_should_work() {
     let app_response = app
         .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
         .unwrap();
+
+    // There should be no submessage responses in the top level message.
+    assert_eq!(app_response.msg_responses, vec![]);
+
     let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
 
     // The identifier of the reply message should be 2.
@@ -222,8 +230,9 @@ fn submessage_responses_from_wasm_execute_should_work() {
     //---------------------------------------------------------------------------------------------
     // Alice executes Wasm::Execute as a submessage on the contract_addr_1.
     // The result from processing Wasm::Execute message by the chain is sent back to the
-    // contract_addr_1, utilizing the reply entry-point. The msg_responses field sent from the chain
-    // if transferred to the caller to verify if processing the submessage returns proper values.
+    // contract_addr_1, utilizing the reply entry-point. The msg_responses field sent from
+    // the chain if transferred to the caller to verify if processing the submessage
+    // returns proper values.
     //---------------------------------------------------------------------------------------------
 
     let msg = test_contracts::responder::ResponderExecuteMessage::WasmMsgExecuteAdd(
@@ -234,6 +243,10 @@ fn submessage_responses_from_wasm_execute_should_work() {
     let app_response = app
         .execute_contract(alice_addr.clone(), contract_addr_1, &msg, &[])
         .unwrap();
+
+    // There should be no submessage responses in the top level message.
+    assert_eq!(app_response.msg_responses, vec![]);
+
     let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
 
     // The identifier of the reply message should be 3.

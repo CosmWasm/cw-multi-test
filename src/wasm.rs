@@ -650,11 +650,10 @@ where
                     sub_messages,
                 )?;
 
-                let encoded_data = encode_response_data(app_response.data);
-                app_response.data = encoded_data.clone();
+                app_response.data = encode_response_data(app_response.data);
                 app_response.msg_responses.push(MsgResponse {
                     type_url: "/cosmwasm.wasm.v1.MsgExecuteContractResponse".to_string(),
-                    value: encode_response_value(encoded_data),
+                    value: encode_response_value(app_response.data.as_ref()),
                 });
 
                 Ok(app_response)
@@ -835,12 +834,12 @@ where
         } = msg;
 
         // execute in cache
-        let res = transactional(storage, |write_cache, _| {
+        let sub_message_result = transactional(storage, |write_cache, _| {
             router.execute(api, write_cache, block, contract.clone(), msg)
         });
 
         // call reply if meaningful
-        if let Ok(mut r) = res {
+        if let Ok(mut r) = sub_message_result {
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Success) {
                 let reply = Reply {
                     id,
@@ -861,12 +860,16 @@ where
                 r.data = reply_res.data;
                 // append the events
                 r.events.extend_from_slice(&reply_res.events);
+                // clear msg responses, were valid only for reply
+                r.msg_responses.clear();
             } else {
                 // reply is not called, no data should be returned
                 r.data = None;
+                // clear msg responses, were valid only for reply
+                r.msg_responses.clear();
             }
             Ok(r)
-        } else if let Err(e) = res {
+        } else if let Err(e) = sub_message_result {
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Error) {
                 let reply = Reply {
                     id,
@@ -879,7 +882,7 @@ where
                 Err(e)
             }
         } else {
-            res
+            sub_message_result
         }
     }
 
@@ -968,7 +971,7 @@ where
         let AppResponse {
             mut events,
             data,
-            mut msg_responses,
+            msg_responses,
         } = response;
         // Recurse in all submessages.
         let data = sub_messages
@@ -985,8 +988,6 @@ where
                 )?;
                 // COLLECT and append all events from the processed submessage.
                 events.extend_from_slice(&sub_response.events);
-                // COLLECT and append all message responses from the processed submessage.
-                msg_responses.extend_from_slice(&sub_response.msg_responses);
                 // REPLACE the data with value from the processes submessage (if not empty).
                 Ok::<_, AnyError>(sub_response.data.or(data))
             })?;
@@ -1292,7 +1293,7 @@ fn encode_response_data(data: Option<Binary>) -> Option<Binary> {
     })
 }
 
-fn encode_response_value(value: Option<Binary>) -> Binary {
+fn encode_response_value(value: Option<&Binary>) -> Binary {
     value.map_or(Binary::default(), |inner| {
         inner.to_base64().as_bytes().into()
     })

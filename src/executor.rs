@@ -152,17 +152,20 @@ where
         msg: &T,
         send_funds: &[Coin],
     ) -> AnyResult<AppResponse> {
-        let binary_msg = to_json_binary(msg)?;
-        let wrapped_msg = WasmMsg::Execute {
-            contract_addr: contract_addr.into_string(),
-            msg: binary_msg,
-            funds: send_funds.to_vec(),
-        };
-        let mut res = self.execute(sender, wrapped_msg.into())?;
-        res.data = res
+        let mut app_response = self.execute(
+            sender,
+            WasmMsg::Execute {
+                contract_addr: contract_addr.into_string(),
+                msg: to_json_binary(msg)?,
+                funds: send_funds.to_vec(),
+            }
+            .into(),
+        )?;
+        app_response.data = app_response
             .data
-            .and_then(|d| parse_execute_response_data(d.as_slice()).unwrap().data);
-        Ok(res)
+            .and_then(|data| parse_execute_response_data(data.as_slice()).unwrap().data);
+        app_response.msg_responses.clear();
+        Ok(app_response)
     }
 
     /// Migrates a contract.
