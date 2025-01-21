@@ -8,10 +8,10 @@ use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, Readonly
 use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
-    to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
-    ContractInfoResponse, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order,
-    Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg,
-    SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    from_base64, to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin,
+    ContractInfo, ContractInfoResponse, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event,
+    MessageInfo, MsgResponse, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response,
+    StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
 use cw_storage_plus::Map;
 use prost::Message;
@@ -624,7 +624,7 @@ where
 
                 // then call the contract
                 let info = MessageInfo { sender, funds };
-                let res = self.call_execute(
+                let response = self.call_execute(
                     api,
                     storage,
                     contract_addr.clone(),
@@ -637,11 +637,27 @@ where
                 let custom_event =
                     Event::new("execute").add_attribute(CONTRACT_ATTR, &contract_addr);
 
-                let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
-                let mut res =
-                    self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = execute_response(res.data);
-                Ok(res)
+                let (sub_response, sub_messages) =
+                    self.build_app_response(&contract_addr, custom_event, response);
+
+                let mut app_response = self.process_response(
+                    api,
+                    router,
+                    storage,
+                    block,
+                    contract_addr,
+                    sub_response,
+                    sub_messages,
+                )?;
+
+                let encoded_data = encode_response_data(app_response.data);
+                app_response.data = encoded_data.clone();
+                app_response.msg_responses.push(MsgResponse {
+                    type_url: "/cosmwasm.wasm.v1.MsgExecuteContractResponse".to_string(),
+                    value: encode_response_value(encoded_data),
+                });
+
+                Ok(app_response)
             }
             WasmMsg::Instantiate {
                 admin,
@@ -707,7 +723,7 @@ where
                 let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
                 let mut res =
                     self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = execute_response(res.data);
+                res.data = encode_response_data(res.data);
                 Ok(res)
             }
             WasmMsg::UpdateAdmin {
@@ -1043,7 +1059,7 @@ where
         Ok(addr)
     }
 
-    /// Executes contract's `execute` entry-point.
+    /// Evaluates `execute` entry-point of the contract.
     pub fn call_execute(
         &self,
         api: &dyn Api,
@@ -1265,15 +1281,29 @@ struct ExecuteResponse {
     pub data: Vec<u8>,
 }
 
-// empty return if no data present in original
-fn execute_response(data: Option<Binary>) -> Option<Binary> {
+/// Encodes the return data of the `execute` entrypoint.
+/// Returns `None` if provided original data is empty.
+fn encode_response_data(data: Option<Binary>) -> Option<Binary> {
     data.map(|d| {
-        let exec_data = ExecuteResponse { data: d.to_vec() };
-        let mut new_data = Vec::<u8>::with_capacity(exec_data.encoded_len());
-        // the data must encode successfully
-        exec_data.encode(&mut new_data).unwrap();
-        new_data.into()
+        let execute_response = ExecuteResponse { data: d.to_vec() };
+        let mut encoded_data = Vec::<u8>::with_capacity(execute_response.encoded_len());
+        execute_response.encode(&mut encoded_data).unwrap();
+        encoded_data.into()
     })
+}
+
+fn encode_response_value(value: Option<Binary>) -> Binary {
+    value.map_or(Binary::default(), |inner| {
+        inner.to_base64().as_bytes().into()
+    })
+}
+
+/// Decodes the value encoded with Base64.
+pub fn decode_response_value(value: Binary) -> Binary {
+    ExecuteResponse::decode(from_base64(value).unwrap().as_slice())
+        .unwrap()
+        .data
+        .into()
 }
 
 #[cfg(test)]
