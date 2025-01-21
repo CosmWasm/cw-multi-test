@@ -1015,6 +1015,8 @@ mod custom_handler {
 
 mod reply_data_overwrite {
     use super::*;
+    use crate::decode_response_value;
+    use cosmwasm_std::to_json_string;
 
     fn make_echo_exec_msg(
         contract_addr: Addr,
@@ -1051,6 +1053,10 @@ mod reply_data_overwrite {
         SubMsg::reply_never(make_echo_exec_msg(contract_addr, data, sub_msg))
     }
 
+    fn payload(s: &str) -> Option<String> {
+        Some(to_json_string(&s).unwrap())
+    }
+
     #[test]
     fn no_submsg() {
         // create a chain with default settings
@@ -1081,7 +1087,11 @@ mod reply_data_overwrite {
 
         // the returned data should be the same as the one being previously sent
         assert_eq!(response.data, Some(b"PAYLOAD".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(1, response.msg_responses.len());
+        assert_eq!(
+            b"PAYLOAD",
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
     }
 
     #[test]
@@ -1119,7 +1129,15 @@ mod reply_data_overwrite {
 
         // the returned data should be the data payload of the submessage
         assert_eq!(response.data, Some(b"SECOND".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(2, response.msg_responses.len());
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
     }
 
     #[test]
@@ -1156,7 +1174,15 @@ mod reply_data_overwrite {
 
         // the returned data should be the data payload of the original message
         assert_eq!(response.data, Some(b"FIRST".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(2, response.msg_responses.len());
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            b"FIRST",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
     }
 
     #[test]
@@ -1190,7 +1216,12 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"FIRST".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(2, response.msg_responses.len());
+        assert_eq!(Binary::default(), response.msg_responses[0].value);
+        assert_eq!(
+            b"FIRST",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
     }
 
     #[test]
@@ -1222,7 +1253,11 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        //assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1282,7 +1317,15 @@ mod reply_data_overwrite {
 
         // ensure the data in response is empty
         assert_eq!(response.data, None);
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(2, response.msg_responses.len());
+        assert_eq!(
+            b"ORIGINAL",
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
         // ensure expected events are returned
         assert_eq!(response.events.len(), 2);
         let make_event = |contract_addr: &Addr| {
@@ -1311,7 +1354,7 @@ mod reply_data_overwrite {
                 owner,
                 echo_contract_addr.clone(),
                 &echo::ExecMessage {
-                    data: "ORIGINAL".to_string().into(),
+                    data: payload("ORIGINAL"),
                     sub_msg: vec![
                         make_echo_reply_always_submsg(
                             echo_contract_addr.clone(),
@@ -1345,7 +1388,27 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(5, response.msg_responses.len());
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            b"FIRST",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[2].value).as_slice()
+        );
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[3].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[4].value).as_slice()
+        );
     }
 
     #[test]
@@ -1365,11 +1428,11 @@ mod reply_data_overwrite {
                 owner,
                 contract.clone(),
                 &echo::ExecMessage {
-                    data: Some("Orig".to_owned()),
+                    data: "ORIGINAL".to_string().into(),
                     sub_msg: vec![
                         make_echo_reply_never_submsg(contract.clone(), None, vec![]),
-                        make_echo_reply_never_submsg(contract.clone(), "First", vec![]),
-                        make_echo_reply_never_submsg(contract.clone(), "Second", vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), "FIRST", vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), "SECOND", vec![]),
                         make_echo_reply_never_submsg(contract, None, vec![]),
                     ],
                     ..Default::default()
@@ -1378,8 +1441,28 @@ mod reply_data_overwrite {
             )
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Orig".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(response.data, Some(b"ORIGINAL".into()));
+        assert_eq!(5, response.msg_responses.len());
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            b"FIRST",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[2].value).as_slice()
+        );
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[3].value).as_slice()
+        );
+        assert_eq!(
+            b"ORIGINAL",
+            decode_response_value(&response.msg_responses[4].value).as_slice()
+        );
     }
 
     #[test]
@@ -1428,7 +1511,31 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(6, response.msg_responses.len());
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            b"FIRST",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[2].value).as_slice()
+        );
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[3].value).as_slice()
+        );
+        assert_eq!(
+            b"THIRD",
+            decode_response_value(&response.msg_responses[4].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[5].value).as_slice()
+        );
     }
 
     #[test]
@@ -1477,7 +1584,27 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        assert_eq!(response.msg_responses, vec![]);
+        assert_eq!(5, response.msg_responses.len());
+        assert_eq!(
+            Binary::default(),
+            decode_response_value(&response.msg_responses[0].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[1].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[2].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[3].value).as_slice()
+        );
+        assert_eq!(
+            b"SECOND",
+            decode_response_value(&response.msg_responses[4].value).as_slice()
+        );
     }
 }
 

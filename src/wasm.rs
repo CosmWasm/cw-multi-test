@@ -1298,8 +1298,8 @@ fn encode_response_value(value: Option<Binary>) -> Binary {
     })
 }
 
-/// Decodes the value encoded with Base64.
-pub fn decode_response_value(value: Binary) -> Binary {
+/// Parses the response value to specified type.
+pub fn decode_response_value(value: &Binary) -> Binary {
     ExecuteResponse::decode(from_base64(value).unwrap().as_slice())
         .unwrap()
         .data

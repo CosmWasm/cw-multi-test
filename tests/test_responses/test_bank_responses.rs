@@ -248,9 +248,9 @@ fn submessage_responses_from_wasm_execute_should_work() {
     // The returned value is Base64 encoded sum = 350 represented as JSON string inside protobuf string.
     assert_eq!(
         350,
-        from_json::<u64>(
-            decode_response_value(responder_response.msg_responses[0].value.clone()).as_slice()
-        )
+        from_json::<u64>(decode_response_value(
+            &responder_response.msg_responses[0].value
+        ))
         .unwrap()
     );
 }
