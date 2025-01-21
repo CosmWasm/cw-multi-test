@@ -1,4 +1,5 @@
 mod test_bank_responses;
+mod test_wasm_responses;
 
 mod test_contracts {
 

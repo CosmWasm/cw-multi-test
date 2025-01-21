@@ -167,4 +167,4 @@ pub use crate::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
 };
 pub use crate::stargate::{Stargate, StargateAccepting, StargateFailing};
-pub use crate::wasm::{decode_response_value, ContractData, Wasm, WasmKeeper, WasmSudo};
+pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};
