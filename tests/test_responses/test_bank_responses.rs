@@ -1,5 +1,7 @@
 use super::*;
-use crate::test_responses::test_contracts::responder::ResponderResponse;
+use crate::test_responses::test_contracts::responder::{
+    ResponderInstantiateMessage, ResponderResponse,
+};
 use cosmwasm_std::{from_json, Addr, Binary, Coin, Empty, Uint128};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
 
@@ -67,7 +69,7 @@ fn submessage_responses_from_bank_send_should_work() {
         .instantiate_contract(
             code_id,
             alice_addr.clone(),
-            &Empty {},
+            &ResponderInstantiateMessage::None,
             &coins(900),
             "responder",
             None,
@@ -88,7 +90,7 @@ fn submessage_responses_from_bank_send_should_work() {
     // if transferred to the caller to verify if processing the submessage returns proper values.
     //---------------------------------------------------------------------------------------------
 
-    let msg = test_contracts::responder::ExecuteMessage::BankSend(
+    let msg = test_contracts::responder::ResponderExecuteMessage::BankSend(
         bob_addr.to_string(),
         100,
         DENOM.to_string(),
@@ -145,7 +147,7 @@ fn submessage_responses_from_bank_burn_should_work() {
         .instantiate_contract(
             code_id,
             alice_addr.clone(),
-            &Empty {},
+            &&ResponderInstantiateMessage::None,
             &coins(90),
             "responder",
             None,
@@ -166,7 +168,7 @@ fn submessage_responses_from_bank_burn_should_work() {
     // if transferred to the caller to verify if processing the submessage returns proper values.
     //---------------------------------------------------------------------------------------------
 
-    let msg = test_contracts::responder::ExecuteMessage::BankBurn(17, DENOM.to_string());
+    let msg = test_contracts::responder::ResponderExecuteMessage::BankBurn(17, DENOM.to_string());
     let app_response = app
         .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
         .unwrap();
