@@ -7,12 +7,16 @@ use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
+#[cfg(feature = "stargate")]
+use cosmwasm_std::GovMsg;
 use cosmwasm_std::{
     to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
     ContractInfoResponse, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event,
-    MessageInfo, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult,
-    Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    MessageInfo, MsgResponse, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response,
+    StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
+#[cfg(feature = "staking")]
+use cosmwasm_std::{DistributionMsg, StakingMsg};
 use cw_storage_plus::Map;
 use prost::Message;
 use schemars::JsonSchema;
@@ -826,8 +830,10 @@ where
             payload,
             ..
         } = msg;
+        // Prepare the message type URL, will be needed when calling `reply` entrypoint.
+        let type_url = Self::response_type_url(&msg);
 
-        // Execute the submessage in cache.
+        // Execute the submessage in cache
         let sub_message_result = transactional(storage, |write_cache, _| {
             router.execute(api, write_cache, block, contract.clone(), msg)
         });
@@ -843,8 +849,11 @@ where
                         #[allow(deprecated)]
                         SubMsgResponse {
                             events: r.events.clone(),
-                            data: r.data,
-                            msg_responses: vec![],
+                            data: r.data.clone(),
+                            msg_responses: vec![MsgResponse {
+                                type_url,
+                                value: r.data.unwrap_or_default(),
+                            }],
                         },
                     ),
                 };
@@ -899,7 +908,7 @@ where
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
 
-    /// Captures all the events and data from the contract call.
+    /// Captures all the events, data and sub messages from the contract call.
     ///
     /// This function does not handle the messages.
     fn build_app_response(
@@ -942,7 +951,6 @@ where
         let app_response = AppResponse {
             events: app_events,
             data,
-            ..Default::default()
         };
         (app_response, messages)
     }
@@ -961,20 +969,28 @@ where
         let AppResponse {
             mut events, data, ..
         } = response;
-
-        // recurse in all messages
-        let data = sub_messages.into_iter().try_fold(data, |data, resend| {
-            let sub_res =
-                self.execute_submsg(api, router, storage, block, contract.clone(), resend)?;
-            events.extend_from_slice(&sub_res.events);
-            Ok::<_, AnyError>(sub_res.data.or(data))
-        })?;
-
-        Ok(AppResponse {
-            events,
-            data,
-            ..Default::default()
-        })
+        // Recurse in all submessages.
+        let data = sub_messages
+            .into_iter()
+            .try_fold(data, |data, sub_message| {
+                // Execute the submessage.
+                let sub_response = self.execute_submsg(
+                    api,
+                    router,
+                    storage,
+                    block,
+                    contract.clone(),
+                    sub_message,
+                )?;
+                // COLLECT and append all events from the processed submessage.
+                events.extend_from_slice(&sub_response.events);
+                // REPLACE the data with value from the processes submessage (if not empty).
+                Ok::<_, AnyError>(sub_response.data.or(data))
+            })?;
+        // Return the response with updated data, events and message responses taken from
+        // all processed sub messages. Note that events and message responses are collected,
+        // but the data is replaced with the data from the last processes submessage.
+        Ok(AppResponse { events, data })
     }
 
     /// Creates a contract address and empty storage instance.
@@ -1229,6 +1245,67 @@ where
                 Order::Ascending,
             )
             .count()
+    }
+
+    /// Returns the response type for specified message.
+    fn response_type_url(msg: &CosmosMsg<ExecC>) -> String {
+        const UNKNOWN: &str = "/unknown";
+        match &msg {
+            CosmosMsg::Bank(bank_msg) => match bank_msg {
+                BankMsg::Send { .. } => "/cosmos.bank.v1beta1.MsgSendResponse",
+                BankMsg::Burn { .. } => "/cosmos.bank.v1beta1.MsgBurnResponse",
+                _ => UNKNOWN,
+            },
+            CosmosMsg::Custom(..) => UNKNOWN,
+            #[cfg(feature = "staking")]
+            CosmosMsg::Staking(staking_msg) => match staking_msg {
+                StakingMsg::Delegate { .. } => "/cosmos.staking.v1beta1.MsgDelegateResponse",
+                StakingMsg::Undelegate { .. } => "/cosmos.staking.v1beta1.MsgUndelegateResponse",
+                StakingMsg::Redelegate { .. } => {
+                    "/cosmos.staking.v1beta1.MsgBeginRedelegateResponse"
+                }
+                _ => UNKNOWN,
+            },
+            #[cfg(feature = "staking")]
+            CosmosMsg::Distribution(distribution_msg) => match distribution_msg {
+                #[cfg(feature = "cosmwasm_1_3")]
+                DistributionMsg::FundCommunityPool { .. } => {
+                    "/cosmos.distribution.v1beta1.MsgFundCommunityPoolResponse"
+                }
+                DistributionMsg::SetWithdrawAddress { .. } => {
+                    "/cosmos.distribution.v1beta1.MsgSetWithdrawAddressResponse"
+                }
+                DistributionMsg::WithdrawDelegatorReward { .. } => {
+                    "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorRewardResponse"
+                }
+                _ => UNKNOWN,
+            },
+            #[cfg(feature = "stargate")]
+            #[allow(deprecated)]
+            CosmosMsg::Stargate { .. } => UNKNOWN,
+            #[cfg(feature = "cosmwasm_2_0")]
+            CosmosMsg::Any(..) => UNKNOWN,
+            #[cfg(feature = "stargate")]
+            CosmosMsg::Ibc(..) => UNKNOWN,
+            CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
+                WasmMsg::Instantiate { .. } => "/cosmwasm.wasm.v1.MsgInstantiateContractResponse",
+                #[cfg(feature = "cosmwasm_1_2")]
+                WasmMsg::Instantiate2 { .. } => "/cosmwasm.wasm.v1.MsgInstantiateContract2Response",
+                WasmMsg::Execute { .. } => "/cosmwasm.wasm.v1.MsgExecuteContractResponse",
+                WasmMsg::Migrate { .. } => "/cosmwasm.wasm.v1.MsgMigrateContractResponse",
+                WasmMsg::UpdateAdmin { .. } => "/cosmwasm.wasm.v1.MsgUpdateAdminResponse",
+                WasmMsg::ClearAdmin { .. } => "/cosmwasm.wasm.v1.MsgClearAdminResponse",
+                _ => UNKNOWN,
+            },
+            #[cfg(feature = "stargate")]
+            CosmosMsg::Gov(gov_msg) => match gov_msg {
+                GovMsg::Vote { .. } => "/cosmos.gov.v1beta1.MsgVoteResponse",
+                #[cfg(feature = "cosmwasm_1_2")]
+                GovMsg::VoteWeighted { .. } => "/cosmos.gov.v1beta1.MsgVoteWeightedResponse",
+            },
+            _ => UNKNOWN,
+        }
+        .to_string()
     }
 }
 
