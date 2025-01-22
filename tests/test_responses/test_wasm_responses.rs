@@ -72,23 +72,18 @@ fn submessage_responses_from_wasm_execute_should_work() {
         .execute_contract(alice_addr.clone(), contract_addr_1, &msg, &[])
         .unwrap();
 
-    // There should be no submessage responses in the top level message.
-    assert_eq!(app_response.msg_responses, vec![]);
-
     let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
 
     // The identifier of the reply message should be 3.
     assert_eq!(3, responder_response.id.unwrap());
     // There should be a single submessage in the reply response.
     assert_eq!(1, responder_response.msg_responses.len());
-    // The type of the response should be specific to the WasmMsg::Execute message
     assert_eq!(
         "/cosmwasm.wasm.v1.MsgExecuteContractResponse",
         responder_response.msg_responses[0].type_url
     );
-    // The returned value is Base64 encoded sum = 350 represented as JSON string inside protobuf string.
     assert_eq!(
-        350,
-        from_json::<u64>(&responder_response.msg_responses[0].value.as_slice()).unwrap()
+        &[10, 3, 51, 53, 48],
+        responder_response.msg_responses[0].value.as_slice()
     );
 }

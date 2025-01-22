@@ -99,9 +99,6 @@ fn submessage_responses_from_bank_send_should_work() {
         .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
         .unwrap();
 
-    // There should be no submessage responses in the top level message.
-    assert_eq!(app_response.msg_responses, vec![]);
-
     let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
 
     // The identifier of the reply message should be 1.
@@ -177,13 +174,15 @@ fn submessage_responses_from_bank_burn_should_work() {
         .execute_contract(alice_addr.clone(), contract_addr.clone(), &msg, &[])
         .unwrap();
 
-    // There should be no submessage responses in the top level message.
-    assert_eq!(app_response.msg_responses, vec![]);
-
     let responder_response = from_json::<ResponderResponse>(app_response.data.unwrap()).unwrap();
 
     // The identifier of the reply message should be 2.
     assert_eq!(2, responder_response.id.unwrap());
-    // BankMsg::Burn should respond with no response messages.
-    assert_eq!(0, responder_response.msg_responses.len());
+    // On the blockchain BankMsg::Burn does not respond with any response messages, but we handle this case also.
+    assert_eq!(1, responder_response.msg_responses.len());
+    assert_eq!(
+        "/cosmos.bank.v1beta1.MsgBurnResponse",
+        responder_response.msg_responses[0].type_url
+    );
+    assert_eq!(b"", responder_response.msg_responses[0].value.as_slice());
 }

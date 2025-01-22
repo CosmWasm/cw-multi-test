@@ -1,7 +1,7 @@
 use crate::error::AnyResult;
 use cosmwasm_std::{
     to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
-    MsgResponse, SubMsgResponse, WasmMsg,
+    SubMsgResponse, WasmMsg,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
@@ -15,8 +15,6 @@ pub struct AppResponse {
     pub events: Vec<Event>,
     /// Response data.
     pub data: Option<Binary>,
-    /// Responses from the messages emitted by the submessage.
-    pub msg_responses: Vec<MsgResponse>,
 }
 
 impl AppResponse {
@@ -63,7 +61,6 @@ impl From<SubMsgResponse> for AppResponse {
             events: reply.events,
             #[allow(deprecated)]
             data: reply.data,
-            msg_responses: reply.msg_responses,
         }
     }
 }
@@ -164,7 +161,6 @@ where
         app_response.data = app_response
             .data
             .and_then(|data| parse_execute_response_data(data.as_slice()).unwrap().data);
-        app_response.msg_responses.clear();
         Ok(app_response)
     }
 

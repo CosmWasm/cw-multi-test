@@ -5,7 +5,7 @@ use crate::module::Module;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use cosmwasm_std::{
     coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
-    Binary, BlockInfo, Coin, DenomMetadata, Event, MsgResponse, Querier, Storage,
+    Binary, BlockInfo, Coin, DenomMetadata, Event, Querier, Storage,
 };
 #[cfg(feature = "cosmwasm_1_3")]
 use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
@@ -203,14 +203,7 @@ impl Module for BankKeeper {
                     Addr::unchecked(to_address),
                     amount,
                 )?;
-                Ok(AppResponse {
-                    events,
-                    data: None,
-                    msg_responses: vec![MsgResponse {
-                        type_url: "/cosmos.bank.v1beta1.MsgSendResponse".to_string(),
-                        value: Default::default(),
-                    }],
-                })
+                Ok(AppResponse { events, data: None })
             }
             BankMsg::Burn { amount } => {
                 // burn doesn't seem to emit any events
