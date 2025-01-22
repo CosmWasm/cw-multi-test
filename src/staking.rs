@@ -679,7 +679,10 @@ impl Module for StakeKeeper {
                     }
                     .into(),
                 )?;
-                Ok(AppResponse { events, data: None })
+                Ok(AppResponse {
+                    events,
+                    ..Default::default()
+                })
             }
             StakingMsg::Undelegate { validator, amount } => {
                 self.validate_denom(&staking_storage, &amount)?;
@@ -714,7 +717,10 @@ impl Module for StakeKeeper {
                     payout_at: block.time.plus_seconds(staking_info.unbonding_time),
                 });
                 UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
-                Ok(AppResponse { events, data: None })
+                Ok(AppResponse {
+                    events,
+                    ..Default::default()
+                })
             }
             StakingMsg::Redelegate {
                 src_validator,
@@ -744,7 +750,10 @@ impl Module for StakeKeeper {
                     amount,
                 )?;
 
-                Ok(AppResponse { events, data: None })
+                Ok(AppResponse {
+                    events,
+                    ..Default::default()
+                })
             }
             m => bail!("Unsupported staking message: {:?}", m),
         }
@@ -977,7 +986,10 @@ impl Module for DistributionKeeper {
                         "amount",
                         format!("{}{}", rewards, staking_info.bonded_denom),
                     )];
-                Ok(AppResponse { events, data: None })
+                Ok(AppResponse {
+                    events,
+                    ..Default::default()
+                })
             }
             DistributionMsg::SetWithdrawAddress { address } => {
                 let address = api.addr_validate(&address)?;
@@ -985,10 +997,10 @@ impl Module for DistributionKeeper {
                 let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
                 Self::set_withdraw_address(storage, &sender, &address)?;
                 Ok(AppResponse {
-                    data: None,
                     // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
                     events: vec![Event::new("set_withdraw_address")
                         .add_attribute("withdraw_address", address)],
+                    ..Default::default()
                 })
             }
             m => bail!("Unsupported distribution message: {:?}", m),

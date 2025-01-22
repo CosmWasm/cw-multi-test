@@ -587,11 +587,8 @@ where
         data.admin = admin;
         self.save_contract(storage, &contract_addr, &data)?;
 
-        // no custom event here
-        Ok(AppResponse {
-            data: None,
-            events: vec![],
-        })
+        // No custom events or data here.
+        Ok(AppResponse::default())
     }
 
     // this returns the contract address as well, so we can properly resend the data
@@ -932,6 +929,7 @@ where
         let app = AppResponse {
             events: app_events,
             data,
+            ..Default::default()
         };
         (app, messages)
     }
@@ -946,7 +944,9 @@ where
         response: AppResponse,
         messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
-        let AppResponse { mut events, data } = response;
+        let AppResponse {
+            mut events, data, ..
+        } = response;
 
         // recurse in all messages
         let data = messages.into_iter().try_fold(data, |data, resend| {
@@ -956,7 +956,11 @@ where
             Ok::<_, AnyError>(sub_res.data.or(data))
         })?;
 
-        Ok(AppResponse { events, data })
+        Ok(AppResponse {
+            events,
+            data,
+            ..Default::default()
+        })
     }
 
     /// Creates a contract address and empty storage instance.

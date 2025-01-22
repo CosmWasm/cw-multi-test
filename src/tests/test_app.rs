@@ -1081,7 +1081,6 @@ mod reply_data_overwrite {
 
         // the returned data should be the same as the one being previously sent
         assert_eq!(response.data, Some(b"PAYLOAD".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1119,7 +1118,6 @@ mod reply_data_overwrite {
 
         // the returned data should be the data payload of the submessage
         assert_eq!(response.data, Some(b"SECOND".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1156,7 +1154,6 @@ mod reply_data_overwrite {
 
         // the returned data should be the data payload of the original message
         assert_eq!(response.data, Some(b"FIRST".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1190,7 +1187,6 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"FIRST".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1222,7 +1218,6 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1282,7 +1277,6 @@ mod reply_data_overwrite {
 
         // ensure the data in response is empty
         assert_eq!(response.data, None);
-        //TODO assert_eq!(response.msg_responses, vec![]);
         // ensure expected events are returned
         assert_eq!(response.events.len(), 2);
         let make_event = |contract_addr: &Addr| {
@@ -1345,7 +1339,6 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1379,7 +1372,6 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"Orig".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1428,7 +1420,6 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        //TODO assert_eq!(response.msg_responses, vec![]);
     }
 
     #[test]
@@ -1477,7 +1468,6 @@ mod reply_data_overwrite {
             .unwrap();
 
         assert_eq!(response.data, Some(b"SECOND".into()));
-        //assert_eq!(response.msg_responses, vec![]);
     }
 }
 

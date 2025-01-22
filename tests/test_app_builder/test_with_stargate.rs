@@ -158,7 +158,7 @@ fn building_app_with_accepting_stargate_should_work() {
         type_url: "test".to_string(),
         value: Default::default(),
     };
-    let AppResponse { events, data } = app.execute(sender_addr, msg).unwrap();
+    let AppResponse { events, data, .. } = app.execute(sender_addr, msg).unwrap();
     assert_eq!(events, Vec::<Event>::new());
     assert_eq!(data, None);
 
@@ -187,7 +187,7 @@ fn building_app_with_accepting_any_grpc_should_work() {
         type_url: "test".to_string(),
         value: Default::default(),
     });
-    let AppResponse { events, data } = app.execute(sender_addr, msg).unwrap();
+    let AppResponse { events, data, .. } = app.execute(sender_addr, msg).unwrap();
     assert_eq!(events, Vec::<Event>::new());
     assert_eq!(data, None);
 

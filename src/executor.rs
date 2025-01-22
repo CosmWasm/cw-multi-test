@@ -1,19 +1,23 @@
 use crate::error::AnyResult;
 use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
-    SubMsgResponse, WasmMsg,
+    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Empty, Event,
+    SubMsg, SubMsgResponse, WasmMsg,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
 use std::fmt::Debug;
 
-/// A subset of data returned as a response of a contract entry point,
+/// A set of data returned as a response of a contract entry point,
 /// such as `instantiate`, `execute` or `migrate`.
 #[derive(Default, Clone, Debug)]
-pub struct AppResponse {
-    /// Response events.
+pub struct AppResponse<T = Empty> {
+    /// Optional list of submessages to pass back.
+    pub messages: Vec<SubMsg<T>>,
+    /// The attributes that will be emitted as part of a "wasm" event.
+    pub attributes: Vec<Attribute>,
+    /// Custom events separate from the main `wasm` one.
     pub events: Vec<Event>,
-    /// Response data.
+    /// The binary payload to include in the response.
     pub data: Option<Binary>,
 }
 
@@ -61,6 +65,7 @@ impl From<SubMsgResponse> for AppResponse {
             #[allow(deprecated)]
             data: reply.data,
             events: reply.events,
+            ..Default::default()
         }
     }
 }
