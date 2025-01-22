@@ -1057,7 +1057,7 @@ where
         Ok(addr)
     }
 
-    /// Evaluates `execute` entry-point of the contract.
+    /// Executes contract's `execute` entry-point.
     pub fn call_execute(
         &self,
         api: &dyn Api,
