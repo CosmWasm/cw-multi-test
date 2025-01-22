@@ -208,7 +208,6 @@ impl Module for BankKeeper {
             BankMsg::Burn { amount } => {
                 // burn doesn't seem to emit any events
                 self.burn(&mut bank_storage, sender, amount)?;
-                // burn doesn't seem to return any data or message responses
                 Ok(AppResponse::default())
             }
             other => unimplemented!("bank message: {other:?}"),
