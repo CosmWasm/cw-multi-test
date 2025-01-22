@@ -637,7 +637,7 @@ where
                 let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
                 let mut res =
                     self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = execute_response(res.data);
+                res.data = encode_response_data(res.data);
                 Ok(res)
             }
             WasmMsg::Instantiate {
@@ -704,7 +704,7 @@ where
                 let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
                 let mut res =
                     self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = execute_response(res.data);
+                res.data = encode_response_data(res.data);
                 Ok(res)
             }
             WasmMsg::UpdateAdmin {
