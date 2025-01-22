@@ -9,9 +9,9 @@ use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 use cosmwasm_std::{
     to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
-    ContractInfoResponse, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event, MessageInfo, Order,
-    Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult, Storage, SubMsg,
-    SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    ContractInfoResponse, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event,
+    MessageInfo, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response, StdResult,
+    Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
 use cw_storage_plus::Map;
 use prost::Message;
@@ -554,7 +554,7 @@ where
         T: Into<Addr>,
     {
         if !amount.is_empty() {
-            let msg: cosmwasm_std::CosmosMsg<ExecC> = BankMsg::Send {
+            let msg: CosmosMsg<ExecC> = BankMsg::Send {
                 to_address: recipient,
                 amount: amount.to_vec(),
             }
@@ -579,13 +579,16 @@ where
         let admin = new_admin.map(|a| api.addr_validate(&a)).transpose()?;
 
         // check admin status
-        let mut data = self.contract_data(storage, &contract_addr)?;
-        if data.admin != Some(sender) {
-            bail!("Only admin can update the contract admin: {:?}", data.admin);
+        let mut contract_data = self.contract_data(storage, &contract_addr)?;
+        if contract_data.admin != Some(sender) {
+            bail!(
+                "Only admin can update the contract admin: {:?}",
+                contract_data.admin
+            );
         }
         // update admin field
-        data.admin = admin;
-        self.save_contract(storage, &contract_addr, &data)?;
+        contract_data.admin = admin;
+        self.save_contract(storage, &contract_addr, &contract_data)?;
 
         // No custom events or data here.
         Ok(AppResponse::default())
@@ -621,7 +624,7 @@ where
 
                 // then call the contract
                 let info = MessageInfo { sender, funds };
-                let res = self.call_execute(
+                let response = self.call_execute(
                     api,
                     storage,
                     contract_addr.clone(),
@@ -634,11 +637,20 @@ where
                 let custom_event =
                     Event::new("execute").add_attribute(CONTRACT_ATTR, &contract_addr);
 
-                let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
-                let mut res =
-                    self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = encode_response_data(res.data);
-                Ok(res)
+                let (sub_response, sub_messages) =
+                    self.build_app_response(&contract_addr, custom_event, response);
+
+                let mut app_response = self.process_response(
+                    api,
+                    router,
+                    storage,
+                    block,
+                    contract_addr,
+                    sub_response,
+                    sub_messages,
+                )?;
+                app_response.data = encode_response_data(app_response.data);
+                Ok(app_response)
             }
             WasmMsg::Instantiate {
                 admin,
@@ -815,13 +827,13 @@ where
             ..
         } = msg;
 
-        // execute in cache
-        let res = transactional(storage, |write_cache, _| {
+        // Execute the submessage in cache.
+        let sub_message_result = transactional(storage, |write_cache, _| {
             router.execute(api, write_cache, block, contract.clone(), msg)
         });
 
         // call reply if meaningful
-        if let Ok(mut r) = res {
+        if let Ok(mut r) = sub_message_result {
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Success) {
                 let reply = Reply {
                     id,
@@ -847,7 +859,7 @@ where
                 r.data = None;
             }
             Ok(r)
-        } else if let Err(e) = res {
+        } else if let Err(e) = sub_message_result {
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Error) {
                 let reply = Reply {
                     id,
@@ -860,7 +872,7 @@ where
                 Err(e)
             }
         } else {
-            res
+            sub_message_result
         }
     }
 
@@ -887,8 +899,9 @@ where
         self.process_response(api, router, storage, block, contract, res, msgs)
     }
 
-    // this captures all the events and data from the contract call.
-    // it does not handle the messages
+    /// Captures all the events and data from the contract call.
+    ///
+    /// This function does not handle the messages.
     fn build_app_response(
         &self,
         contract: &Addr,
@@ -926,12 +939,12 @@ where
         });
         app_events.extend(wasm_events);
 
-        let app = AppResponse {
+        let app_response = AppResponse {
             events: app_events,
             data,
             ..Default::default()
         };
-        (app, messages)
+        (app_response, messages)
     }
 
     fn process_response(
@@ -942,14 +955,15 @@ where
         block: &BlockInfo,
         contract: Addr,
         response: AppResponse,
-        messages: Vec<SubMsg<ExecC>>,
+        sub_messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
+        // Unpack the provided response.
         let AppResponse {
             mut events, data, ..
         } = response;
 
         // recurse in all messages
-        let data = messages.into_iter().try_fold(data, |data, resend| {
+        let data = sub_messages.into_iter().try_fold(data, |data, resend| {
             let sub_res =
                 self.execute_submsg(api, router, storage, block, contract.clone(), resend)?;
             events.extend_from_slice(&sub_res.events);
