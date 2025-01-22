@@ -7,13 +7,16 @@ use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
+#[cfg(feature = "stargate")]
+use cosmwasm_std::GovMsg;
 use cosmwasm_std::{
     to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
-    ContractInfoResponse, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, DistributionMsg, Env,
-    Event, GovMsg, MessageInfo, MsgResponse, Order, Querier, QuerierWrapper, Record, Reply,
-    ReplyOn, Response, StakingMsg, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult,
-    TransactionInfo, WasmMsg, WasmQuery,
+    ContractInfoResponse, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event,
+    MessageInfo, MsgResponse, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response,
+    StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
 };
+#[cfg(feature = "staking")]
+use cosmwasm_std::{DistributionMsg, StakingMsg};
 use cw_storage_plus::Map;
 use prost::Message;
 use schemars::JsonSchema;
@@ -1243,6 +1246,7 @@ where
             .count()
     }
 
+    /// Returns the response type for specified message.
     fn response_type_url(msg: &CosmosMsg<ExecC>) -> String {
         const UNKNOWN: &str = "/unknown";
         match &msg {
@@ -1252,6 +1256,7 @@ where
                 _ => UNKNOWN,
             },
             CosmosMsg::Custom(..) => UNKNOWN,
+            #[cfg(feature = "staking")]
             CosmosMsg::Staking(staking_msg) => match staking_msg {
                 StakingMsg::Delegate { .. } => "/cosmos.staking.v1beta1.MsgDelegateResponse",
                 StakingMsg::Undelegate { .. } => "/cosmos.staking.v1beta1.MsgUndelegateResponse",
@@ -1260,7 +1265,9 @@ where
                 }
                 _ => UNKNOWN,
             },
+            #[cfg(feature = "staking")]
             CosmosMsg::Distribution(distribution_msg) => match distribution_msg {
+                #[cfg(feature = "cosmwasm_1_3")]
                 DistributionMsg::FundCommunityPool { .. } => {
                     "/cosmos.distribution.v1beta1.MsgFundCommunityPoolResponse"
                 }
@@ -1272,12 +1279,16 @@ where
                 }
                 _ => UNKNOWN,
             },
+            #[cfg(feature = "stargate")]
             #[allow(deprecated)]
             CosmosMsg::Stargate { .. } => UNKNOWN,
+            #[cfg(feature = "cosmwasm_2_0")]
             CosmosMsg::Any(..) => UNKNOWN,
+            #[cfg(feature = "stargate")]
             CosmosMsg::Ibc(..) => UNKNOWN,
             CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
                 WasmMsg::Instantiate { .. } => "/cosmwasm.wasm.v1.MsgInstantiateContractResponse",
+                #[cfg(feature = "cosmwasm_1_2")]
                 WasmMsg::Instantiate2 { .. } => "/cosmwasm.wasm.v1.MsgInstantiateContract2Response",
                 WasmMsg::Execute { .. } => "/cosmwasm.wasm.v1.MsgExecuteContractResponse",
                 WasmMsg::Migrate { .. } => "/cosmwasm.wasm.v1.MsgMigrateContractResponse",
@@ -1285,8 +1296,10 @@ where
                 WasmMsg::ClearAdmin { .. } => "/cosmwasm.wasm.v1.MsgClearAdminResponse",
                 _ => UNKNOWN,
             },
+            #[cfg(feature = "stargate")]
             CosmosMsg::Gov(gov_msg) => match gov_msg {
                 GovMsg::Vote { .. } => "/cosmos.gov.v1beta1.MsgVoteResponse",
+                #[cfg(feature = "cosmwasm_1_2")]
                 GovMsg::VoteWeighted { .. } => "/cosmos.gov.v1beta1.MsgVoteWeightedResponse",
             },
             _ => UNKNOWN,
