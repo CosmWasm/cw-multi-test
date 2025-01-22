@@ -115,10 +115,6 @@
 //! This allows us to implement an independent [Wasm] in a way that it can process [SubMsg](cosmwasm_std::SubMsg)
 //! that call into [Bank]. You can see an example of that in _send_ method of the [WasmKeeper],
 //! where it moves bank tokens from one account to another.
-//!
-//! ### Addons
-//!
-//! (tbd)
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]

@@ -594,7 +594,7 @@ where
         contract_data.admin = admin;
         self.save_contract(storage, &contract_addr, &contract_data)?;
 
-        // no custom event here
+        // No custom events or data here.
         Ok(AppResponse::default())
     }
 
@@ -967,7 +967,9 @@ where
         sub_messages: Vec<SubMsg<ExecC>>,
     ) -> AnyResult<AppResponse> {
         // Unpack the provided response.
-        let AppResponse { mut events, data } = response;
+        let AppResponse {
+            mut events, data, ..
+        } = response;
         // Recurse in all submessages.
         let data = sub_messages
             .into_iter()
@@ -989,7 +991,11 @@ where
         // Return the response with updated data, events and message responses taken from
         // all processed sub messages. Note that events and message responses are collected,
         // but the data is replaced with the data from the last processes submessage.
-        Ok(AppResponse { events, data })
+        Ok(AppResponse {
+            events,
+            data,
+            ..Default::default()
+        })
     }
 
     /// Creates a contract address and empty storage instance.

@@ -1,19 +1,23 @@
 use crate::error::AnyResult;
 use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
-    SubMsgResponse, WasmMsg,
+    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Empty, Event,
+    SubMsg, SubMsgResponse, WasmMsg,
 };
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
 use std::fmt::Debug;
 
-/// A subset of data returned as a response of a contract entry point,
+/// A set of data returned as a response of a contract entry point,
 /// such as `instantiate`, `execute` or `migrate`.
 #[derive(Default, Clone, Debug)]
-pub struct AppResponse {
-    /// Response events.
+pub struct AppResponse<T = Empty> {
+    /// Optional list of submessages to pass back.
+    pub messages: Vec<SubMsg<T>>,
+    /// The attributes that will be emitted as part of a "wasm" event.
+    pub attributes: Vec<Attribute>,
+    /// Custom events separate from the main `wasm` one.
     pub events: Vec<Event>,
-    /// Response data.
+    /// The binary payload to include in the response.
     pub data: Option<Binary>,
 }
 
@@ -58,9 +62,10 @@ impl AppResponse {
 impl From<SubMsgResponse> for AppResponse {
     fn from(reply: SubMsgResponse) -> Self {
         AppResponse {
-            events: reply.events,
             #[allow(deprecated)]
             data: reply.data,
+            events: reply.events,
+            ..Default::default()
         }
     }
 }
@@ -149,19 +154,17 @@ where
         msg: &T,
         send_funds: &[Coin],
     ) -> AnyResult<AppResponse> {
-        let mut app_response = self.execute(
-            sender,
-            WasmMsg::Execute {
-                contract_addr: contract_addr.into_string(),
-                msg: to_json_binary(msg)?,
-                funds: send_funds.to_vec(),
-            }
-            .into(),
-        )?;
-        app_response.data = app_response
+        let binary_msg = to_json_binary(msg)?;
+        let wrapped_msg = WasmMsg::Execute {
+            contract_addr: contract_addr.into_string(),
+            msg: binary_msg,
+            funds: send_funds.to_vec(),
+        };
+        let mut res = self.execute(sender, wrapped_msg.into())?;
+        res.data = res
             .data
-            .and_then(|data| parse_execute_response_data(data.as_slice()).unwrap().data);
-        Ok(app_response)
+            .and_then(|d| parse_execute_response_data(d.as_slice()).unwrap().data);
+        Ok(res)
     }
 
     /// Migrates a contract.
