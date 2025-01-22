@@ -637,7 +637,7 @@ where
                 let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
                 let mut res =
                     self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = execute_response(res.data);
+                res.data = encode_response_data(res.data);
                 Ok(res)
             }
             WasmMsg::Instantiate {
@@ -704,7 +704,7 @@ where
                 let (res, msgs) = self.build_app_response(&contract_addr, custom_event, res);
                 let mut res =
                     self.process_response(api, router, storage, block, contract_addr, res, msgs)?;
-                res.data = execute_response(res.data);
+                res.data = encode_response_data(res.data);
                 Ok(res)
             }
             WasmMsg::UpdateAdmin {
@@ -1244,14 +1244,13 @@ struct ExecuteResponse {
     pub data: Vec<u8>,
 }
 
-// empty return if no data present in original
-fn execute_response(data: Option<Binary>) -> Option<Binary> {
+/// Encodes the response data.
+fn encode_response_data(data: Option<Binary>) -> Option<Binary> {
     data.map(|d| {
-        let exec_data = ExecuteResponse { data: d.to_vec() };
-        let mut new_data = Vec::<u8>::with_capacity(exec_data.encoded_len());
-        // the data must encode successfully
-        exec_data.encode(&mut new_data).unwrap();
-        new_data.into()
+        let execute_response = ExecuteResponse { data: d.to_vec() };
+        let mut encoded_data = Vec::<u8>::with_capacity(execute_response.encoded_len());
+        execute_response.encode(&mut encoded_data).unwrap();
+        encoded_data.into()
     })
 }
 

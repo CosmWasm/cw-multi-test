@@ -86,13 +86,16 @@ fn reply<C>(_deps: DepsMut, _env: Env, msg: Reply) -> StdResult<Response<C>>
 where
     C: CustomMsg + 'static,
 {
-    let response = Response::new();
+    let mut response = Response::default();
     #[allow(deprecated)]
     if let Reply {
         id,
-        result: SubMsgResult::Ok(SubMsgResponse {
-            data: Some(data), ..
-        }),
+        result:
+            SubMsgResult::Ok(SubMsgResponse {
+                events: _,
+                data: Some(data),
+                msg_responses: _,
+            }),
         ..
     } = msg
     {
@@ -108,13 +111,10 @@ where
                 .data
         };
         if let Some(data) = parsed_data {
-            Ok(response.set_data(data))
-        } else {
-            Ok(response)
+            response = response.set_data(data);
         }
-    } else {
-        Ok(response)
     }
+    Ok(response)
 }
 
 pub fn contract<C>() -> Box<dyn Contract<C>>

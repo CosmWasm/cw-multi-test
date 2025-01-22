@@ -1358,11 +1358,11 @@ mod reply_data_overwrite {
                 owner,
                 contract.clone(),
                 &echo::ExecMessage {
-                    data: Some("Orig".to_owned()),
+                    data: "ORIGINAL".to_string().into(),
                     sub_msg: vec![
                         make_echo_reply_never_submsg(contract.clone(), None, vec![]),
-                        make_echo_reply_never_submsg(contract.clone(), "First", vec![]),
-                        make_echo_reply_never_submsg(contract.clone(), "Second", vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), "FIRST", vec![]),
+                        make_echo_reply_never_submsg(contract.clone(), "SECOND", vec![]),
                         make_echo_reply_never_submsg(contract, None, vec![]),
                     ],
                     ..Default::default()
@@ -1371,7 +1371,7 @@ mod reply_data_overwrite {
             )
             .unwrap();
 
-        assert_eq!(response.data, Some(b"Orig".into()));
+        assert_eq!(response.data, Some(b"ORIGINAL".into()));
     }
 
     #[test]
