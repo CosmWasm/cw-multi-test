@@ -39,75 +39,27 @@ where
     /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
+    /// Evaluates the contract's `ibc_channel_open` entry-point.
+    fn ibc_channel_open(&self, deps: DepsMut<Q>, env: Env, msg: IbcChannelOpenMsg) -> AnyResult<IbcChannelOpenResponse>;
+
+    /// Evaluates the contract's `ibc_channel_connect` entry-point.
+    fn ibc_channel_connect(&self, deps: DepsMut<Q>, env: Env, msg: IbcChannelConnectMsg) -> AnyResult<IbcBasicResponse<C>>;
+
+    /// Evaluates the contract's `ibc_channel_close` entry-point.
+    fn ibc_channel_close(&self, deps: DepsMut<Q>, env: Env, msg: IbcChannelCloseMsg) -> AnyResult<IbcBasicResponse<C>>;
+
+    /// Evaluates the contract's `ibc_packet_receive` entry-point.
+    fn ibc_packet_receive(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketReceiveMsg) -> AnyResult<IbcReceiveResponse<C>>;
+
+    /// Evaluates the contract's `ibc_packet_acknowledge` entry-point.
+    fn ibc_packet_acknowledge(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketAckMsg) -> AnyResult<IbcBasicResponse<C>>;
+
+    /// Evaluates the contract's `ibc_packet_timeout` entry-point.
+    fn ibc_packet_timeout(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketTimeoutMsg) -> AnyResult<IbcBasicResponse<C>>;
+
     /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
         None
-    }
-
-    /// Executes the contract ibc_channel_open endpoint
-    #[allow(unused)]
-    fn ibc_channel_open(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        msg: IbcChannelOpenMsg,
-    ) -> AnyResult<IbcChannelOpenResponse> {
-        bail!("No Ibc capabilities on this contract")
-    }
-
-    /// Executes the contract ibc_channel_connect endpoint
-    #[allow(unused)]
-    fn ibc_channel_connect(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        msg: IbcChannelConnectMsg,
-    ) -> AnyResult<IbcBasicResponse<C>> {
-        bail!("No Ibc capabilities on this contract")
-    }
-
-    /// Executes the contract ibc_channel_close endpoint
-    #[allow(unused)]
-    fn ibc_channel_close(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        msg: IbcChannelCloseMsg,
-    ) -> AnyResult<IbcBasicResponse<C>> {
-        bail!("No Ibc capabilities on this contract")
-    }
-
-    /// Executes the contract ibc_packet_receive endpoint
-    #[allow(unused)]
-    fn ibc_packet_receive(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        msg: IbcPacketReceiveMsg,
-    ) -> AnyResult<IbcReceiveResponse<C>> {
-        bail!("No Ibc capabilities on this contract")
-    }
-
-    /// Executes the contract ibc_packet_acknowledge endpoint
-    #[allow(unused)]
-    fn ibc_packet_acknowledge(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        msg: IbcPacketAckMsg,
-    ) -> AnyResult<IbcBasicResponse<C>> {
-        bail!("No Ibc capabilities on this contract")
-    }
-
-    /// Executes the contract ibc_packet_timeout endpoint
-    #[allow(unused)]
-    fn ibc_packet_timeout(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        msg: IbcPacketTimeoutMsg,
-    ) -> AnyResult<IbcBasicResponse<C>> {
-        bail!("No Ibc capabilities on this contract")
     }
 }
 
@@ -115,21 +67,19 @@ where
 mod closures {
     use super::*;
 
-    // function types
-    pub type IbcFn<T, R, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<R, E>;
-
+    // Function types:
     pub type ContractFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
     pub type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
     pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
     pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
+    pub type IbcFn<T, R, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<R, E>;
 
-    // closure types
-    pub type IbcClosure<T, R, E, Q> = Box<dyn Fn(DepsMut<Q>,Env, T) -> Result<R, E>>;
-
+    // Closure types:
     pub type ContractClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
     pub type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
     pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
     pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
+    pub type IbcClosure<T, R, E, Q> = Box<dyn Fn(DepsMut<Q>,Env, T) -> Result<R, E>>;
 }
 
 use closures::*;
@@ -248,15 +198,13 @@ pub struct ContractWrapper<
     sudo_fn: Option<PermissionedClosure<T4, C, E4, Q>>,
     reply_fn: Option<ReplyClosure<C, E5, Q>>,
     migrate_fn: Option<PermissionedClosure<T6, C, E6, Q>>,
-    checksum: Option<Checksum>,
-
     channel_open_fn: Option<IbcClosure<IbcChannelOpenMsg, IbcChannelOpenResponse, E7, Q>>,
     channel_connect_fn: Option<IbcClosure<IbcChannelConnectMsg, IbcBasicResponse<C>, E8, Q>>,
     channel_close_fn: Option<IbcClosure<IbcChannelCloseMsg, IbcBasicResponse<C>, E9, Q>>,
-
     ibc_packet_receive_fn: Option<IbcClosure<IbcPacketReceiveMsg, IbcReceiveResponse<C>, E10, Q>>,
     ibc_packet_ack_fn: Option<IbcClosure<IbcPacketAckMsg, IbcBasicResponse<C>, E11, Q>>,
     ibc_packet_timeout_fn: Option<IbcClosure<IbcPacketTimeoutMsg, IbcBasicResponse<C>, E12, Q>>,
+    checksum: Option<Checksum>,
 }
 
 impl<T1, T2, T3, E1, E2, E3, C, Q> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q>
@@ -283,15 +231,13 @@ where
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
-            checksum: None,
-
             channel_open_fn: None,
             channel_connect_fn: None,
             channel_close_fn: None,
-
             ibc_packet_receive_fn: None,
             ibc_packet_ack_fn: None,
             ibc_packet_timeout_fn: None,
+            checksum: None,
         }
     }
 
@@ -309,15 +255,13 @@ where
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
-            checksum: None,
-
             channel_open_fn: None,
             channel_connect_fn: None,
             channel_close_fn: None,
-
             ibc_packet_receive_fn: None,
             ibc_packet_ack_fn: None,
             ibc_packet_timeout_fn: None,
+            checksum: None,
         }
     }
 }
@@ -356,15 +300,13 @@ where
             sudo_fn: Some(Box::new(sudo_fn)),
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
-            checksum: None,
-
             channel_open_fn: self.channel_open_fn,
             channel_connect_fn: self.channel_connect_fn,
             channel_close_fn: self.channel_close_fn,
-
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            checksum: None,
         }
     }
 
@@ -384,15 +326,13 @@ where
             sudo_fn: Some(customize_permissioned_fn(sudo_fn)),
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
-            checksum: None,
-
             channel_open_fn: self.channel_open_fn,
             channel_connect_fn: self.channel_connect_fn,
             channel_close_fn: self.channel_close_fn,
-
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            checksum: None,
         }
     }
 
@@ -411,15 +351,13 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: Some(Box::new(reply_fn)),
             migrate_fn: self.migrate_fn,
-            checksum: None,
-
             channel_open_fn: self.channel_open_fn,
             channel_connect_fn: self.channel_connect_fn,
             channel_close_fn: self.channel_close_fn,
-
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            checksum: None,
         }
     }
 
@@ -438,15 +376,13 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: Some(customize_permissioned_fn(reply_fn)),
             migrate_fn: self.migrate_fn,
-            checksum: None,
-
             channel_open_fn: self.channel_open_fn,
             channel_connect_fn: self.channel_connect_fn,
             channel_close_fn: self.channel_close_fn,
-
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            checksum: None,
         }
     }
 
@@ -466,15 +402,13 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: Some(Box::new(migrate_fn)),
-            checksum: None,
-
             channel_open_fn: self.channel_open_fn,
             channel_connect_fn: self.channel_connect_fn,
             channel_close_fn: self.channel_close_fn,
-
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            checksum: None,
         }
     }
 
@@ -494,15 +428,13 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: Some(customize_permissioned_fn(migrate_fn)),
-            checksum: None,
-
             channel_open_fn: self.channel_open_fn,
             channel_connect_fn: self.channel_connect_fn,
             channel_close_fn: self.channel_close_fn,
-
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            checksum: None,
         }
     }
 
@@ -512,13 +444,12 @@ where
         self
     }
 
-    /// Adding IBC endpoint capabilities
+    /// Adding IBC capabilities.
     pub fn with_ibc<E7A, E8A, E9A, E10A, E11A, E12A>(
         self,
         channel_open_fn: IbcFn<IbcChannelOpenMsg, IbcChannelOpenResponse, E7A, Q>,
         channel_connect_fn: IbcFn<IbcChannelConnectMsg, IbcBasicResponse<C>, E8A, Q>,
         channel_close_fn: IbcFn<IbcChannelCloseMsg, IbcBasicResponse<C>, E9A, Q>,
-
         ibc_packet_receive_fn: IbcFn<IbcPacketReceiveMsg, IbcReceiveResponse<C>, E10A, Q>,
         ibc_packet_ack_fn: IbcFn<IbcPacketAckMsg, IbcBasicResponse<C>, E11A, Q>,
         ibc_packet_timeout_fn: IbcFn<IbcPacketTimeoutMsg, IbcBasicResponse<C>, E12A, Q>,
@@ -558,15 +489,13 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
-            checksum: None,
-
             channel_open_fn: Some(Box::new(channel_open_fn)),
             channel_connect_fn: Some(Box::new(channel_connect_fn)),
             channel_close_fn: Some(Box::new(channel_close_fn)),
-
             ibc_packet_receive_fn: Some(Box::new(ibc_packet_receive_fn)),
             ibc_packet_ack_fn: Some(Box::new(ibc_packet_ack_fn)),
             ibc_packet_timeout_fn: Some(Box::new(ibc_packet_timeout_fn)),
+            checksum: None,
         }
     }
 }
@@ -778,11 +707,10 @@ where
         }
     }
 
-    /// Returns the provided checksum of the contract's Wasm blob.
-    fn checksum(&self) -> Option<Checksum> {
-        self.checksum
-    }
-
+    /// Calls [ibc_channel_open] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_channel_open].
+    ///
+    /// [ibc_channel_open]: Contract::ibc_channel_open
     fn ibc_channel_open(
         &self,
         deps: DepsMut<Q>,
@@ -790,10 +718,15 @@ where
         msg: IbcChannelOpenMsg,
     ) -> AnyResult<IbcChannelOpenResponse> {
         match &self.channel_open_fn {
-            Some(channel_open) => channel_open(deps, env, msg).map_err(|err| anyhow!(err)),
-            None => bail!("channel open not implemented for contract"),
+            Some(channel_open) => channel_open(deps, env, msg).map_err(|err: E7| anyhow!(err)),
+            None => bail!("ibc_channel_open is not implemented for contract"),
         }
     }
+
+    /// Calls [ibc_channel_connect] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_channel_connect].
+    ///
+    /// [ibc_channel_connect]: Contract::ibc_channel_connect
     fn ibc_channel_connect(
         &self,
         deps: DepsMut<Q>,
@@ -801,10 +734,17 @@ where
         msg: IbcChannelConnectMsg,
     ) -> AnyResult<IbcBasicResponse<C>> {
         match &self.channel_connect_fn {
-            Some(channel_connect) => channel_connect(deps, env, msg).map_err(|err| anyhow!(err)),
-            None => bail!("channel connect not implemented for contract"),
+            Some(channel_connect) => {
+                channel_connect(deps, env, msg).map_err(|err: E8| anyhow!(err))
+            }
+            None => bail!("ibc_channel_connect is not implemented for contract"),
         }
     }
+
+    /// Calls [ibc_channel_close] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_channel_close].
+    ///
+    /// [ibc_channel_close]: Contract::ibc_channel_close
     fn ibc_channel_close(
         &self,
         deps: DepsMut<Q>,
@@ -812,11 +752,15 @@ where
         msg: IbcChannelCloseMsg,
     ) -> AnyResult<IbcBasicResponse<C>> {
         match &self.channel_close_fn {
-            Some(channel_close) => channel_close(deps, env, msg).map_err(|err| anyhow!(err)),
-            None => bail!("channel close not implemented for contract"),
+            Some(channel_close) => channel_close(deps, env, msg).map_err(|err: E9| anyhow!(err)),
+            None => bail!("ibc_channel_close is not implemented for contract"),
         }
     }
 
+    /// Calls [ibc_packet_receive] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_packet_receive].
+    ///
+    /// [ibc_packet_receive]: Contract::ibc_packet_receive
     fn ibc_packet_receive(
         &self,
         deps: DepsMut<Q>,
@@ -824,10 +768,15 @@ where
         msg: IbcPacketReceiveMsg,
     ) -> AnyResult<IbcReceiveResponse<C>> {
         match &self.ibc_packet_receive_fn {
-            Some(packet_receive) => packet_receive(deps, env, msg).map_err(|err| anyhow!(err)),
-            None => bail!("packet receive not implemented for contract"),
+            Some(packet_receive) => packet_receive(deps, env, msg).map_err(|err: E10| anyhow!(err)),
+            None => bail!("ibc_packet_receive is not implemented for contract"),
         }
     }
+
+    /// Calls [ibc_packet_acknowledge] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_packet_acknowledge].
+    ///
+    /// [ibc_packet_acknowledge]: Contract::ibc_packet_acknowledge
     fn ibc_packet_acknowledge(
         &self,
         deps: DepsMut<Q>,
@@ -835,10 +784,15 @@ where
         msg: IbcPacketAckMsg,
     ) -> AnyResult<IbcBasicResponse<C>> {
         match &self.ibc_packet_ack_fn {
-            Some(packet_ack) => packet_ack(deps, env, msg).map_err(|err| anyhow!(err)),
-            None => bail!("packet ack not implemented for contract"),
+            Some(packet_ack) => packet_ack(deps, env, msg).map_err(|err: E11| anyhow!(err)),
+            None => bail!("ibc_packet_acknowledge is not implemented for contract"),
         }
     }
+
+    /// Calls [ibc_packet_timeout] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_packet_timeout].
+    ///
+    /// [ibc_packet_timeout]: Contract::ibc_packet_timeout
     fn ibc_packet_timeout(
         &self,
         deps: DepsMut<Q>,
@@ -846,8 +800,13 @@ where
         msg: IbcPacketTimeoutMsg,
     ) -> AnyResult<IbcBasicResponse<C>> {
         match &self.ibc_packet_timeout_fn {
-            Some(packet_timeout) => packet_timeout(deps, env, msg).map_err(|err| anyhow!(err)),
-            None => bail!("packet timeout not implemented for contract"),
+            Some(packet_timeout) => packet_timeout(deps, env, msg).map_err(|err: E12| anyhow!(err)),
+            None => bail!("ibc_packet_timeout is not implemented for contract"),
         }
+    }
+
+    /// Returns the provided checksum of the contract's Wasm blob.
+    fn checksum(&self) -> Option<Checksum> {
+        self.checksum
     }
 }
