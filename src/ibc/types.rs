@@ -1,13 +1,13 @@
+use crate::app::IbcModule;
 use anyhow::bail;
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     Addr, Binary, Event, IbcChannel, IbcChannelOpenResponse, IbcEndpoint, IbcOrder, IbcQuery,
     IbcTimeout,
 };
 use std::{fmt::Display, str::FromStr};
 
-use crate::app::IbcModule;
-
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 /// IBC connection
 pub struct Connection {
     /// Connection id on the counterparty chain
@@ -16,7 +16,7 @@ pub struct Connection {
     pub counterparty_chain_id: String,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 #[derive(Default)]
 /// IBC Port Info
 pub struct PortInfo {
@@ -24,7 +24,7 @@ pub struct PortInfo {
     pub next_channel_id: u64,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub struct ChannelHandshakeInfo {
     pub connection_id: String,
     pub port: MockIbcPort,
@@ -35,7 +35,7 @@ pub struct ChannelHandshakeInfo {
     pub version: String,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub enum ChannelHandshakeState {
     Init,
     Try,
@@ -43,7 +43,7 @@ pub enum ChannelHandshakeState {
     Confirm,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub struct ChannelInfo {
     pub next_packet_id: u64,
     pub last_packet_relayed: u64,
@@ -53,7 +53,7 @@ pub struct ChannelInfo {
     pub open: bool,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub enum MockIbcPort {
     Wasm(String), // A wasm port is simply a wasm contract address
     Bank,         // The bank port simply talks to the bank module
@@ -104,7 +104,7 @@ impl FromStr for MockIbcPort {
     }
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub struct IbcPacketData {
     pub ack: Option<Binary>,
     /// This also tells us whether this packet was already sent on the other chain or not
@@ -117,21 +117,21 @@ pub struct IbcPacketData {
     pub timeout: IbcTimeout,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub struct IbcPacketReceived {
     pub data: IbcPacketData,
-    /// Indicates wether the packet was received with a timeout
+    /// Indicates whether the packet was received with a timeout
     pub timeout: bool,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 pub struct IbcPacketAck {
     pub ack: Option<Binary>,
 }
 
 /// This is a custom msg that is used for executing actions on the IBC module
-/// We trust all packets that are relayed. Remember, this is a test environement
-#[cosmwasm_schema::cw_serde]
+/// We trust all packets that are relayed. Remember, this is a test environment.
+#[cw_serde]
 pub enum IbcPacketRelayingMsg {
     CreateConnection {
         remote_chain_id: String,
@@ -179,21 +179,21 @@ pub enum IbcPacketRelayingMsg {
     },
 }
 
-// This type allows to wrap the ibc response to return from the Router
-#[cosmwasm_schema::cw_serde]
+/// This type allows to wrap the IBC response to return from the Router.
+#[cw_serde]
 pub enum IbcResponse {
     Open(IbcChannelOpenResponse),
     Basic(AppIbcBasicResponse),
     Receive(AppIbcReceiveResponse),
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 #[derive(Default)]
 pub struct AppIbcBasicResponse {
     pub events: Vec<Event>,
 }
 
-#[cosmwasm_schema::cw_serde]
+#[cw_serde]
 #[derive(Default)]
 pub struct AppIbcReceiveResponse {
     pub events: Vec<Event>,
@@ -218,8 +218,8 @@ impl From<AppIbcReceiveResponse> for IbcResponse {
     }
 }
 
-#[cosmwasm_schema::cw_serde]
-// This extends the cosmwasm std IBC query type with internal tools needed
+/// This extends the cosmwasm-std IBC query type with internal tools needed.
+#[cw_serde]
 pub enum MockIbcQuery {
     CosmWasm(IbcQuery),
     /// Only used inside cw-multi-test
