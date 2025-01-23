@@ -57,11 +57,6 @@ The table below summarizes all available features:
 | **cosmwasm_2_1** | Enables `cosmwasm_2_0` in **MultiTest** and `cosmwasm_2_1` feature in **cosmwasm-std** dependency. |
 | **cosmwasm_2_2** | Enables `cosmwasm_2_1` in **MultiTest** and `cosmwasm_2_2` feature in **cosmwasm-std** dependency. |
 
-## IBC support
-
-This is the **alpha** version of IBC support in **CosmWasm MultiTest**,
-generously contributed by [Abstract](https://github.com/CosmWasm/cw-multi-test/pull/184).
-
 ## Conclusion
 
 **CosmWasm MultiTest** stands as a vital development tool in
