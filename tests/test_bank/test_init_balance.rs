@@ -28,6 +28,7 @@ fn initializing_balance_should_work() {
             .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
+    #[allow(deprecated)]
     assert_balance(
         app.wrap()
             .query_all_balances(app.api().addr_make(USER))
@@ -43,6 +44,7 @@ fn initializing_balance_without_builder_should_work() {
             .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
+    #[allow(deprecated)]
     assert_balance(
         app.wrap()
             .query_all_balances(app.api().addr_make(USER))
@@ -72,6 +74,7 @@ fn initializing_balance_custom_app_should_work() {
             .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
+    #[allow(deprecated)]
     assert_balance(
         app.wrap()
             .query_all_balances(app.api().addr_make(USER))
@@ -88,6 +91,7 @@ fn initializing_balance_later_should_work() {
             .init_balance(storage, &api.addr_make(USER), coins())
             .unwrap();
     });
+    #[allow(deprecated)]
     assert_balance(
         app.wrap()
             .query_all_balances(app.api().addr_make(USER))

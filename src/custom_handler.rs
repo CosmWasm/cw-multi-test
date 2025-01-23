@@ -4,22 +4,33 @@ use crate::app::CosmosRouter;
 use crate::error::{bail, AnyResult};
 use crate::{AppResponse, Module};
 use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
-use derivative::Derivative;
 use std::cell::{Ref, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
 
 /// A cache for messages and queries processes by the custom module.
-#[derive(Derivative)]
-#[derivative(Default(bound = "", new = "true"), Clone(bound = ""))]
-pub struct CachingCustomHandlerState<ExecC, QueryC> {
+#[derive(Default, Clone)]
+pub struct CachingCustomHandlerState<ExecC, QueryC>
+where
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
+{
     /// Cache for processes custom messages.
     execs: Rc<RefCell<Vec<ExecC>>>,
     /// Cache for processed custom queries.
     queries: Rc<RefCell<Vec<QueryC>>>,
 }
 
-impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC> {
+impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC>
+where
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
+{
+    /// Creates a new [CachingCustomHandlerState].
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     /// Returns a slice of processed custom messages.
     pub fn execs(&self) -> impl Deref<Target = [ExecC]> + '_ {
         Ref::map(self.execs.borrow(), Vec::as_slice)
@@ -40,26 +51,41 @@ impl<ExecC, QueryC> CachingCustomHandlerState<ExecC, QueryC> {
 /// Custom handler that stores all received messages and queries.
 ///
 /// State is thin shared state, so it can be held after mock is passed to [App](crate::App) to read state.
-#[derive(Clone, Derivative)]
-#[derivative(Default(bound = "", new = "true"))]
-pub struct CachingCustomHandler<ExecC, QueryC> {
+#[derive(Default, Clone)]
+pub struct CachingCustomHandler<ExecC, QueryC>
+where
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
+{
     /// Cached state.
     state: CachingCustomHandlerState<ExecC, QueryC>,
 }
 
-impl<ExecC, QueryC> CachingCustomHandler<ExecC, QueryC> {
+impl<ExecC, QueryC> CachingCustomHandler<ExecC, QueryC>
+where
+    ExecC: Default + Clone,
+    QueryC: Default + Clone,
+{
+    /// Creates a new [CachingCustomHandler].
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     /// Returns the cached state.
     pub fn state(&self) -> CachingCustomHandlerState<ExecC, QueryC> {
         self.state.clone()
     }
 }
 
-impl<Exec, Query> Module for CachingCustomHandler<Exec, Query> {
+impl<Exec, Query> Module for CachingCustomHandler<Exec, Query>
+where
+    Exec: Default + Clone,
+    Query: Default + Clone,
+{
     type ExecT = Exec;
     type QueryT = Query;
     type SudoT = Empty;
 
-    // TODO: how to assert like `where ExecC: Exec, QueryC: Query`
     fn execute<ExecC, QueryC>(
         &self,
         _api: &dyn Api,

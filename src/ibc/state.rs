@@ -13,7 +13,7 @@ pub struct ConnectionIndexes<'a> {
     pub chain_id: MultiIndex<'a, String, Connection, String>,
 }
 
-impl<'a> IndexList<Connection> for ConnectionIndexes<'a> {
+impl IndexList<Connection> for ConnectionIndexes<'_> {
     fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Connection>> + '_> {
         let v: Vec<&dyn Index<Connection>> = vec![&self.chain_id];
         Box::new(v.into_iter())

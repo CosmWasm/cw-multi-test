@@ -45,7 +45,7 @@ impl<'a> StorageTransaction<'a> {
     }
 }
 
-impl<'a> Storage for StorageTransaction<'a> {
+impl Storage for StorageTransaction<'_> {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         match self.local_state.get(key) {
             Some(val) => match val {

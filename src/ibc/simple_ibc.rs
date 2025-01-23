@@ -1189,6 +1189,7 @@ impl Module for IbcSimpleModule {
                             channel_info.map(|c| c.info),
                         ))?)
                     }
+                    #[allow(deprecated)]
                     IbcQuery::ListChannels { port_id } => {
                         // Port_id has to be specified here, unfortunately we can't access the contract address
                         let port_id = port_id.unwrap();

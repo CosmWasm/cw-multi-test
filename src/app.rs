@@ -947,7 +947,7 @@ impl<'a, ExecC, QueryC> RouterQuerier<'a, ExecC, QueryC> {
     }
 }
 
-impl<'a, ExecC, QueryC> Querier for RouterQuerier<'a, ExecC, QueryC>
+impl<ExecC, QueryC> Querier for RouterQuerier<'_, ExecC, QueryC>
 where
     ExecC: CustomMsg + DeserializeOwned + 'static,
     QueryC: CustomQuery + DeserializeOwned + 'static,

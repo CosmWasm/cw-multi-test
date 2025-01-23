@@ -76,9 +76,12 @@ fn simple_transfer_timeout() -> anyhow::Result<()> {
     // We make sure the balance of the sender hasn't changed in the process
     let balances = app1
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_owner.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_owner.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?
@@ -99,9 +102,12 @@ fn simple_transfer_timeout() -> anyhow::Result<()> {
     // We make sure the balance of the recipient has not changed
     let balances = app2
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_recipient.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_recipient.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?
@@ -114,9 +120,12 @@ fn simple_transfer_timeout() -> anyhow::Result<()> {
     // We make sure the balance of the sender hasn't changed in the process
     let balances = app1
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_owner.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_owner.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?

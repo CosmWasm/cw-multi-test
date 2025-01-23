@@ -79,9 +79,12 @@ fn simple_transfer() -> anyhow::Result<()> {
     // We make sure the balance of the reciepient has changed
     let balances = app2
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_recipient.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_recipient.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?
@@ -99,9 +102,12 @@ fn simple_transfer() -> anyhow::Result<()> {
     // We make sure the balance of the sender has changed as well
     let balances = app1
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_owner.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_owner.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?
@@ -211,12 +217,15 @@ fn transfer_and_back() -> anyhow::Result<()> {
     // We relaying all packets found in the transaction
     relay_packets_in_tx(&mut app2, &mut app1, send_back_response)?;
 
-    // We make sure the balance of the reciepient has changed
+    // We make sure the balance of the recipient has changed
     let balances = app2
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_recipient.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_recipient.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?
@@ -227,9 +236,12 @@ fn transfer_and_back() -> anyhow::Result<()> {
     // We make sure the balance of the sender has changed as well
     let balances = app1
         .raw_query(
-            to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
-                address: fund_owner.to_string(),
-            }))?
+            to_json_binary(&QueryRequest::<Empty>::Bank(
+                #[allow(deprecated)]
+                BankQuery::AllBalances {
+                    address: fund_owner.to_string(),
+                },
+            ))?
             .as_slice(),
         )
         .into_result()?
