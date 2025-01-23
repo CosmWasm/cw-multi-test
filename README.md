@@ -24,7 +24,7 @@ interactions within the [CosmWasm](https://github.com/CosmWasm) ecosystem.
 Its primary focus is on providing developers with a robust framework for simulating
 complex contract interactions and bank operations.
 
-## Library Capabilities
+## Library capabilities
 
 **CosmWasm MultiTest** enables comprehensive unit testing, including scenarios where contracts
 call other contracts and interact with several modules like bank and staking. Its current implementation
@@ -38,7 +38,7 @@ for various blockchain interaction tests.
 
 ```toml
 [dev-dependencies]
-cw-multi-test = { version = "2.1.0", features = ["staking", "stargate", "cosmwasm_2_0"] }
+cw-multi-test = { version = "2", features = ["staking", "stargate", "cosmwasm_2_2"] }
 ```
 
 Since version 2.1.0, **CosmWasm MultiTest** has no default features enabled.
@@ -54,6 +54,8 @@ The table below summarizes all available features:
 | **cosmwasm_1_3** | Enables `cosmwasm_1_2` in **MultiTest** and `cosmwasm_1_3` feature in **cosmwasm-std** dependency. |
 | **cosmwasm_1_4** | Enables `cosmwasm_1_3` in **MultiTest** and `cosmwasm_1_4` feature in **cosmwasm-std** dependency. |
 | **cosmwasm_2_0** | Enables `cosmwasm_1_4` in **MultiTest** and `cosmwasm_2_0` feature in **cosmwasm-std** dependency. |
+| **cosmwasm_2_1** | Enables `cosmwasm_2_0` in **MultiTest** and `cosmwasm_2_1` feature in **cosmwasm-std** dependency. |
+| **cosmwasm_2_2** | Enables `cosmwasm_2_1` in **MultiTest** and `cosmwasm_2_2` feature in **cosmwasm-std** dependency. |
 
 ## IBC support
 
