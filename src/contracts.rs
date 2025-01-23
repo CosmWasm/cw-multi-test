@@ -1,4 +1,4 @@
-//! # Implementation of the contract trait and contract wrapper
+//! # Implementation of the contract trait and the contract wrapper
 
 use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
@@ -805,7 +805,7 @@ where
         }
     }
 
-    /// Returns the provided checksum of the contract's Wasm blob.
+    /// Returns the provided checksum of the contract's `wasm` blob.
     fn checksum(&self) -> Option<Checksum> {
         self.checksum
     }
