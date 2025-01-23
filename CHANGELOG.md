@@ -1,5 +1,26 @@
 # Changelog
 
+## [v2.3.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.1) (2025-01-23)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.0...v2.3.1)
+
+**Key highlights:**
+
+- Providing `msg_responses` in **`reply`** entrypoint (see [\#206](https://github.com/CosmWasm/cw-multi-test/issues/206) for details).
+
+**Closed issues:**
+
+- `SubMsgResponse::msg_responses` empty with "cosmwasm_2_0" [\#206](https://github.com/CosmWasm/cw-multi-test/issues/206)
+
+**Merged pull requests:**
+
+- Handling `msg_responses` [\#213](https://github.com/CosmWasm/cw-multi-test/pull/213) ([DariuszDepta](https://github.com/DariuszDepta))
+- Renaming refactoring [\#233](https://github.com/CosmWasm/cw-multi-test/pull/233) ([DariuszDepta](https://github.com/DariuszDepta))
+- Minor refactoring [\#232](https://github.com/CosmWasm/cw-multi-test/pull/232) ([DariuszDepta](https://github.com/DariuszDepta))
+- Minor refactoring [\#232](https://github.com/CosmWasm/cw-multi-test/pull/232) ([DariuszDepta](https://github.com/DariuszDepta))
+- Upgraded dependencies [\#202](https://github.com/CosmWasm/cw-multi-test/pull/202) ([DariuszDepta](https://github.com/DariuszDepta))
+- Upgraded dependencies [\#200](https://github.com/CosmWasm/cw-multi-test/pull/200) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.3.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.0) (2025-01-19)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.2.1...v2.3.0)
