@@ -40,7 +40,7 @@ fn building_app_with_default_gov_vote_should_work() {
     use cosmwasm_std::{GovMsg, VoteOption};
     use cw_multi_test::{no_init, AppBuilder, Executor, IntoAddr};
 
-    // Build the application with always failing governance module.
+    // Build the application with default (always failing) governance module.
     let mut app = AppBuilder::default().build(no_init);
 
     // Prepare sender address.
@@ -65,7 +65,7 @@ fn building_app_with_default_gov_vote_weighted_should_work() {
     use cosmwasm_std::{Decimal, GovMsg, Uint128, VoteOption, WeightedVoteOption};
     use cw_multi_test::{no_init, AppBuilder, Executor, IntoAddr};
 
-    // Build the application with always failing governance module.
+    // Build the application with default (always failing) governance module.
     let mut app = AppBuilder::default().build(no_init);
 
     // Prepare sender address.
