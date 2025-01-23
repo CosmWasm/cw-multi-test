@@ -1,3 +1,5 @@
+#![cfg(feature = "stargate")]
+
 use crate::test_helpers::stargate;
 use crate::{no_init, App, AppBuilder, Executor, StargateAccepting};
 use cosmwasm_std::Empty;

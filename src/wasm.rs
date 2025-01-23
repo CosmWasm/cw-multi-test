@@ -388,6 +388,7 @@ where
         }
         Ok(self.save_code(code_id, creator, code))
     }
+
     /// Duplicates the contract's code with specified identifier.
     /// Returns an identifier of the copy of the contract's code.
     fn duplicate_code(&mut self, code_id: u64) -> AnyResult<u64> {
