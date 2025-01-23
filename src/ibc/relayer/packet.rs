@@ -11,7 +11,7 @@ use crate::{
     App, AppResponse, Bank, Gov, Ibc, Module, SudoMsg, Wasm,
 };
 use anyhow::Result as AnyResult;
-use cosmwasm_std::{from_json, Api, Binary, CustomMsg, CustomQuery, Storage};
+use cosmwasm_std::{from_hex, from_json, Api, Binary, CustomMsg, CustomQuery, Storage};
 use serde::de::DeserializeOwned;
 
 use super::{get_all_event_attr_value, get_event_attr_value, has_event};
@@ -200,7 +200,7 @@ where
     // Then we query the packet ack to deliver the response on chain 1
     let hex_ack = get_event_attr_value(&receive_response, WRITE_ACK_EVENT, "packet_ack_hex")?;
 
-    let ack = Binary::from(hex::decode(hex_ack)?);
+    let ack = Binary::from(from_hex(hex_ack)?);
 
     let ack_response = app1.sudo(SudoMsg::Ibc(IbcPacketRelayingMsg::Acknowledge {
         packet,

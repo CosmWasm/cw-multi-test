@@ -164,7 +164,7 @@ where
 
     let init_response = src_app.sudo(crate::SudoMsg::Ibc(ibc_init_msg))?;
 
-    log::debug!("Channel init {:?}", init_response);
+    println!("@DDD Channel init {:?}", init_response);
 
     // Get the returned version
     let new_version = get_event_attr_value(&init_response, "channel_open_init", "version")?;
@@ -188,7 +188,7 @@ where
     };
 
     let try_response: crate::AppResponse = dst_app.sudo(crate::SudoMsg::Ibc(ibc_try_msg))?;
-    log::debug!("Channel try {:?}", try_response);
+    println!("@DDD Channel try {:?}", try_response);
 
     // Get the returned version
     let new_version = get_event_attr_value(&try_response, "channel_open_try", "version")?;
@@ -206,7 +206,7 @@ where
     };
 
     let ack_response: crate::AppResponse = src_app.sudo(crate::SudoMsg::Ibc(ibc_ack_msg))?;
-    log::debug!("Channel ack {:?}", ack_response);
+    println!("@DDD Channel ack {:?}", ack_response);
 
     let ibc_ack_msg = IbcPacketRelayingMsg::ConnectChannel {
         port_id: dst_port,
@@ -219,7 +219,7 @@ where
     };
 
     let confirm_response: crate::AppResponse = dst_app.sudo(crate::SudoMsg::Ibc(ibc_ack_msg))?;
-    log::debug!("Channel confirm {:?}", confirm_response);
+    println!("@DDD Channel confirm {:?}", confirm_response);
 
     Ok(ChannelCreationResult {
         init: init_response,

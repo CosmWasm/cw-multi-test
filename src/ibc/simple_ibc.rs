@@ -9,11 +9,11 @@ use crate::{
 use anyhow::Result as AnyResult;
 use anyhow::{anyhow, bail};
 use cosmwasm_std::{
-    ensure_eq, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, CustomMsg, Event,
-    IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg,
-    IbcPacketTimeoutMsg, IbcQuery, IbcTimeout, IbcTimeoutBlock, ListChannelsResponse, Order,
-    Storage,
+    ensure_eq, to_hex, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, CustomMsg,
+    Event, IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg,
+    IbcChannelOpenMsg, IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg,
+    IbcPacketReceiveMsg, IbcPacketTimeoutMsg, IbcQuery, IbcTimeout, IbcTimeoutBlock,
+    ListChannelsResponse, Order, Storage,
 };
 use cw20_ics20::ibc::Ics20Packet;
 
@@ -501,7 +501,7 @@ impl IbcSimpleModule {
                 "packet_data",
                 String::from_utf8_lossy(packet.data.as_slice()),
             )
-            .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
+            .add_attribute("packet_data_hex", to_hex(packet.data.as_slice()))
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -621,7 +621,7 @@ impl IbcSimpleModule {
                     "packet_data",
                     String::from_utf8_lossy(packet.data.as_slice()),
                 )
-                .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
+                .add_attribute("packet_data_hex", to_hex(packet.data.as_slice()))
                 .add_attribute(
                     "packet_timeout_height",
                     format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -699,7 +699,7 @@ impl IbcSimpleModule {
                 "packet_data",
                 String::from_utf8_lossy(packet.data.as_slice()),
             )
-            .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
+            .add_attribute("packet_data_hex", to_hex(packet.data.as_slice()))
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -721,7 +721,7 @@ impl IbcSimpleModule {
                 "packet_data",
                 serde_json::to_value(&packet.data)?.to_string(),
             )
-            .add_attribute("packet_data_hex", hex::encode(packet.data.as_slice()))
+            .add_attribute("packet_data_hex", to_hex(packet.data.as_slice()))
             .add_attribute(
                 "packet_timeout_height",
                 format!("{}-{}", timeout_height.revision, timeout_height.height),
@@ -743,7 +743,7 @@ impl IbcSimpleModule {
                 "packet_ack_hex",
                 acknowledgement
                     .as_ref()
-                    .map(|a| hex::encode(a.as_slice()))
+                    .map(to_hex)
                     .unwrap_or("".to_string()),
             );
 
