@@ -88,6 +88,14 @@
 
 - Fixed documentation metadata [\#204](https://github.com/CosmWasm/cw-multi-test/pull/204) ([DariuszDepta](https://github.com/DariuszDepta))
 
+## [v3.0.0-ibc-alpha.0](https://github.com/CosmWasm/cw-multi-test/tree/v3.0.0-ibc-alpha.0) (2024-07-10)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.1.0...v3.0.0-ibc-alpha.0)
+
+**Merged pull requests:**
+
+- Add IBC capabilities [\#184](https://github.com/CosmWasm/cw-multi-test/pull/184) ([Kayanski](https://github.com/Kayanski))
+
 ## [v2.1.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.1.0) (2024-07-05)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.0.1...v2.1.0)
