@@ -2,13 +2,12 @@ use cosmwasm_std::{
     coin, from_json, testing::MockApi, to_json_binary, AllBalanceResponse, BankQuery, CosmosMsg,
     Empty, IbcMsg, IbcOrder, IbcTimeout, IbcTimeoutBlock, Querier, QueryRequest,
 };
-
 use cw_multi_test::{
     ibc::{
         relayer::{create_channel, create_connection, relay_packets_in_tx, ChannelCreationResult},
         IbcSimpleModule,
     },
-    AppBuilder, Executor,
+    no_init, AppBuilder, Executor,
 };
 
 /// In this module, we are testing the bank module ibc capabilities
@@ -21,12 +20,12 @@ fn simple_transfer() -> anyhow::Result<()> {
     let mut app1 = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("src"))
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     let mut app2 = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("dst"))
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     // We add a start balance for the owner
     let fund_owner = app1.api().addr_make("owner");
@@ -73,10 +72,10 @@ fn simple_transfer() -> anyhow::Result<()> {
         }),
     )?;
 
-    // We relaying all packets found in the transaction
+    // We are relaying all packets found in the transaction.
     relay_packets_in_tx(&mut app1, &mut app2, send_response)?;
 
-    // We make sure the balance of the reciepient has changed
+    // We make sure the balance of the recipient has changed.
     let balances = app2
         .raw_query(
             to_json_binary(&QueryRequest::<Empty>::Bank(
@@ -128,12 +127,12 @@ fn transfer_and_back() -> anyhow::Result<()> {
     let mut app1 = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("src"))
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     let mut app2 = AppBuilder::default()
         .with_api(MockApi::default().with_prefix("dst"))
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     // We add a start balance for the owner
     let fund_owner = app1.api().addr_make("owner");
@@ -177,10 +176,10 @@ fn transfer_and_back() -> anyhow::Result<()> {
         }),
     )?;
 
-    // We relaying all packets found in the transaction
+    // We are relaying all packets found in the transaction.
     relay_packets_in_tx(&mut app1, &mut app2, send_response)?;
 
-    // TODO:  We can't verify the funds are locked because the IBC_LOCK_MODULE_ADDRESS is not valid
+    // TODO:  We can't verify the funds are locked because the IBC_LOCK_MODULE_ADDRESS is not valid.
     // let balances = app1
     //     .raw_query(
     //         to_json_binary(&QueryRequest::<Empty>::Bank(BankQuery::AllBalances {
@@ -214,7 +213,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
         }),
     )?;
 
-    // We relaying all packets found in the transaction
+    // We are relaying all packets found in the transaction.
     relay_packets_in_tx(&mut app2, &mut app1, send_back_response)?;
 
     // We make sure the balance of the recipient has changed
@@ -233,7 +232,7 @@ fn transfer_and_back() -> anyhow::Result<()> {
     let balances: AllBalanceResponse = from_json(balances)?;
     assert!(balances.amount.is_empty());
 
-    // We make sure the balance of the sender has changed as well
+    // We make sure the balance of the sender has changed as well.
     let balances = app1
         .raw_query(
             to_json_binary(&QueryRequest::<Empty>::Bank(
@@ -248,12 +247,12 @@ fn transfer_and_back() -> anyhow::Result<()> {
         .unwrap();
     let balances: AllBalanceResponse = from_json(balances)?;
 
-    // The owner has back exactly what they need
+    // The owner has back exactly what they need.
     assert_eq!(balances.amount.len(), 1);
     assert_eq!(balances.amount[0].amount, funds.amount);
     assert_eq!(balances.amount[0].denom, funds.denom);
 
-    // // TODO:  We can't verify the funds are locked because the IBC_LOCK_MODULE_ADDRESS is not valid
+    // TODO:  We can't verify the funds are locked because the IBC_LOCK_MODULE_ADDRESS is not valid.
     // // Same for ibc lock address
     // let balances = app1
     //     .raw_query(

@@ -1,29 +1,31 @@
+#![cfg(feature = "stargate")]
+
+mod bank;
+mod timeout;
+
 use cosmwasm_std::{
     from_json, to_json_binary, ChannelResponse, Empty, IbcChannel, IbcEndpoint, IbcOrder, IbcQuery,
     Querier, QueryRequest,
 };
-
 use cw_multi_test::{
     ibc::{
         relayer::{create_channel, create_connection, ChannelCreationResult},
         IbcSimpleModule,
     },
-    AppBuilder,
+    no_init, AppBuilder,
 };
-
-mod bank;
-mod timeout;
 
 #[test]
 fn channel_creation() -> anyhow::Result<()> {
-    // Here we want to create a channel between 2 bank modules to make sure that we are able to create a channel correctly
-    // This is a tracking test for all channel creation
+    // Here we want to create a channel between 2 bank modules to make sure
+    // that we are able to create a channel correctly.
+    // This is a tracking test for all channel creation.
     let mut app1 = AppBuilder::default()
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
     let mut app2 = AppBuilder::default()
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     app1.update_block(|block| block.chain_id = "mock_app_1".to_string());
     app2.update_block(|block| block.chain_id = "mock_app_2".to_string());
@@ -114,15 +116,15 @@ fn channel_creation() -> anyhow::Result<()> {
 
 #[test]
 fn channel_unknown_port() -> anyhow::Result<()> {
-    // Here we want to create a channel between 2 bank modules to make sure that we are able to create a channel correctly
-    // This is a tracking test for all channel creation
-
+    // Here we want to create a channel between 2 bank modules to make sure
+    // that we are able to create a channel correctly.
+    // This is a tracking test for all channel creation.
     let mut app1 = AppBuilder::default()
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
     let mut app2 = AppBuilder::default()
         .with_ibc(IbcSimpleModule)
-        .build(|_, _, _| {});
+        .build(no_init);
 
     let port1 = "other-bad-port".to_string();
     let port2 = "bad-port".to_string();
