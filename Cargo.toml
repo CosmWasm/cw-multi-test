@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "3.0.0-ibc-alpha.0"
+version = "3.0.0-ibc-alpha.1"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <depta@engos.de>"
