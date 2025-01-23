@@ -24,7 +24,7 @@ interactions within the [CosmWasm](https://github.com/CosmWasm) ecosystem.
 Its primary focus is on providing developers with a robust framework for simulating
 complex contract interactions and bank operations.
 
-## Library Capabilities
+## Library capabilities
 
 **CosmWasm MultiTest** enables comprehensive unit testing, including scenarios where contracts
 call other contracts and interact with several modules like bank and staking. Its current implementation
