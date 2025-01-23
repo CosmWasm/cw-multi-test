@@ -3,7 +3,8 @@
 use crate::error::{anyhow, bail, AnyError, AnyResult};
 use cosmwasm_std::{
     from_json, Binary, Checksum, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env,
-    MessageInfo, QuerierWrapper, Reply, Response, SubMsg,
+    IbcDestinationCallbackMsg, IbcSourceCallbackMsg, MessageInfo, QuerierWrapper, Reply, Response,
+    SubMsg,
 };
 use cosmwasm_std::{
     IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
@@ -56,6 +57,12 @@ where
 
     /// Evaluates the contract's `ibc_packet_timeout` entry-point.
     fn ibc_packet_timeout(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketTimeoutMsg) -> AnyResult<IbcBasicResponse<C>>;
+
+    /// Evaluates the contract's `ibc_source_callback` entry-point.
+    fn ibc_source_callback(&self, deps: DepsMut<Q>, env: Env, msg: IbcSourceCallbackMsg) -> AnyResult<IbcBasicResponse<C>>;
+
+    /// Evaluates the contract's `ibc_destination_callback` entry-point.
+    fn ibc_destination_callback(&self, deps: DepsMut<Q>, env: Env, msg: IbcDestinationCallbackMsg) -> AnyResult<IbcBasicResponse<C>>;
 
     /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
@@ -151,6 +158,7 @@ use closures::*;
 /// [sudo]: Contract::sudo
 /// [reply]: Contract::reply
 /// [migrate]: Contract::migrate
+#[rustfmt::skip]
 pub struct ContractWrapper<
     T1,
     T2,
@@ -171,26 +179,30 @@ pub struct ContractWrapper<
     E10 = AnyError,
     E11 = AnyError,
     E12 = AnyError,
+    E13 = AnyError,
+    E14 = AnyError,
 > where
-    T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
-    T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
-    T3: DeserializeOwned, // Type of message passed to `query` entry-point.
-    T4: DeserializeOwned, // Type of message passed to `sudo` entry-point.
-    T6: DeserializeOwned, // Type of message passed to `migrate` entry-point.
-    E1: Display + Debug + Send + Sync, // Type of error returned from `execute` entry-point.
-    E2: Display + Debug + Send + Sync, // Type of error returned from `instantiate` entry-point.
-    E3: Display + Debug + Send + Sync, // Type of error returned from `query` entry-point.
-    E4: Display + Debug + Send + Sync, // Type of error returned from `sudo` entry-point.
-    E5: Display + Debug + Send + Sync, // Type of error returned from `reply` entry-point.
-    E6: Display + Debug + Send + Sync, // Type of error returned from `migrate` entry-point.
-    E7: Display + Debug + Send + Sync, // Type of error returned from `channel_open` entry-point.
-    E8: Display + Debug + Send + Sync, // Type of error returned from `channel_connect` entry-point.
-    E9: Display + Debug + Send + Sync, // Type of error returned from `channel_close` entry-point.
+    T1: DeserializeOwned,               // Type of message passed to `execute` entry-point.
+    T2: DeserializeOwned,               // Type of message passed to `instantiate` entry-point.
+    T3: DeserializeOwned,               // Type of message passed to `query` entry-point.
+    T4: DeserializeOwned,               // Type of message passed to `sudo` entry-point.
+    T6: DeserializeOwned,               // Type of message passed to `migrate` entry-point.
+    E1: Display + Debug + Send + Sync,  // Type of error returned from `execute` entry-point.
+    E2: Display + Debug + Send + Sync,  // Type of error returned from `instantiate` entry-point.
+    E3: Display + Debug + Send + Sync,  // Type of error returned from `query` entry-point.
+    E4: Display + Debug + Send + Sync,  // Type of error returned from `sudo` entry-point.
+    E5: Display + Debug + Send + Sync,  // Type of error returned from `reply` entry-point.
+    E6: Display + Debug + Send + Sync,  // Type of error returned from `migrate` entry-point.
+    E7: Display + Debug + Send + Sync,  // Type of error returned from `channel_open` entry-point.
+    E8: Display + Debug + Send + Sync,  // Type of error returned from `channel_connect` entry-point.
+    E9: Display + Debug + Send + Sync,  // Type of error returned from `channel_close` entry-point.
     E10: Display + Debug + Send + Sync, // Type of error returned from `ibc_packet_receive` entry-point.
     E11: Display + Debug + Send + Sync, // Type of error returned from `ibc_packet_ack` entry-point.
     E12: Display + Debug + Send + Sync, // Type of error returned from `ibc_packet_timeout` entry-point.
-    C: CustomMsg, // Type of custom message returned from all entry-points except `query`.
-    Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
+    E13: Display + Debug + Send + Sync, // Type of error returned from `ibc_source_callback_fn` entry-point.
+    E14: Display + Debug + Send + Sync, // Type of error returned from `ibc_destination_callback_fn` entry-point.
+    C: CustomMsg,                       // Type of custom message returned from all entry-points except `query`.
+    Q: CustomQuery + DeserializeOwned,  // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
     execute_fn: ContractClosure<T1, C, E1, Q>,
     instantiate_fn: ContractClosure<T2, C, E2, Q>,
@@ -204,6 +216,8 @@ pub struct ContractWrapper<
     ibc_packet_receive_fn: Option<IbcClosure<IbcPacketReceiveMsg, IbcReceiveResponse<C>, E10, Q>>,
     ibc_packet_ack_fn: Option<IbcClosure<IbcPacketAckMsg, IbcBasicResponse<C>, E11, Q>>,
     ibc_packet_timeout_fn: Option<IbcClosure<IbcPacketTimeoutMsg, IbcBasicResponse<C>, E12, Q>>,
+    ibc_source_callback_fn: Option<IbcClosure<IbcSourceCallbackMsg, IbcBasicResponse<C>, E13, Q>>,
+    ibc_destination_callback_fn: Option<IbcClosure<IbcDestinationCallbackMsg, IbcBasicResponse<C>, E14, Q>>,
     checksum: Option<Checksum>,
 }
 
@@ -237,6 +251,8 @@ where
             ibc_packet_receive_fn: None,
             ibc_packet_ack_fn: None,
             ibc_packet_timeout_fn: None,
+            ibc_source_callback_fn: None,
+            ibc_destination_callback_fn: None,
             checksum: None,
         }
     }
@@ -261,27 +277,30 @@ where
             ibc_packet_receive_fn: None,
             ibc_packet_ack_fn: None,
             ibc_packet_timeout_fn: None,
+            ibc_source_callback_fn: None,
+            ibc_destination_callback_fn: None,
             checksum: None,
         }
     }
 }
 
 #[allow(clippy::type_complexity)]
+#[rustfmt::skip]
 impl<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
     ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6>
 where
-    T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
-    T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
-    T3: DeserializeOwned, // Type of message passed to `query` entry-point.
-    T4: DeserializeOwned, // Type of message passed to `sudo` entry-point.
-    T6: DeserializeOwned, // Type of message passed to `migrate` entry-point.
-    E1: Display + Debug + Send + Sync, // Type of error returned from `execute` entry-point.
-    E2: Display + Debug + Send + Sync, // Type of error returned from `instantiate` entry-point.
-    E3: Display + Debug + Send + Sync, // Type of error returned from `query` entry-point.
-    E4: Display + Debug + Send + Sync, // Type of error returned from `sudo` entry-point.
-    E5: Display + Debug + Send + Sync, // Type of error returned from `reply` entry-point.
-    E6: Display + Debug + Send + Sync, // Type of error returned from `migrate` entry-point.
-    C: CustomMsg + 'static, // Type of custom message returned from all entry-points except `query`.
+    T1: DeserializeOwned,                        // Type of message passed to `execute` entry-point.
+    T2: DeserializeOwned,                        // Type of message passed to `instantiate` entry-point.
+    T3: DeserializeOwned,                        // Type of message passed to `query` entry-point.
+    T4: DeserializeOwned,                        // Type of message passed to `sudo` entry-point.
+    T6: DeserializeOwned,                        // Type of message passed to `migrate` entry-point.
+    E1: Display + Debug + Send + Sync,           // Type of error returned from `execute` entry-point.
+    E2: Display + Debug + Send + Sync,           // Type of error returned from `instantiate` entry-point.
+    E3: Display + Debug + Send + Sync,           // Type of error returned from `query` entry-point.
+    E4: Display + Debug + Send + Sync,           // Type of error returned from `sudo` entry-point.
+    E5: Display + Debug + Send + Sync,           // Type of error returned from `reply` entry-point.
+    E6: Display + Debug + Send + Sync,           // Type of error returned from `migrate` entry-point.
+    C: CustomMsg + 'static,                      // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned + 'static, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
     /// Populates [ContractWrapper] with contract's `sudo` entry-point and custom message type.
@@ -306,6 +325,8 @@ where
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            ibc_source_callback_fn: self.ibc_source_callback_fn,
+            ibc_destination_callback_fn: self.ibc_destination_callback_fn,
             checksum: None,
         }
     }
@@ -332,6 +353,8 @@ where
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            ibc_source_callback_fn: self.ibc_source_callback_fn,
+            ibc_destination_callback_fn: self.ibc_destination_callback_fn,
             checksum: None,
         }
     }
@@ -357,6 +380,8 @@ where
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            ibc_source_callback_fn: self.ibc_source_callback_fn,
+            ibc_destination_callback_fn: self.ibc_destination_callback_fn,
             checksum: None,
         }
     }
@@ -382,6 +407,8 @@ where
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            ibc_source_callback_fn: self.ibc_source_callback_fn,
+            ibc_destination_callback_fn: self.ibc_destination_callback_fn,
             checksum: None,
         }
     }
@@ -408,6 +435,8 @@ where
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            ibc_source_callback_fn: self.ibc_source_callback_fn,
+            ibc_destination_callback_fn: self.ibc_destination_callback_fn,
             checksum: None,
         }
     }
@@ -434,6 +463,8 @@ where
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
+            ibc_source_callback_fn: self.ibc_source_callback_fn,
+            ibc_destination_callback_fn: self.ibc_destination_callback_fn,
             checksum: None,
         }
     }
@@ -445,7 +476,7 @@ where
     }
 
     /// Adding IBC capabilities.
-    pub fn with_ibc<E7A, E8A, E9A, E10A, E11A, E12A>(
+    pub fn with_ibc<E7A, E8A, E9A, E10A, E11A, E12A, E13A, E14A>(
         self,
         channel_open_fn: IbcFn<IbcChannelOpenMsg, IbcChannelOpenResponse, E7A, Q>,
         channel_connect_fn: IbcFn<IbcChannelConnectMsg, IbcBasicResponse<C>, E8A, Q>,
@@ -453,6 +484,8 @@ where
         ibc_packet_receive_fn: IbcFn<IbcPacketReceiveMsg, IbcReceiveResponse<C>, E10A, Q>,
         ibc_packet_ack_fn: IbcFn<IbcPacketAckMsg, IbcBasicResponse<C>, E11A, Q>,
         ibc_packet_timeout_fn: IbcFn<IbcPacketTimeoutMsg, IbcBasicResponse<C>, E12A, Q>,
+        ibc_source_callback_fn: IbcClosure<IbcSourceCallbackMsg, IbcBasicResponse<C>, E13A, Q>,
+        ibc_destination_callback_fn: IbcClosure<IbcDestinationCallbackMsg, IbcBasicResponse<C>, E14A, Q>,
     ) -> ContractWrapper<
         T1,
         T2,
@@ -473,6 +506,8 @@ where
         E10A,
         E11A,
         E12A,
+        E13A,
+        E14A,
     >
     where
         E7A: Display + Debug + Send + Sync + 'static,
@@ -481,6 +516,8 @@ where
         E10A: Display + Debug + Send + Sync + 'static,
         E11A: Display + Debug + Send + Sync + 'static,
         E12A: Display + Debug + Send + Sync + 'static,
+        E13A: Display + Debug + Send + Sync + 'static,
+        E14A: Display + Debug + Send + Sync + 'static,
     {
         ContractWrapper {
             execute_fn: self.execute_fn,
@@ -495,6 +532,8 @@ where
             ibc_packet_receive_fn: Some(Box::new(ibc_packet_receive_fn)),
             ibc_packet_ack_fn: Some(Box::new(ibc_packet_ack_fn)),
             ibc_packet_timeout_fn: Some(Box::new(ibc_packet_timeout_fn)),
+            ibc_source_callback_fn: Some(Box::new(ibc_source_callback_fn)),
+            ibc_destination_callback_fn: Some(Box::new(ibc_destination_callback_fn)),
             checksum: None,
         }
     }
@@ -612,8 +651,31 @@ where
     }
 }
 
-impl<T1, T2, T3, E1, E2, E3, C, T4, E4, E5, T6, E6, E7, E8, E9, E10, E11, E12, Q> Contract<C, Q>
-    for ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6, E6, E7, E8, E9, E10, E11, E12>
+impl<T1, T2, T3, E1, E2, E3, C, T4, E4, E5, T6, E6, E7, E8, E9, E10, E11, E12, E13, E14, Q>
+    Contract<C, Q>
+    for ContractWrapper<
+        T1,
+        T2,
+        T3,
+        E1,
+        E2,
+        E3,
+        C,
+        Q,
+        T4,
+        E4,
+        E5,
+        T6,
+        E6,
+        E7,
+        E8,
+        E9,
+        E10,
+        E11,
+        E12,
+        E13,
+        E14,
+    >
 where
     T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
     T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
@@ -632,6 +694,8 @@ where
     E10: Display + Debug + Send + Sync + 'static, // Type of error returned from `ibc_packet_receive` entry-point.
     E11: Display + Debug + Send + Sync + 'static, // Type of error returned from `ibc_packet_ack` entry-point.
     E12: Display + Debug + Send + Sync + 'static, // Type of error returned from `ibc_packet_timeout` entry-point.
+    E13: Display + Debug + Send + Sync + 'static, // Type of error returned from `ibc_source_callback` entry-point.
+    E14: Display + Debug + Send + Sync + 'static, // Type of error returned from `ibc_destination_callback` entry-point.
     C: CustomMsg, // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
@@ -802,6 +866,42 @@ where
         match &self.ibc_packet_timeout_fn {
             Some(packet_timeout) => packet_timeout(deps, env, msg).map_err(|err: E12| anyhow!(err)),
             None => bail!("ibc_packet_timeout is not implemented for contract"),
+        }
+    }
+
+    /// Calls [ibc_source_callback] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_source_callback].
+    ///
+    /// [ibc_source_callback]: Contract::ibc_source_callback
+    fn ibc_source_callback(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        msg: IbcSourceCallbackMsg,
+    ) -> AnyResult<IbcBasicResponse<C>> {
+        match &self.ibc_source_callback_fn {
+            Some(source_callback) => {
+                source_callback(deps, env, msg).map_err(|err: E13| anyhow!(err))
+            }
+            None => bail!("ibc_source_callback is not implemented for contract"),
+        }
+    }
+
+    /// Calls [ibc_destination_callback] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [ibc_destination_callback].
+    ///
+    /// [ibc_destination_callback]: Contract::ibc_destination_callback
+    fn ibc_destination_callback(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        msg: IbcDestinationCallbackMsg,
+    ) -> AnyResult<IbcBasicResponse<C>> {
+        match &self.ibc_destination_callback_fn {
+            Some(destination_callback) => {
+                destination_callback(deps, env, msg).map_err(|err: E14| anyhow!(err))
+            }
+            None => bail!("ibc_destination_callback is not implemented for contract"),
         }
     }
 
