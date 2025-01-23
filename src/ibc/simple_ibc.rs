@@ -1,13 +1,3 @@
-use anyhow::{anyhow, bail};
-use cosmwasm_std::{
-    ensure_eq, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, CustomMsg, Event,
-    IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
-    IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg,
-    IbcPacketTimeoutMsg, IbcQuery, IbcTimeout, IbcTimeoutBlock, ListChannelsResponse, Order,
-    Storage,
-};
-use cw20_ics20::ibc::Ics20Packet;
-
 use crate::{
     app::IbcRouterMsg,
     bank::{optional_unwrap_ibc_denom, IBC_LOCK_MODULE_ADDRESS},
@@ -17,6 +7,15 @@ use crate::{
     AppResponse, Ibc, Module, SudoMsg,
 };
 use anyhow::Result as AnyResult;
+use anyhow::{anyhow, bail};
+use cosmwasm_std::{
+    ensure_eq, to_json_binary, Addr, BankMsg, Binary, ChannelResponse, Coin, CustomMsg, Event,
+    IbcAcknowledgement, IbcChannel, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
+    IbcEndpoint, IbcMsg, IbcOrder, IbcPacket, IbcPacketAckMsg, IbcPacketReceiveMsg,
+    IbcPacketTimeoutMsg, IbcQuery, IbcTimeout, IbcTimeoutBlock, ListChannelsResponse, Order,
+    Storage,
+};
+use cw20_ics20::ibc::Ics20Packet;
 
 #[derive(Default)]
 pub struct IbcSimpleModule;
@@ -62,7 +61,7 @@ impl IbcSimpleModule {
         remote_chain_id: String,
         connection_id: Option<String>,
         counterparty_connection_id: Option<String>,
-    ) -> AnyResult<crate::AppResponse> {
+    ) -> AnyResult<AppResponse> {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
 
         // First we get the data (from storage or create it)
@@ -127,7 +126,7 @@ impl IbcSimpleModule {
 
         counterparty_endpoint: IbcEndpoint,
         counterparty_version: Option<String>,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -250,7 +249,7 @@ impl IbcSimpleModule {
 
         counterparty_endpoint: IbcEndpoint,
         counterparty_version: Option<String>,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -373,7 +372,7 @@ impl IbcSimpleModule {
         port_id: String,
         channel_id: String,
         init: bool,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -457,7 +456,7 @@ impl IbcSimpleModule {
         channel_id: String,
         data: Binary,
         timeout: IbcTimeout,
-    ) -> AnyResult<crate::AppResponse> {
+    ) -> AnyResult<AppResponse> {
         let mut ibc_storage = prefixed(storage, NAMESPACE_IBC);
 
         // On this storage, we need to get the id of the transfer packet
@@ -530,7 +529,7 @@ impl IbcSimpleModule {
         router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &cosmwasm_std::BlockInfo,
         packet: IbcPacketData,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -543,7 +542,7 @@ impl IbcSimpleModule {
             (packet.dst_port_id.clone(), packet.dst_channel_id.clone()),
         )?;
 
-        // First we verify it's not already in storage. If its is, we error, not possible to receive the same packet twice
+        // First we verify it's not already in storage. If it is, we error, not possible to receive the same packet twice
         if RECEIVE_PACKET_MAP
             .load(
                 &ibc_storage,
@@ -762,7 +761,7 @@ impl IbcSimpleModule {
         block: &cosmwasm_std::BlockInfo,
         packet: IbcPacketData,
         ack: Binary,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -875,7 +874,7 @@ impl IbcSimpleModule {
         router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &cosmwasm_std::BlockInfo,
         packet: IbcPacketData,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -898,7 +897,7 @@ impl IbcSimpleModule {
             ),
         )?;
 
-        // If the packet was already aknowledge, no timeout possible
+        // If the packet was already ack, no timeout possible
         if packet_data.ack.is_some() {
             bail!("You can't timeout an acked packet")
         }
@@ -950,7 +949,7 @@ impl IbcSimpleModule {
 
         // Then we collect events
         let mut events = match res {
-            // Only type allowed as an timeout response
+            // Only type allowed as in timeout response
             IbcResponse::Basic(r) => r.events,
             _ => panic!("Only a basic response was expected when timeout a packet"),
         };
@@ -987,7 +986,7 @@ impl IbcSimpleModule {
     fn transfer<ExecC, QueryC>(
         &self,
         api: &dyn cosmwasm_std::Api,
-        storage: &mut dyn cosmwasm_std::Storage,
+        storage: &mut dyn Storage,
         router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &cosmwasm_std::BlockInfo,
         sender: Addr,
@@ -995,7 +994,7 @@ impl IbcSimpleModule {
         to_address: String,
         amount: Coin,
         timeout: IbcTimeout,
-    ) -> AnyResult<crate::AppResponse>
+    ) -> AnyResult<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -1039,12 +1038,12 @@ impl Module for IbcSimpleModule {
     fn execute<ExecC, QueryC>(
         &self,
         api: &dyn cosmwasm_std::Api,
-        storage: &mut dyn cosmwasm_std::Storage,
+        storage: &mut dyn Storage,
         router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &cosmwasm_std::BlockInfo,
-        sender: cosmwasm_std::Addr,
+        sender: Addr,
         msg: Self::ExecT,
-    ) -> anyhow::Result<crate::AppResponse>
+    ) -> anyhow::Result<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -1079,14 +1078,93 @@ impl Module for IbcSimpleModule {
         }
     }
 
+    fn query(
+        &self,
+        _api: &dyn cosmwasm_std::Api,
+        storage: &dyn Storage,
+        _querier: &dyn cosmwasm_std::Querier,
+        _block: &cosmwasm_std::BlockInfo,
+        request: Self::QueryT,
+    ) -> anyhow::Result<Binary> {
+        let ibc_storage = prefixed_read(storage, NAMESPACE_IBC);
+        match request {
+            MockIbcQuery::CosmWasm(m) => {
+                match m {
+                    IbcQuery::Channel {
+                        channel_id,
+                        port_id,
+                    } => {
+                        // Port id has to be specified unfortunately here
+                        let port_id = port_id.unwrap();
+                        // We load the channel of the port
+                        let channel_info =
+                            CHANNEL_INFO.may_load(&ibc_storage, (port_id, channel_id))?;
+
+                        Ok(to_json_binary(&ChannelResponse::new(
+                            channel_info.map(|c| c.info),
+                        ))?)
+                    }
+                    #[allow(deprecated)]
+                    IbcQuery::ListChannels { port_id } => {
+                        // Port_id has to be specified here, unfortunately we can't access the contract address
+                        let port_id = port_id.unwrap();
+
+                        let channels = CHANNEL_INFO
+                            .prefix(port_id)
+                            .range(&ibc_storage, None, None, Order::Ascending)
+                            .collect::<Result<Vec<_>, _>>()?;
+
+                        Ok(to_json_binary(&ListChannelsResponse::new(
+                            channels.iter().map(|c| c.1.info.clone()).collect(),
+                        ))?)
+                    }
+                    _ => bail!("Query not available"),
+                }
+            }
+            MockIbcQuery::SendPacket {
+                channel_id,
+                port_id,
+                sequence,
+            } => {
+                let packet_data =
+                    SEND_PACKET_MAP.load(&ibc_storage, (port_id, channel_id, sequence))?;
+
+                Ok(to_json_binary(&packet_data)?)
+            }
+            MockIbcQuery::ConnectedChain { connection_id } => {
+                let chain_id = ibc_connections().load(&ibc_storage, &connection_id)?;
+
+                Ok(to_json_binary(&chain_id)?)
+            }
+            MockIbcQuery::ChainConnections { chain_id } => {
+                let connections = ibc_connections()
+                    .idx
+                    .chain_id
+                    .prefix(chain_id)
+                    .range(&ibc_storage, None, None, Order::Descending)
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Ok(to_json_binary(&connections)?)
+            }
+            MockIbcQuery::ChannelInfo {
+                port_id,
+                channel_id,
+            } => {
+                let channel_info = CHANNEL_INFO.load(&ibc_storage, (port_id, channel_id))?;
+
+                Ok(to_json_binary(&channel_info)?)
+            }
+        }
+    }
+
     fn sudo<ExecC, QueryC>(
         &self,
         api: &dyn cosmwasm_std::Api,
-        storage: &mut dyn cosmwasm_std::Storage,
+        storage: &mut dyn Storage,
         router: &dyn crate::CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &cosmwasm_std::BlockInfo,
         msg: Self::SudoT,
-    ) -> anyhow::Result<crate::AppResponse>
+    ) -> anyhow::Result<AppResponse>
     where
         ExecC: CustomMsg,
         QueryC: cosmwasm_std::CustomQuery + serde::de::DeserializeOwned + 'static,
@@ -1161,85 +1239,6 @@ impl Module for IbcSimpleModule {
         }?;
 
         Ok(response)
-    }
-
-    fn query(
-        &self,
-        _api: &dyn cosmwasm_std::Api,
-        storage: &dyn cosmwasm_std::Storage,
-        _querier: &dyn cosmwasm_std::Querier,
-        _block: &cosmwasm_std::BlockInfo,
-        request: Self::QueryT,
-    ) -> anyhow::Result<cosmwasm_std::Binary> {
-        let ibc_storage = prefixed_read(storage, NAMESPACE_IBC);
-        match request {
-            MockIbcQuery::CosmWasm(m) => {
-                match m {
-                    IbcQuery::Channel {
-                        channel_id,
-                        port_id,
-                    } => {
-                        // Port id has to be specificed unfortunately here
-                        let port_id = port_id.unwrap();
-                        // We load the channel of the port
-                        let channel_info =
-                            CHANNEL_INFO.may_load(&ibc_storage, (port_id, channel_id))?;
-
-                        Ok(to_json_binary(&ChannelResponse::new(
-                            channel_info.map(|c| c.info),
-                        ))?)
-                    }
-                    #[allow(deprecated)]
-                    IbcQuery::ListChannels { port_id } => {
-                        // Port_id has to be specified here, unfortunately we can't access the contract address
-                        let port_id = port_id.unwrap();
-
-                        let channels = CHANNEL_INFO
-                            .prefix(port_id)
-                            .range(&ibc_storage, None, None, Order::Ascending)
-                            .collect::<Result<Vec<_>, _>>()?;
-
-                        Ok(to_json_binary(&ListChannelsResponse::new(
-                            channels.iter().map(|c| c.1.info.clone()).collect(),
-                        ))?)
-                    }
-                    _ => bail!("Query not available"),
-                }
-            }
-            MockIbcQuery::SendPacket {
-                channel_id,
-                port_id,
-                sequence,
-            } => {
-                let packet_data =
-                    SEND_PACKET_MAP.load(&ibc_storage, (port_id, channel_id, sequence))?;
-
-                Ok(to_json_binary(&packet_data)?)
-            }
-            MockIbcQuery::ConnectedChain { connection_id } => {
-                let chain_id = ibc_connections().load(&ibc_storage, &connection_id)?;
-
-                Ok(to_json_binary(&chain_id)?)
-            }
-            MockIbcQuery::ChainConnections { chain_id } => {
-                let connections = ibc_connections()
-                    .idx
-                    .chain_id
-                    .prefix(chain_id)
-                    .range(&ibc_storage, None, None, Order::Descending)
-                    .collect::<Result<Vec<_>, _>>()?;
-
-                Ok(to_json_binary(&connections)?)
-            }
-            MockIbcQuery::ChannelInfo {
-                port_id,
-                channel_id,
-            } => {
-                let channel_info = CHANNEL_INFO.load(&ibc_storage, (port_id, channel_id))?;
-
-                Ok(to_json_binary(&channel_info)?)
-            }
-        }
     }
 
     //Ibc endpoints are not available on the IBC module. This module is only a fix for receiving IBC messages. The IBC module doesn't and will never have ports opened to other blockchains
