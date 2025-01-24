@@ -7,6 +7,7 @@ mod test_attributes;
 mod test_bank;
 mod test_contract_storage;
 mod test_ibc;
+mod test_empty_contract;
 mod test_module;
 mod test_payload;
 mod test_prefixed_storage;
