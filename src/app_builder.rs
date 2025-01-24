@@ -454,7 +454,19 @@ where
         }
     }
 
-    /// Overwrites the default gov interface.
+    /// Overwrites the default governance module.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cw_multi_test::{no_init, AppBuilder, GovAcceptingModule};
+    ///
+    /// let app = AppBuilder::default()
+    ///     .with_gov(GovAcceptingModule::new())
+    ///     .build(no_init);
+    ///
+    /// // use the app with accepting governance module in your test
+    /// ```
     pub fn with_gov<NewGov: Gov>(
         self,
         gov: NewGov,
