@@ -1,10 +1,12 @@
 //! # CosmWasm MultiTest
 //!
 //! **CosmWasm MultiTest** is designed to simulate a blockchain environment in pure Rust.
-//! This allows to run unit tests that involve **contract 🡘 contract**,
-//! and **contract 🡘 module** interactions. **CosmWasm MultiTest** is not intended
-//! to be a full blockchain application, but to simulate the Cosmos SDK x/wasm module close enough
-//! to gain confidence in multi-contract deployments, before testing them on a live blockchain.
+//! This allows you to run unit tests that involve **contract 🡘 contract**,
+//! and **contract 🡘 module** interactions.
+//!
+//! **CosmWasm MultiTest** is not intended to be a full blockchain application, but to simulate
+//! the Cosmos SDK modules close enough to gain confidence in multi-contract deployments,
+//! before testing them on a live blockchain.
 //!
 //! The following sections explains some of the design for those who want to use the API,
 //! as well as those who want to take a look under the hood of **CosmWasm MultiTest**.
@@ -23,7 +25,7 @@
 //! any [CosmosMsg](cosmwasm_std::CosmosMsg) and wraps it in an atomic transaction.
 //! That is, only if [execute](App::execute) returns a success, then the state will be committed.
 //! It returns the data and a list of [Event](cosmwasm_std::Event)s on successful execution
-//! or an **`Err(String)`** on error. There are some helper methods tied to the [Executor] trait
+//! or an `Err(String)` on error. There are some helper methods tied to the [Executor] trait
 //! that create the [CosmosMsg](cosmwasm_std::CosmosMsg) for you to provide a less verbose API.
 //! [App]'s methods like [instantiate_contract](App::instantiate_contract),
 //! [execute_contract](App::execute_contract), and [send_tokens](App::send_tokens) are exposed
@@ -45,7 +47,7 @@
 //!
 //! You can easily create an [App] for use in your testcode like shown below.
 //! Having a single utility function for creating and configuring the [App] is the common
-//! pattern while testing contracts with **CosmWasm MultiTest**.
+//! pattern while testing contracts with **MultiTest**.
 //!
 //! ```
 //! use cw_multi_test::App;
@@ -66,10 +68,11 @@
 //!
 //! ### Contracts
 //!
-//! Before you can call contracts, you must **instantiate** them. And to instantiate them, you need a `code_id`.
-//! In `wasmd`, this `code_id` points to some stored Wasm code that is then run. In multitest, we use it to
-//! point to a `Box<dyn Contract>` that should be run. That is, you need to implement the [Contract] trait
-//! and then add the contract to the [App] via [store_code](App::store_code) function.
+//! Before you can call contracts, you must **instantiate** them. And to instantiate them,
+//! you need a `code_id`. In `wasmd`, this `code_id` points to some stored Wasm code that is then run.
+//! In **MultiTest**, we use it to point to a `Box<dyn Contract>` that should be run.
+//! That is, you need to implement the [Contract] trait and then add the contract
+//! to the [App] via [store_code](App::store_code) function.
 //!
 //! The [Contract] trait defines the major entry points to any CosmWasm contract:
 //! [instantiate](Contract::instantiate), [execute](Contract::execute), [query](Contract::query),
@@ -80,28 +83,66 @@
 //! for some examples or how to do so (and useful mocks for some test cases).
 //! Here is an example of wrapping a CosmWasm contract into a [Contract] trait to be added to an [App]:
 //!
-//! ```ignore
+//! ```
 //! use cosmwasm_std::Empty;
-//! use cw1_whitelist::contract::{execute, instantiate, query};
 //! use cw_multi_test::{App, Contract, ContractWrapper};
 //!
-//! pub fn contract_whitelist() -> Box<dyn Contract<Empty>> {
-//!     Box::new(ContractWrapper::new(execute, instantiate, query))
+//! // Contract definition.
+//! mod my_contract {
+//!     use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdResult};
+//!
+//!     pub fn instantiate(
+//!         deps: DepsMut,
+//!         env: Env,
+//!         info: MessageInfo,
+//!         msg: Empty,
+//!     ) -> StdResult<Response> {
+//!         Ok(Response::default())
+//!     }
+//!
+//!     pub fn execute(
+//!         deps: DepsMut,
+//!         env: Env,
+//!         info: MessageInfo,
+//!         msg: Empty,
+//!     ) -> StdResult<Response> {
+//!         Ok(Response::default())
+//!     }
+//!
+//!     pub fn query(deps: Deps, env: Env, msg: Empty) -> StdResult<Binary> {
+//!         Ok(Binary::default())
+//!     }
 //! }
 //!
+//! // Wrapped contract.
+//! pub fn contract() -> Box<dyn Contract<Empty>> {
+//!     Box::new(ContractWrapper::new(
+//!         my_contract::execute,
+//!         my_contract::instantiate,
+//!         my_contract::query,
+//!     ))
+//! }
+//!
+//! // Chain initialization.
 //! let mut app = App::default();
-//! let code_id = app.store_code(contract_whitelist());
-//! // use this code_id to instantiate a contract
+//!
+//! // Storing contract code on chain.
+//! let code_id = app.store_code(contract());
+//!
+//! assert_eq!(1, code_id);
+//!
+//! // Use this `code_id` to instantiate the contract.
+//! // ...
 //! ```
 //!
 //! ### Modules
 //!
 //! There is only one root [Storage](cosmwasm_std::Storage), stored inside [App].
 //! This is wrapped into a transaction, and then passed down to other functions to work with.
-//! The code that modifies the Storage is divided into _modules_ much like the CosmosSDK.
-//! Currently, the message processing logic is divided into one _module_ for every [CosmosMsg](cosmwasm_std) variant.
-//! [Bank] handles [BankMsg](cosmwasm_std::BankMsg) and [BankQuery](cosmwasm_std::BankQuery),
-//! [Wasm] handles [WasmMsg](cosmwasm_std::WasmMsg) and [WasmQuery](cosmwasm_std::WasmQuery), etc.
+//! The code that modifies the Storage is divided into modules much like the CosmosSDK.
+//! Currently, the message processing logic is divided into one module for every [CosmosMsg](cosmwasm_std) variant:
+//! - [Bank] module handles [BankMsg](cosmwasm_std::BankMsg) and [BankQuery](cosmwasm_std::BankQuery) messages,
+//! - [Wasm] module handles [WasmMsg](cosmwasm_std::WasmMsg) and [WasmQuery](cosmwasm_std::WasmQuery), etc.
 //!
 //! ### Router
 //!
@@ -113,7 +154,7 @@
 //!
 //! Note that the only way one module can call or query another module is by dispatching messages via the [Router].
 //! This allows us to implement an independent [Wasm] in a way that it can process [SubMsg](cosmwasm_std::SubMsg)
-//! that call into [Bank]. You can see an example of that in _send_ method of the [WasmKeeper],
+//! that call into [Bank]. You can see an example of that in `send` method of the [WasmKeeper],
 //! where it moves bank tokens from one account to another.
 
 #![deny(missing_docs)]
