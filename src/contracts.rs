@@ -15,7 +15,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
-/// This trait serves as a primary interface for interacting with contracts.
+/// A primary interface for interacting with smart contracts.
 #[rustfmt::skip]
 pub trait Contract<C, Q = Empty>
 where
@@ -52,8 +52,8 @@ where
     /// Evaluates the contract's `ibc_packet_receive` entry-point.
     fn ibc_packet_receive(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketReceiveMsg) -> AnyResult<IbcReceiveResponse<C>>;
 
-    /// Evaluates the contract's `ibc_packet_acknowledge` entry-point.
-    fn ibc_packet_acknowledge(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketAckMsg) -> AnyResult<IbcBasicResponse<C>>;
+    /// Evaluates the contract's `ibc_packet_ack` entry-point.
+    fn ibc_packet_ack(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketAckMsg) -> AnyResult<IbcBasicResponse<C>>;
 
     /// Evaluates the contract's `ibc_packet_timeout` entry-point.
     fn ibc_packet_timeout(&self, deps: DepsMut<Q>, env: Env, msg: IbcPacketTimeoutMsg) -> AnyResult<IbcBasicResponse<C>>;
@@ -107,43 +107,77 @@ use closures::*;
 /// - **E4** type of error returned from [sudo] entry-point.
 /// - **E5** type of error returned from [reply] entry-point.
 /// - **E6** type of error returned from [migrate] entry-point.
+/// - **E7** type of error returned from [ibc_channel_open] entry-point.
+/// - **E8** type of error returned from [ibc_channel_connect] entry-point.
+/// - **E9** type of error returned from [ibc_channel_close] entry-point.
+/// - **E10** type of error returned from [ibc_packet_receive] entry-point.
+/// - **E11** type of error returned from [ibc_packet_ack] entry-point.
+/// - **E12** type of error returned from [ibc_packet_timeout] entry-point.
+/// - **E13** type of error returned from [ibc_source_callback] entry-point.
+/// - **E14** type of error returned from [ibc_destination_callback] entry-point.
 /// - **C** type of custom message returned from all entry-points except [query].
 /// - **Q** type of custom query in `Querier` passed as 'Deps' or 'DepsMut' to all entry-points.
 ///
 /// The following table summarizes the purpose of all generic types used in [ContractWrapper].
 /// ```text
-/// ┌─────────────┬────────────────┬─────────────────────┬─────────┬─────────┬───────┬───────┐
-/// │  Contract   │    Contract    │                     │         │         │       │       │
-/// │ entry-point │    wrapper     │    Closure type     │ Message │ Message │ Error │ Query │
-/// │             │    member      │                     │   IN    │   OUT   │  OUT  │       │
-/// ╞═════════════╪════════════════╪═════════════════════╪═════════╪═════════╪═══════╪═══════╡
-/// │     (1)     │                │                     │         │         │       │       │
-/// ╞═════════════╪════════════════╪═════════════════════╪═════════╪═════════╪═══════╪═══════╡
-/// │ execute     │ execute_fn     │ ContractClosure     │   T1    │    C    │  E1   │   Q   │
-/// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ instantiate │ instantiate_fn │ ContractClosure     │   T2    │    C    │  E2   │   Q   │
-/// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ query       │ query_fn       │ QueryClosure        │   T3    │ Binary  │  E3   │   Q   │
-/// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ sudo        │ sudo_fn        │ PermissionedClosure │   T4    │    C    │  E4   │   Q   │
-/// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ reply       │ reply_fn       │ ReplyClosure        │  Reply  │    C    │  E5   │   Q   │
-/// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ migrate     │ migrate_fn     │ PermissionedClosure │   T6    │    C    │  E6   │   Q   │
-/// └─────────────┴────────────────┴─────────────────────┴─────────┴─────────┴───────┴───────┘
+/// ┌──────────────────────────┬─────────────────────────────┬─────────────────────┬───────────────────────────┬────────────────────────┬───────┬───────┐
+/// │  Contract entry-point    │  ContractWrapper function   │    Closure type     │        message_in         │      message_out       │       │       │
+/// │                          │                             │                     │                           │                        │ Error │ Query │
+/// │                          │                             │                     │                           │                        │  OUT  │       │
+/// ╞══════════════════════════╪═════════════════════════════╪═════════════════════╪═══════════════════════════╪════════════════════════╪═══════╪═══════╡
+/// │ execute                  │ execute_fn                  │ ContractClosure     │ T1                        │ C                      │  E1   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ instantiate              │ instantiate_fn              │ ContractClosure     │ T2                        │ C                      │  E2   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ query                    │ query_fn                    │ QueryClosure        │ T3                        │ Binary                 │  E3   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ sudo                     │ sudo_fn                     │ PermissionedClosure │ T4                        │ C                      │  E4   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ reply                    │ reply_fn                    │ ReplyClosure        │ Reply                     │ C                      │  E5   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ migrate                  │ migrate_fn                  │ PermissionedClosure │ T6                        │ C                      │  E6   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_channel_open         │ ibc_channel_open_fn         │ IbcClosure          │ IbcChannelOpenMsg         │ IbcChannelOpenResponse │  E7   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_channel_connect      │ ibc_channel_connect_fn      │ IbcClosure          │ IbcChannelConnectMsg      │ IbcBasicResponse       │  E8   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_channel_close        │ ibc_channel_close_fn        │ IbcClosure          │ IbcChannelCloseMsg        │ IbcBasicResponse       │  E9   │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_packet_receive       │ ibc_packet_receive_fn       │ IbcClosure          │ IbcPacketReceiveMsg       │ IbcReceiveResponse     │  E10  │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_packet_ack           │ ibc_packet_ack_fn           │ IbcClosure          │ IbcPacketAckMsg           │ IbcBasicResponse       │  E11  │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_packet_timeout       │ ibc_packet_timeout_fn       │ IbcClosure          │ IbcPacketTimeoutMsg       │ IbcBasicResponse       │  E12  │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_source_callback      │ ibc_source_callback_fn      │ IbcClosure          │ IbcSourceCallbackMsg      │ IbcBasicResponse       │  E13  │   Q   │
+/// ├──────────────────────────┼─────────────────────────────┼─────────────────────┼───────────────────────────┼────────────────────────┼───────┼───────┤
+/// │ ibc_destination_callback │ ibc_destination_callback_fn │ IbcClosure          │ IbcDestinationCallbackMsg │ IbcBasicResponse       │  E14  │   Q   │
+/// └──────────────────────────┴─────────────────────────────┴─────────────────────┴───────────────────────────┴────────────────────────┴───────┴───────┘
 /// ```
 /// The general schema depicting which generic type is used in entry points is shown below.
 /// Entry point, when called, is provided minimum two arguments: custom query of type **Q**
 /// (inside `Deps` or `DepsMut`) and input message of type **T1**, **T2**, **T3**, **T4**,
-/// **Reply** or **T6**. As a result, entry point returns custom output message of type
-/// Response<**C**> or **Binary** and an error of type **E1**, **E2**, **E3**, **E4**, **E5**
-/// or **E6**.
+/// **Reply**, **T6**, **IbcChannelOpenMsg**, **IbcChannelConnectMsg**, **IbcChannelCloseMsg**,
+/// **IbcPacketReceiveMsg**, **IbcPacketAckMsg**, **IbcPacketTimeoutMsg**, **IbcSourceCallbackMsg**
+/// or **IbcDestinationCallbackMsg**. As a result, entry point returns custom output message of type
+/// Response<**C**>, **Binary**, **IbcChannelOpenResponse**, **IbcReceiveResponse** or **IbcBasicResponse**
+/// and an error of type **E1**, **E2**, **E3**, **E4**, **E5**, **E6**, **E7**, **E8**, **E9**, **E10**,
+/// **E11**, **E12**, **E13** or **E14**.
 ///
 /// ```text
 ///    entry_point(query, .., message_in) -> Result<message_out, error>
 ///                  ┬           ┬                      ┬          ┬
-///             Q >──┘           │                      │          └──> E1,E2,E3,E4,E5,E6
-///    T1,T2,T3,T4,Reply,T6 >────┘                      └─────────────> C,Binary
+///             Q >──┘           │                      │          └──> E1,E2,E3,E4,E5,E6,E7,
+///                              │                      │               E8,E9,E10,E11,E12,E13,E14
+///    T1,T2,T3,T4,Reply,T6,  >──┘                      └──> C,Binary,
+///    IbcChannelOpenMsg,                                    IbcChannelOpenResponse,
+///    IbcChannelConnectMsg,                                 IbcReceiveResponse,
+///    IbcChannelCloseMsg,                                   IbcBasicResponse
+///    IbcPacketReceiveMsg,
+///    IbcPacketAckMsg,
+///    IbcPacketTimeoutMsg,
+///    IbcSourceCallbackMsg,
+///    IbcDestinationCallbackMsg
 /// ```
 /// Generic type **C** defines a custom message that is specific for the **whole blockchain**.
 /// Similarly, the generic type **Q** defines a custom query that is also specific
@@ -158,6 +192,14 @@ use closures::*;
 /// [sudo]: Contract::sudo
 /// [reply]: Contract::reply
 /// [migrate]: Contract::migrate
+/// [ibc_channel_open]: Contract::ibc_channel_open
+/// [ibc_channel_connect]: Contract::ibc_channel_connect
+/// [ibc_channel_close]: Contract::ibc_channel_close
+/// [ibc_packet_receive]: Contract::ibc_packet_receive
+/// [ibc_packet_ack]: Contract::ibc_packet_ack
+/// [ibc_packet_timeout]: Contract::ibc_packet_timeout
+/// [ibc_source_callback]: Contract::ibc_source_callback
+/// [ibc_destination_callback]: Contract::ibc_destination_callback
 #[rustfmt::skip]
 pub struct ContractWrapper<
     T1,
@@ -193,9 +235,9 @@ pub struct ContractWrapper<
     E4: Display + Debug + Send + Sync,  // Type of error returned from `sudo` entry-point.
     E5: Display + Debug + Send + Sync,  // Type of error returned from `reply` entry-point.
     E6: Display + Debug + Send + Sync,  // Type of error returned from `migrate` entry-point.
-    E7: Display + Debug + Send + Sync,  // Type of error returned from `channel_open` entry-point.
-    E8: Display + Debug + Send + Sync,  // Type of error returned from `channel_connect` entry-point.
-    E9: Display + Debug + Send + Sync,  // Type of error returned from `channel_close` entry-point.
+    E7: Display + Debug + Send + Sync,  // Type of error returned from `ibc_channel_open` entry-point.
+    E8: Display + Debug + Send + Sync,  // Type of error returned from `ibc_channel_connect` entry-point.
+    E9: Display + Debug + Send + Sync,  // Type of error returned from `ibc_channel_close` entry-point.
     E10: Display + Debug + Send + Sync, // Type of error returned from `ibc_packet_receive` entry-point.
     E11: Display + Debug + Send + Sync, // Type of error returned from `ibc_packet_ack` entry-point.
     E12: Display + Debug + Send + Sync, // Type of error returned from `ibc_packet_timeout` entry-point.
@@ -210,9 +252,9 @@ pub struct ContractWrapper<
     sudo_fn: Option<PermissionedClosure<T4, C, E4, Q>>,
     reply_fn: Option<ReplyClosure<C, E5, Q>>,
     migrate_fn: Option<PermissionedClosure<T6, C, E6, Q>>,
-    channel_open_fn: Option<IbcClosure<IbcChannelOpenMsg, IbcChannelOpenResponse, E7, Q>>,
-    channel_connect_fn: Option<IbcClosure<IbcChannelConnectMsg, IbcBasicResponse<C>, E8, Q>>,
-    channel_close_fn: Option<IbcClosure<IbcChannelCloseMsg, IbcBasicResponse<C>, E9, Q>>,
+    ibc_channel_open_fn: Option<IbcClosure<IbcChannelOpenMsg, IbcChannelOpenResponse, E7, Q>>,
+    ibc_channel_connect_fn: Option<IbcClosure<IbcChannelConnectMsg, IbcBasicResponse<C>, E8, Q>>,
+    ibc_channel_close_fn: Option<IbcClosure<IbcChannelCloseMsg, IbcBasicResponse<C>, E9, Q>>,
     ibc_packet_receive_fn: Option<IbcClosure<IbcPacketReceiveMsg, IbcReceiveResponse<C>, E10, Q>>,
     ibc_packet_ack_fn: Option<IbcClosure<IbcPacketAckMsg, IbcBasicResponse<C>, E11, Q>>,
     ibc_packet_timeout_fn: Option<IbcClosure<IbcPacketTimeoutMsg, IbcBasicResponse<C>, E12, Q>>,
@@ -245,9 +287,9 @@ where
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
-            channel_open_fn: None,
-            channel_connect_fn: None,
-            channel_close_fn: None,
+            ibc_channel_open_fn: None,
+            ibc_channel_connect_fn: None,
+            ibc_channel_close_fn: None,
             ibc_packet_receive_fn: None,
             ibc_packet_ack_fn: None,
             ibc_packet_timeout_fn: None,
@@ -271,9 +313,9 @@ where
             sudo_fn: None,
             reply_fn: None,
             migrate_fn: None,
-            channel_open_fn: None,
-            channel_connect_fn: None,
-            channel_close_fn: None,
+            ibc_channel_open_fn: None,
+            ibc_channel_connect_fn: None,
+            ibc_channel_close_fn: None,
             ibc_packet_receive_fn: None,
             ibc_packet_ack_fn: None,
             ibc_packet_timeout_fn: None,
@@ -319,9 +361,9 @@ where
             sudo_fn: Some(Box::new(sudo_fn)),
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
-            channel_open_fn: self.channel_open_fn,
-            channel_connect_fn: self.channel_connect_fn,
-            channel_close_fn: self.channel_close_fn,
+            ibc_channel_open_fn: self.ibc_channel_open_fn,
+            ibc_channel_connect_fn: self.ibc_channel_connect_fn,
+            ibc_channel_close_fn: self.ibc_channel_close_fn,
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
@@ -347,9 +389,9 @@ where
             sudo_fn: Some(customize_permissioned_fn(sudo_fn)),
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
-            channel_open_fn: self.channel_open_fn,
-            channel_connect_fn: self.channel_connect_fn,
-            channel_close_fn: self.channel_close_fn,
+            ibc_channel_open_fn: self.ibc_channel_open_fn,
+            ibc_channel_connect_fn: self.ibc_channel_connect_fn,
+            ibc_channel_close_fn: self.ibc_channel_close_fn,
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
@@ -374,9 +416,9 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: Some(Box::new(reply_fn)),
             migrate_fn: self.migrate_fn,
-            channel_open_fn: self.channel_open_fn,
-            channel_connect_fn: self.channel_connect_fn,
-            channel_close_fn: self.channel_close_fn,
+            ibc_channel_open_fn: self.ibc_channel_open_fn,
+            ibc_channel_connect_fn: self.ibc_channel_connect_fn,
+            ibc_channel_close_fn: self.ibc_channel_close_fn,
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
@@ -401,9 +443,9 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: Some(customize_permissioned_fn(reply_fn)),
             migrate_fn: self.migrate_fn,
-            channel_open_fn: self.channel_open_fn,
-            channel_connect_fn: self.channel_connect_fn,
-            channel_close_fn: self.channel_close_fn,
+            ibc_channel_open_fn: self.ibc_channel_open_fn,
+            ibc_channel_connect_fn: self.ibc_channel_connect_fn,
+            ibc_channel_close_fn: self.ibc_channel_close_fn,
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
@@ -429,9 +471,9 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: Some(Box::new(migrate_fn)),
-            channel_open_fn: self.channel_open_fn,
-            channel_connect_fn: self.channel_connect_fn,
-            channel_close_fn: self.channel_close_fn,
+            ibc_channel_open_fn: self.ibc_channel_open_fn,
+            ibc_channel_connect_fn: self.ibc_channel_connect_fn,
+            ibc_channel_close_fn: self.ibc_channel_close_fn,
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
@@ -457,9 +499,9 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: Some(customize_permissioned_fn(migrate_fn)),
-            channel_open_fn: self.channel_open_fn,
-            channel_connect_fn: self.channel_connect_fn,
-            channel_close_fn: self.channel_close_fn,
+            ibc_channel_open_fn: self.ibc_channel_open_fn,
+            ibc_channel_connect_fn: self.ibc_channel_connect_fn,
+            ibc_channel_close_fn: self.ibc_channel_close_fn,
             ibc_packet_receive_fn: self.ibc_packet_receive_fn,
             ibc_packet_ack_fn: self.ibc_packet_ack_fn,
             ibc_packet_timeout_fn: self.ibc_packet_timeout_fn,
@@ -526,9 +568,9 @@ where
             sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
             migrate_fn: self.migrate_fn,
-            channel_open_fn: Some(Box::new(channel_open_fn)),
-            channel_connect_fn: Some(Box::new(channel_connect_fn)),
-            channel_close_fn: Some(Box::new(channel_close_fn)),
+            ibc_channel_open_fn: Some(Box::new(channel_open_fn)),
+            ibc_channel_connect_fn: Some(Box::new(channel_connect_fn)),
+            ibc_channel_close_fn: Some(Box::new(channel_close_fn)),
             ibc_packet_receive_fn: Some(Box::new(ibc_packet_receive_fn)),
             ibc_packet_ack_fn: Some(Box::new(ibc_packet_ack_fn)),
             ibc_packet_timeout_fn: Some(Box::new(ibc_packet_timeout_fn)),
@@ -781,7 +823,7 @@ where
         env: Env,
         msg: IbcChannelOpenMsg,
     ) -> AnyResult<IbcChannelOpenResponse> {
-        match &self.channel_open_fn {
+        match &self.ibc_channel_open_fn {
             Some(channel_open) => channel_open(deps, env, msg).map_err(|err: E7| anyhow!(err)),
             None => bail!("ibc_channel_open is not implemented for contract"),
         }
@@ -797,7 +839,7 @@ where
         env: Env,
         msg: IbcChannelConnectMsg,
     ) -> AnyResult<IbcBasicResponse<C>> {
-        match &self.channel_connect_fn {
+        match &self.ibc_channel_connect_fn {
             Some(channel_connect) => {
                 channel_connect(deps, env, msg).map_err(|err: E8| anyhow!(err))
             }
@@ -815,7 +857,7 @@ where
         env: Env,
         msg: IbcChannelCloseMsg,
     ) -> AnyResult<IbcBasicResponse<C>> {
-        match &self.channel_close_fn {
+        match &self.ibc_channel_close_fn {
             Some(channel_close) => channel_close(deps, env, msg).map_err(|err: E9| anyhow!(err)),
             None => bail!("ibc_channel_close is not implemented for contract"),
         }
@@ -840,8 +882,8 @@ where
     /// Calls [ibc_packet_acknowledge] on wrapped [Contract] trait implementor.
     /// Returns an error when the contract does not implement [ibc_packet_acknowledge].
     ///
-    /// [ibc_packet_acknowledge]: Contract::ibc_packet_acknowledge
-    fn ibc_packet_acknowledge(
+    /// [ibc_packet_acknowledge]: Contract::ibc_packet_ack
+    fn ibc_packet_ack(
         &self,
         deps: DepsMut<Q>,
         env: Env,

@@ -522,7 +522,7 @@ where
             router,
             block,
             contract_addr.clone(),
-            |contract, deps, env| contract.ibc_packet_acknowledge(deps, env, request),
+            |contract, deps, env| contract.ibc_packet_ack(deps, env, request),
         )?)?;
 
         self.process_ibc_response(api, contract_addr, storage, router, block, res)
