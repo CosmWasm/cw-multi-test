@@ -5,6 +5,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+mod test_default;
 mod test_with_api;
 mod test_with_bank;
 mod test_with_block;
