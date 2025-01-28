@@ -41,7 +41,7 @@ pub type BasicAppBuilder<ExecC, QueryC> = AppBuilder<
     StargateFailing,
 >;
 
-/// Chain builder.
+/// The chain builder.
 ///
 /// Utility structure for building a chain in stages.
 /// When particular properties are not explicitly set, then default values are used.
@@ -104,7 +104,18 @@ impl
         StargateFailing,
     >
 {
-    /// Creates builder with default components working with empty exec and query messages.
+    /// Creates a builder with default components working with empty exec and query messages.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use cw_multi_test::{no_init, AppBuilder};
+    ///
+    /// let app = AppBuilder::new().build(no_init);
+    ///
+    /// let sender_addr = app.api().addr_make("sender");
+    /// assert!(sender_addr.as_str().starts_with("cosmwasm1"));
+    /// ```
     pub fn new() -> Self {
         AppBuilder {
             api: MockApi::default(),
