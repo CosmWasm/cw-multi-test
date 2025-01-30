@@ -31,6 +31,8 @@ mod constants {
 
 use constants::*;
 
+// This test case was taken from:
+// https://github.com/CosmWasm/cosmwasm/blob/80473e14e92f63855659add0b61492f59f8b7d9c/packages/std/src/testing/mock.rs#L1385-L1407
 fn assert_bls12_381_aggregate_g1_works(api: &dyn Api) {
     #[derive(Deserialize)]
     struct EthHeader {
@@ -48,6 +50,8 @@ fn assert_bls12_381_aggregate_g1_works(api: &dyn Api) {
     assert_eq!(expected, actual);
 }
 
+// This test case was taken from:
+// https://github.com/CosmWasm/cosmwasm/blob/80473e14e92f63855659add0b61492f59f8b7d9c/packages/std/src/testing/mock.rs#L1409-L1426
 fn assert_bls12_381_aggregate_g2_works(api: &dyn Api) {
     let points: Vec<u8> = [
         hex!("b6ed936746e01f8ecf281f020953fbf1f01debd5657c4a383940b020b26507f6076334f91e2366c96e9ab279fb5158090352ea1c5b0c9274504f4f0e7053af24802e51e4568d164fe986834f41e55c8e850ce1f98458c0cfc9ab380b55285a55"),
@@ -62,6 +66,8 @@ fn assert_bls12_381_aggregate_g2_works(api: &dyn Api) {
     assert_eq!(expected, actual);
 }
 
+// This test case was taken from:
+// https://github.com/CosmWasm/cosmwasm/blob/80473e14e92f63855659add0b61492f59f8b7d9c/packages/std/src/testing/mock.rs#L1428-L1451
 fn assert_bls12_381_pairing_equality_works(api: &dyn Api) {
     let dst = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
     let ps = hex!("a491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79ab301803f8b5ac4a1133581fc676dfedc60d891dd5fa99028805e5ea5b08d3491af75d0707adab3b70c6a6a580217bf81b53d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f");
@@ -82,6 +88,8 @@ fn assert_bls12_381_pairing_equality_works(api: &dyn Api) {
         .unwrap());
 }
 
+// This test case was taken from:
+// https://github.com/CosmWasm/cosmwasm/blob/80473e14e92f63855659add0b61492f59f8b7d9c/packages/std/src/testing/mock.rs#L1453-L1469
 fn assert_bls12_381_hash_to_g1_works(api: &dyn Api) {
     let msg = b"abc";
     let dst = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
@@ -93,6 +101,8 @@ fn assert_bls12_381_hash_to_g1_works(api: &dyn Api) {
     assert_eq!(hashed_point, serialized_expected_compressed);
 }
 
+// This test case was taken from:
+// https://github.com/CosmWasm/cosmwasm/blob/80473e14e92f63855659add0b61492f59f8b7d9c/packages/std/src/testing/mock.rs#L1471-L1485
 fn assert_bls12_381_hash_to_g2_works(api: &dyn Api) {
     let msg = b"abc";
     let dst = b"QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_";
