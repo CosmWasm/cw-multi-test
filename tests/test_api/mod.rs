@@ -1,6 +1,6 @@
 use base64::engine::general_purpose::STANDARD as Base64;
 use base64::Engine;
-use cosmwasm_std::Api;
+use cosmwasm_std::{Api, HashFunction, BLS12_381_G1_GENERATOR};
 use hex_literal::hex;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -62,16 +62,46 @@ fn assert_bls12_381_aggregate_g2_works(api: &dyn Api) {
     assert_eq!(expected, actual);
 }
 
-fn assert_bls12_381_pairing_equality_works(_api: &dyn Api) {
-    //TODO Add proper assertion.
+fn assert_bls12_381_pairing_equality_works(api: &dyn Api) {
+    let dst = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
+    let ps = hex!("a491d1b0ecd9bb917989f0e74f0dea0422eac4a873e5e2644f368dffb9a6e20fd6e10c1b77654d067c0618f6e5a7f79ab301803f8b5ac4a1133581fc676dfedc60d891dd5fa99028805e5ea5b08d3491af75d0707adab3b70c6a6a580217bf81b53d21a4cfd562c469cc81514d4ce5a6b577d8403d32a394dc265dd190b47fa9f829fdd7963afdf972e5e77854051f6f");
+    let qs: Vec<u8> = [
+        hex!("0000000000000000000000000000000000000000000000000000000000000000"),
+        hex!("5656565656565656565656565656565656565656565656565656565656565656"),
+        hex!("abababababababababababababababababababababababababababababababab"),
+    ]
+    .into_iter()
+    .flat_map(|msg| {
+        api.bls12_381_hash_to_g2(HashFunction::Sha256, &msg, dst)
+            .unwrap()
+    })
+    .collect();
+    let s = hex!("9104e74b9dfd3ad502f25d6a5ef57db0ed7d9a0e00f3500586d8ce44231212542fcfaf87840539b398bf07626705cf1105d246ca1062c6c2e1a53029a0f790ed5e3cb1f52f8234dc5144c45fc847c0cd37a92d68e7c5ba7c648a8a339f171244");
+    assert!(api
+        .bls12_381_pairing_equality(&ps, &qs, &BLS12_381_G1_GENERATOR, &s)
+        .unwrap());
 }
 
-fn assert_bls12_381_hash_to_g1_works(_api: &dyn Api) {
-    //TODO Add proper assertion.
+fn assert_bls12_381_hash_to_g1_works(api: &dyn Api) {
+    let msg = b"abc";
+    let dst = b"QUUX-V01-CS02-with-BLS12381G1_XMD:SHA-256_SSWU_RO_";
+    let hashed_point = api
+        .bls12_381_hash_to_g1(HashFunction::Sha256, msg, dst)
+        .unwrap();
+    let mut serialized_expected_compressed = hex!("03567bc5ef9c690c2ab2ecdf6a96ef1c139cc0b2f284dca0a9a7943388a49a3aee664ba5379a7655d3c68900be2f6903");
+    serialized_expected_compressed[0] |= 0b1000_0000;
+    assert_eq!(hashed_point, serialized_expected_compressed);
 }
 
-fn assert_bls12_381_hash_to_g2_works(_api: &dyn Api) {
-    //TODO Add proper assertion.
+fn assert_bls12_381_hash_to_g2_works(api: &dyn Api) {
+    let msg = b"abc";
+    let dst = b"QUUX-V01-CS02-with-BLS12381G2_XMD:SHA-256_SSWU_RO_";
+    let hashed_point = api
+        .bls12_381_hash_to_g2(HashFunction::Sha256, msg, dst)
+        .unwrap();
+    let mut serialized_expected_compressed = hex!("139cddbccdc5e91b9623efd38c49f81a6f83f175e80b06fc374de9eb4b41dfe4ca3a230ed250fbe3a2acf73a41177fd802c2d18e033b960562aae3cab37a27ce00d80ccd5ba4b7fe0e7a210245129dbec7780ccc7954725f4168aff2787776e6");
+    serialized_expected_compressed[0] |= 0b1000_0000;
+    assert_eq!(hashed_point, serialized_expected_compressed);
 }
 
 fn assert_secp256k1_verify_works(api: &dyn Api) {
