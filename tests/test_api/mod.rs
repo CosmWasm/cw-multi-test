@@ -1,4 +1,8 @@
+use base64::engine::general_purpose::STANDARD as Base64;
+use base64::Engine;
 use cosmwasm_std::Api;
+use hex_literal::hex;
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 mod test_addr;
@@ -8,7 +12,7 @@ mod test_prefixed;
 
 #[rustfmt::skip]
 mod constants {
-    use hex_literal::hex;
+    use super::*;
 
     pub const SECP256K1_MSG: [u8; 128] = hex!("5c868fedb8026979ebd26f1ba07c27eedf4ff6d10443505a96ecaf21ba8c4f0937b3cd23ffdc3dd429d4cd1905fb8dbcceeff1350020e18b58d2ba70887baa3a9b783ad30d3fbf210331cdd7df8d77defa398cdacdfc2e359c7ba4cae46bb74401deb417f8b912a1aa966aeeba9c39c7dd22479ae2b30719dca2f2206c5eb4b7");
     pub const SECP256K1_SIG: [u8; 64] = hex!("207082eb2c3dfa0b454e0906051270ba4074ac93760ba9e7110cd9471475111151eb0dbbc9920e72146fb564f99d039802bf6ef2561446eb126ef364d21ee9c4");
@@ -22,16 +26,40 @@ mod constants {
     pub const ED25519_SIG_2: [u8; 64] = hex!("6291d657deec24024827e69c3abe01a30ce548a284743a445e3680d7db5ac3ac18ff9b538d16f290ae67f760984dc6594a7c15e9716ed28dc027beceea1ec40a");
     pub const ED25519_PUBKEY_1: [u8; 32] = hex!("3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c");
     pub const ED25519_PUBKEY_2: [u8; 32] = hex!("fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025");
+    pub const ETH_BLOCK_HEADER: &[u8] = include_bytes!("./eth-block-header.json");
 }
 
 use constants::*;
 
-fn assert_bls12_381_aggregate_g1_works(_api: &dyn Api) {
-    //TODO Add proper assertion.
+fn assert_bls12_381_aggregate_g1_works(api: &dyn Api) {
+    #[derive(Deserialize)]
+    struct EthHeader {
+        public_keys: Vec<String>,
+        aggregate_pubkey: String,
+    }
+    let header: EthHeader = serde_json::from_slice(ETH_BLOCK_HEADER).unwrap();
+    let expected = Base64.decode(header.aggregate_pubkey).unwrap();
+    let pub_keys: Vec<u8> = header
+        .public_keys
+        .into_iter()
+        .flat_map(|key| Base64.decode(key).unwrap())
+        .collect();
+    let actual = api.bls12_381_aggregate_g1(&pub_keys).unwrap();
+    assert_eq!(expected, actual);
 }
 
-fn assert_bls12_381_aggregate_g2_works(_api: &dyn Api) {
-    //TODO Add proper assertion.
+fn assert_bls12_381_aggregate_g2_works(api: &dyn Api) {
+    let points: Vec<u8> = [
+        hex!("b6ed936746e01f8ecf281f020953fbf1f01debd5657c4a383940b020b26507f6076334f91e2366c96e9ab279fb5158090352ea1c5b0c9274504f4f0e7053af24802e51e4568d164fe986834f41e55c8e850ce1f98458c0cfc9ab380b55285a55"),
+        hex!("b23c46be3a001c63ca711f87a005c200cc550b9429d5f4eb38d74322144f1b63926da3388979e5321012fb1a0526bcd100b5ef5fe72628ce4cd5e904aeaa3279527843fae5ca9ca675f4f51ed8f83bbf7155da9ecc9663100a885d5dc6df96d9"),
+        hex!("948a7cb99f76d616c2c564ce9bf4a519f1bea6b0a624a02276443c245854219fabb8d4ce061d255af5330b078d5380681751aa7053da2c98bae898edc218c75f07e24d8802a17cd1f6833b71e58f5eb5b94208b4d0bb3848cecb075ea21be115"),
+    ]
+        .into_iter()
+        .flatten()
+        .collect();
+    let expected = hex!("9683b3e6701f9a4b706709577963110043af78a5b41991b998475a3d3fd62abf35ce03b33908418efc95a058494a8ae504354b9f626231f6b3f3c849dfdeaf5017c4780e2aee1850ceaf4b4d9ce70971a3d2cfcd97b7e5ecf6759f8da5f76d31");
+    let actual = api.bls12_381_aggregate_g2(&points).unwrap();
+    assert_eq!(expected, actual);
 }
 
 fn assert_bls12_381_pairing_equality_works(_api: &dyn Api) {
