@@ -118,6 +118,31 @@ fn address_make_prefix_too_long() {
 }
 
 #[test]
+fn bls12_381_aggregate_g1_works() {
+    assert_bls12_381_aggregate_g1_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
+fn bls12_381_aggregate_g2_works() {
+    assert_bls12_381_aggregate_g2_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
+fn bls12_381_pairing_equality_works() {
+    assert_bls12_381_pairing_equality_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
+fn bls12_381_hash_to_g1_works() {
+    assert_bls12_381_hash_to_g1_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
+fn bls12_381_hash_to_g2_works() {
+    assert_bls12_381_hash_to_g2_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
 fn secp256k1_verify_works() {
     assert_secp256k1_verify_works(&MockApiBech32::new("juno"));
 }
@@ -125,6 +150,16 @@ fn secp256k1_verify_works() {
 #[test]
 fn secp256k1_recover_pubkey_works() {
     assert_secp256k1_recover_pubkey_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
+fn secp256r1_verify_works() {
+    assert_secp256r1_verify_works(&MockApiBech32::new("juno"));
+}
+
+#[test]
+fn secp256r1_recover_pubkey_works() {
+    assert_secp256r1_recover_pubkey_works(&MockApiBech32::new("juno"));
 }
 
 #[test]
