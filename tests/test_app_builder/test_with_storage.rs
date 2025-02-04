@@ -125,7 +125,6 @@ mod documentation {
         assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
     }
 
-    #[allow(unused_variables)]
     #[test]
     fn initializing_storage_should_work() {
         use cosmwasm_std::testing::MockStorage;
@@ -140,5 +139,24 @@ mod documentation {
         let app = AppBuilder::default().with_storage(storage).build(no_init);
 
         assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+    }
+
+    #[allow(unused_variables)]
+    #[test]
+    fn init_storage_should_work() {
+        use cosmwasm_std::testing::MockStorage;
+        use cosmwasm_std::Storage;
+        use cw_multi_test::AppBuilder;
+
+        let key = b"owner";
+
+        let app = AppBuilder::default()
+            .with_storage(MockStorage::new())
+            .build(|router, api, storage| {
+                let owner_addr = api.addr_make("owner");
+                storage.set(key, owner_addr.as_bytes());
+            });
+
+        assert_eq!(67, app.storage().get(key).unwrap().len());
     }
 }
