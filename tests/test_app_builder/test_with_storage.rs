@@ -101,11 +101,12 @@ mod documentation {
 
         let mut app = AppBuilder::default().build(no_init);
 
-        let key = &[1, 2, 3];
+        let key = b"key";
+        let value = b"value";
 
-        app.storage_mut().set(key, &[10, 20, 30]);
+        app.storage_mut().set(key, value);
 
-        assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
     }
 
     #[test]
@@ -118,11 +119,12 @@ mod documentation {
             .with_storage(MockStorage::new())
             .build(no_init);
 
-        let key = &[1, 2, 3];
+        let key = b"key";
+        let value = b"value";
 
-        app.storage_mut().set(key, &[10, 20, 30]);
+        app.storage_mut().set(key, value);
 
-        assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
     }
 
     #[test]
@@ -131,14 +133,15 @@ mod documentation {
         use cosmwasm_std::Storage;
         use cw_multi_test::{no_init, AppBuilder};
 
-        let key = &[1, 2, 3];
+        let key = b"key";
+        let value = b"value";
 
         let mut storage = MockStorage::new();
-        storage.set(key, &[10, 20, 30]);
+        storage.set(key, value);
 
         let app = AppBuilder::default().with_storage(storage).build(no_init);
 
-        assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
     }
 
     #[allow(unused_variables)]
@@ -148,15 +151,15 @@ mod documentation {
         use cosmwasm_std::Storage;
         use cw_multi_test::AppBuilder;
 
-        let key = b"owner";
+        let key = b"key";
+        let value = b"value";
 
         let app = AppBuilder::default()
             .with_storage(MockStorage::new())
             .build(|router, api, storage| {
-                let owner_addr = api.addr_make("owner");
-                storage.set(key, owner_addr.as_bytes());
+                storage.set(key, value);
             });
 
-        assert_eq!(67, app.storage().get(key).unwrap().len());
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
     }
 }
