@@ -91,3 +91,54 @@ fn building_app_with_custom_storage_should_work() {
     // counter should be 2
     assert_eq!(2, response.value);
 }
+
+mod documentation {
+
+    #[test]
+    fn building_app_with_default_storage_should_work() {
+        use cosmwasm_std::Storage;
+        use cw_multi_test::{no_init, AppBuilder};
+
+        let mut app = AppBuilder::default().build(no_init);
+
+        let key = &[1, 2, 3];
+
+        app.storage_mut().set(key, &[10, 20, 30]);
+
+        assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+    }
+
+    #[test]
+    fn building_app_with_mock_storage_should_work() {
+        use cosmwasm_std::testing::MockStorage;
+        use cosmwasm_std::Storage;
+        use cw_multi_test::{no_init, AppBuilder};
+
+        let mut app = AppBuilder::default()
+            .with_storage(MockStorage::new())
+            .build(no_init);
+
+        let key = &[1, 2, 3];
+
+        app.storage_mut().set(key, &[10, 20, 30]);
+
+        assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+    }
+
+    #[allow(unused_variables)]
+    #[test]
+    fn initializing_storage_should_work() {
+        use cosmwasm_std::testing::MockStorage;
+        use cosmwasm_std::Storage;
+        use cw_multi_test::{no_init, AppBuilder};
+
+        let key = &[1, 2, 3];
+
+        let mut storage = MockStorage::new();
+        storage.set(key, &[10, 20, 30]);
+
+        let app = AppBuilder::default().with_storage(storage).build(no_init);
+
+        assert_eq!(&[10, 20, 30], app.storage().get(key).unwrap().as_slice());
+    }
+}
