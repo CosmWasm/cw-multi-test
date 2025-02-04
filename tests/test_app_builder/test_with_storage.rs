@@ -92,6 +92,7 @@ fn building_app_with_custom_storage_should_work() {
     assert_eq!(2, response.value);
 }
 
+/// Test examples used in user documentation.
 mod documentation {
 
     #[test]
