@@ -6,10 +6,9 @@ use std::collections::BTreeMap;
 use std::iter;
 
 #[derive(Default)]
-struct MyStorage(BTreeMap<Vec<u8>, Vec<u8>>);
+struct CustomStorage(BTreeMap<Vec<u8>, Vec<u8>>);
 
-// Minimal implementation of custom storage.
-impl Storage for MyStorage {
+impl Storage for CustomStorage {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.0.get::<Vec<u8>>(&key.into()).cloned()
     }
@@ -42,7 +41,7 @@ fn building_app_with_custom_storage_should_work() {
 
     // build the application with custom storage
     let mut app = AppBuilder::default()
-        .with_storage(MyStorage::default())
+        .with_storage(CustomStorage::default())
         .build(no_init);
 
     // prepare user addresses
