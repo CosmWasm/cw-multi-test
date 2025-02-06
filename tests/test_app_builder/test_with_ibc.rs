@@ -1,8 +1,11 @@
 use crate::test_app_builder::MyKeeper;
-use cosmwasm_std::{Empty, IbcMsg, IbcQuery, QueryRequest};
-use cw_multi_test::{no_init, AppBuilder, Executor, Ibc};
+use anyhow::Result as AnyResult;
+use cosmwasm_std::{IbcMsg, IbcQuery, QueryRequest};
+use cw_multi_test::ibc::relayer::{create_channel, create_connection};
+use cw_multi_test::ibc::{types::MockIbcQuery, IbcPacketRelayingMsg};
+use cw_multi_test::{no_init, AppBuilder, BasicApp, Executor, Ibc};
 
-type MyIbcKeeper = MyKeeper<IbcMsg, IbcQuery, Empty>;
+type MyIbcKeeper = MyKeeper<IbcMsg, MockIbcQuery, IbcPacketRelayingMsg>;
 
 impl Ibc for MyIbcKeeper {}
 
@@ -47,4 +50,39 @@ fn building_app_with_custom_ibc_should_work() {
             .unwrap_err()
             .to_string()
     );
+}
+
+#[test]
+fn create_channel_should_work_with_basic_app() -> AnyResult<()> {
+    let mut app1 = BasicApp::new(no_init);
+    let mut app2 = BasicApp::new(no_init);
+
+    let (src_connection_id, _dst_connection) = create_connection(&mut app1, &mut app2)?;
+
+    create_channel(
+        &mut app1,
+        &mut app2,
+        src_connection_id,
+        "transfer".to_string(),
+        "transfer".to_string(),
+        "ics20-1".to_string(),
+        cosmwasm_std::IbcOrder::Unordered,
+    )?;
+
+    Ok(())
+}
+
+#[test]
+fn create_channel_should_work_with_failing_keeper() -> AnyResult<()> {
+    // build custom ibc keeper (no sudo handling for ibc)
+    let ibc_keeper1 = MyIbcKeeper::new(EXECUTE_MSG, QUERY_MSG, "");
+    let ibc_keeper2 = MyIbcKeeper::new(EXECUTE_MSG, QUERY_MSG, "");
+
+    // build the application with custom ibc keeper
+    let mut app1 = AppBuilder::default().with_ibc(ibc_keeper1).build(no_init);
+    let mut app2 = AppBuilder::default().with_ibc(ibc_keeper2).build(no_init);
+
+    create_connection(&mut app1, &mut app2).unwrap_err();
+
+    Ok(())
 }
