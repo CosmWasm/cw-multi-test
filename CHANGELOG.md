@@ -19,7 +19,6 @@
 - Updated table in documentation [\#237](https://github.com/CosmWasm/cw-multi-test/pull/237) ([DariuszDepta](https://github.com/DariuszDepta))
 - Additional `AppBuilder` tests [\#238](https://github.com/CosmWasm/cw-multi-test/pull/238) ([DariuszDepta](https://github.com/DariuszDepta))
 - Added `bls_*` to `Api` implementors [\#239](https://github.com/CosmWasm/cw-multi-test/pull/239) ([DariuszDepta](https://github.com/DariuszDepta))
-- Added `bls_*` to `Api` implementors [\#239](https://github.com/CosmWasm/cw-multi-test/pull/239) ([DariuszDepta](https://github.com/DariuszDepta))
 - Additional tests for `AppBuilder::with_api` [\#240](https://github.com/CosmWasm/cw-multi-test/pull/240) ([DariuszDepta](https://github.com/DariuszDepta))
 - Add additional storage tests [\#241](https://github.com/CosmWasm/cw-multi-test/pull/241) ([DariuszDepta](https://github.com/DariuszDepta))
 - Made staking structures public for Sylvia [\#243](https://github.com/CosmWasm/cw-multi-test/pull/243) ([DariuszDepta](https://github.com/DariuszDepta))
