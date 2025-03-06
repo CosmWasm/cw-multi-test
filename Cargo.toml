@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "2.3.1"
+version = "2.3.2"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <depta@engos.de>"
@@ -30,8 +30,8 @@ cosmwasm_2_2 = ["cosmwasm_2_1", "cosmwasm-std/cosmwasm_2_2"]
 [dependencies]
 anyhow = "1.0.97"
 bech32 = "0.11.0"
-cosmwasm-schema = "2.2.1"
-cosmwasm-std = "2.2.1"
+cosmwasm-schema = "2.2.2"
+cosmwasm-std = "2.2.2"
 cw-storage-plus = "2.0.0"
 cw-utils = "2.0.0"
 itertools = "0.14.0"
