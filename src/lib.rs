@@ -37,7 +37,7 @@
 //! The other key entry point to [App] is the [Querier](cosmwasm_std::Querier) interface that it implements.
 //! In particular, you can use [wrap](App::wrap) to get a [QuerierWrapper](cosmwasm_std::QuerierWrapper),
 //! which provides all kinds of interesting APIs to query the blockchain, like
-//! [query_all_balances](cosmwasm_std::QuerierWrapper::query_all_balances) and
+//! [query_balance](cosmwasm_std::QuerierWrapper::query_balances) and
 //! [query_wasm_smart](cosmwasm_std::QuerierWrapper::query_wasm_smart).
 //! Putting this all together, you have one [Storage](cosmwasm_std::Storage) wrapped into an application,
 //! where you can execute contracts and bank, query them easily, and update the current
@@ -196,12 +196,11 @@ pub use crate::bank::{Bank, BankKeeper, BankSudo};
 pub use crate::checksums::ChecksumGenerator;
 pub use crate::contracts::{Contract, ContractWrapper};
 pub use crate::executor::{AppResponse, Executor};
+pub use crate::featured::staking::{
+    Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
+};
 pub use crate::gov::{Gov, GovAcceptingModule, GovFailingModule};
 pub use crate::ibc::{Ibc, IbcAcceptingModule, IbcFailingModule};
 pub use crate::module::{AcceptingModule, FailingModule, Module};
-#[cfg(feature = "staking")]
-pub use crate::staking::{
-    Distribution, DistributionKeeper, StakeKeeper, Staking, StakingInfo, StakingSudo,
-};
 pub use crate::stargate::{Stargate, StargateAccepting, StargateFailing};
 pub use crate::wasm::{ContractData, Wasm, WasmKeeper, WasmSudo};

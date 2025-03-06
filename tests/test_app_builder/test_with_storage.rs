@@ -6,10 +6,9 @@ use std::collections::BTreeMap;
 use std::iter;
 
 #[derive(Default)]
-struct MyStorage(BTreeMap<Vec<u8>, Vec<u8>>);
+struct CustomStorage(BTreeMap<Vec<u8>, Vec<u8>>);
 
-// Minimal implementation of custom storage.
-impl Storage for MyStorage {
+impl Storage for CustomStorage {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.0.get::<Vec<u8>>(&key.into()).cloned()
     }
@@ -42,7 +41,7 @@ fn building_app_with_custom_storage_should_work() {
 
     // build the application with custom storage
     let mut app = AppBuilder::default()
-        .with_storage(MyStorage::default())
+        .with_storage(CustomStorage::default())
         .build(no_init);
 
     // prepare user addresses
@@ -90,4 +89,77 @@ fn building_app_with_custom_storage_should_work() {
 
     // counter should be 2
     assert_eq!(2, response.value);
+}
+
+/// Test examples used in user documentation.
+mod documentation {
+
+    #[test]
+    fn building_app_with_default_storage_should_work() {
+        use cosmwasm_std::Storage;
+        use cw_multi_test::{no_init, AppBuilder};
+
+        let mut app = AppBuilder::default().build(no_init);
+
+        let key = b"key";
+        let value = b"value";
+
+        app.storage_mut().set(key, value);
+
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
+    }
+
+    #[test]
+    fn building_app_with_mock_storage_should_work() {
+        use cosmwasm_std::testing::MockStorage;
+        use cosmwasm_std::Storage;
+        use cw_multi_test::{no_init, AppBuilder};
+
+        let mut app = AppBuilder::default()
+            .with_storage(MockStorage::new())
+            .build(no_init);
+
+        let key = b"key";
+        let value = b"value";
+
+        app.storage_mut().set(key, value);
+
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
+    }
+
+    #[test]
+    fn initializing_storage_should_work() {
+        use cosmwasm_std::testing::MockStorage;
+        use cosmwasm_std::Storage;
+        use cw_multi_test::{no_init, AppBuilder};
+
+        let key = b"key";
+        let value = b"value";
+
+        let mut storage = MockStorage::new();
+        storage.set(key, value);
+
+        let app = AppBuilder::default().with_storage(storage).build(no_init);
+
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
+    }
+
+    #[allow(unused_variables)]
+    #[test]
+    fn init_storage_should_work() {
+        use cosmwasm_std::testing::MockStorage;
+        use cosmwasm_std::Storage;
+        use cw_multi_test::AppBuilder;
+
+        let key = b"key";
+        let value = b"value";
+
+        let app = AppBuilder::default()
+            .with_storage(MockStorage::new())
+            .build(|router, api, storage| {
+                storage.set(key, value);
+            });
+
+        assert_eq!(value, app.storage().get(key).unwrap().as_slice());
+    }
 }
