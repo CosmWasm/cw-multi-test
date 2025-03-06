@@ -1,5 +1,29 @@
 # Changelog
 
+## [v2.3.2](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.2) (2025-03-06)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.1...v2.3.2)
+
+**Key highlights:**
+
+- Enabled switching `staking` feature off in Sylvia (see [\#242](https://github.com/CosmWasm/cw-multi-test/issues/242) for details).
+
+**Closed issues:**
+
+- Make staking module public [\#242](https://github.com/CosmWasm/cw-multi-test/issues/242)
+
+**Merged pull requests:**
+
+- Added additional test for governance module [\#235](https://github.com/CosmWasm/cw-multi-test/pull/235) ([DariuszDepta](https://github.com/DariuszDepta))
+- Improved source code documentation [\#236](https://github.com/CosmWasm/cw-multi-test/pull/236) ([DariuszDepta](https://github.com/DariuszDepta))
+- Updated table in documentation [\#237](https://github.com/CosmWasm/cw-multi-test/pull/237) ([DariuszDepta](https://github.com/DariuszDepta))
+- Additional `AppBuilder` tests [\#238](https://github.com/CosmWasm/cw-multi-test/pull/238) ([DariuszDepta](https://github.com/DariuszDepta))
+- Added `bls_*` to `Api` implementors [\#239](https://github.com/CosmWasm/cw-multi-test/pull/239) ([DariuszDepta](https://github.com/DariuszDepta))
+- Additional tests for `AppBuilder::with_api` [\#240](https://github.com/CosmWasm/cw-multi-test/pull/240) ([DariuszDepta](https://github.com/DariuszDepta))
+- Add additional storage tests [\#241](https://github.com/CosmWasm/cw-multi-test/pull/241) ([DariuszDepta](https://github.com/DariuszDepta))
+- Made staking structures public for Sylvia [\#243](https://github.com/CosmWasm/cw-multi-test/pull/243) ([DariuszDepta](https://github.com/DariuszDepta))
+
+
 ## [v2.3.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.1) (2025-01-23)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.0...v2.3.1)
