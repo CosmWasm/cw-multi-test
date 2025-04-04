@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "2.3.2"
+version = "2.3.3"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <depta@engos.de>"
