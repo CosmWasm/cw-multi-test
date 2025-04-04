@@ -30,7 +30,7 @@ workflows:
 jobs:
   build_and_test:
     docker:
-      - image: rust:1.78
+      - image: rust:1.80
     working_directory: ~/project
     steps:
       - checkout
@@ -42,8 +42,8 @@ jobs:
           command: cargo update
       - restore_cache:
           keys:
-            - cargocache-v2-multi-test:1.78-{{ checksum "Cargo.lock" }}
-            - cargocache-v2-multi-test:1.78-
+            - cargocache-v2-multi-test:1.80-{{ checksum "Cargo.lock" }}
+            - cargocache-v2-multi-test:1.80-
       - run:
           name: Build library for native target
           command: cargo build --locked
@@ -54,7 +54,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-v2-multi-test:1.78-{{ checksum "Cargo.lock" }}
+          key: cargocache-v2-multi-test:1.80-{{ checksum "Cargo.lock" }}
 
   build_minimal:
     docker:
@@ -74,7 +74,7 @@ jobs:
           command: cargo update -p ahash && cargo update -p num-bigint
       - restore_cache:
           keys:
-            - cargocache-v2-multi-test:1.78-minimal-{{ checksum "Cargo.toml" }}
+            - cargocache-v2-multi-test:1.80-minimal-{{ checksum "Cargo.toml" }}
       - run:
           name: Build library for native target
           command: cargo build -Zminimal-versions --all-features
@@ -85,11 +85,11 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-v2-multi-test:1.78-minimal-{{ checksum "Cargo.toml" }}
+          key: cargocache-v2-multi-test:1.80-minimal-{{ checksum "Cargo.toml" }}
 
   build_maximal:
     docker:
-      - image: rust:1.78
+      - image: rust:1.80
     working_directory: ~/project
     steps:
       - checkout
@@ -101,7 +101,7 @@ jobs:
           command: cargo update
       - restore_cache:
           keys:
-            - cargocache-v2-multi-test:1.78-{{ checksum "Cargo.lock" }}
+            - cargocache-v2-multi-test:1.80-{{ checksum "Cargo.lock" }}
       - run:
           name: Build library for native target
           command: cargo build --locked --all-features
@@ -112,11 +112,11 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-v2-multi-test:1.78-{{ checksum "Cargo.lock" }}
+          key: cargocache-v2-multi-test:1.80-{{ checksum "Cargo.lock" }}
 
   lint:
     docker:
-      - image: rust:1.78
+      - image: rust:1.80
     steps:
       - checkout
       - run:
@@ -127,8 +127,8 @@ jobs:
           command: cargo update
       - restore_cache:
           keys:
-            - cargocache-v2-lint-rust:1.78-{{ checksum "Cargo.lock" }}
-            - cargocache-v2-lint-rust:1.78-
+            - cargocache-v2-lint-rust:1.80-{{ checksum "Cargo.lock" }}
+            - cargocache-v2-lint-rust:1.80-
       - run:
           name: Add rustfmt component
           command: rustup component add rustfmt
@@ -147,12 +147,12 @@ jobs:
             - target/debug/.fingerprint
             - target/debug/build
             - target/debug/deps
-          key: cargocache-v2-lint-rust:1.78-{{ checksum "Cargo.lock" }}
+          key: cargocache-v2-lint-rust:1.80-{{ checksum "Cargo.lock" }}
 
   coverage:
     # https://circleci.com/developer/images?imageType=machine
     machine:
-      image: ubuntu-2404:2024.05.1
+      image: ubuntu-2404:2024.11.1
     steps:
       - checkout
       - run:
