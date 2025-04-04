@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.3.3](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.3) (2025-04-04)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.2...v2.3.3)
+
+**Closed issues:**
+
+- Remove `once_cell` dependency [\#246](https://github.com/CosmWasm/cw-multi-test/issues/246)
+
+**Merged pull requests:**
+
+- Removed `once_cell` from dependencies [\#245](https://github.com/CosmWasm/cw-multi-test/pull/245) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.3.2](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.2) (2025-03-06)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.1...v2.3.2)
@@ -22,7 +34,6 @@
 - Additional tests for `AppBuilder::with_api` [\#240](https://github.com/CosmWasm/cw-multi-test/pull/240) ([DariuszDepta](https://github.com/DariuszDepta))
 - Add additional storage tests [\#241](https://github.com/CosmWasm/cw-multi-test/pull/241) ([DariuszDepta](https://github.com/DariuszDepta))
 - Made staking structures public for Sylvia [\#243](https://github.com/CosmWasm/cw-multi-test/pull/243) ([DariuszDepta](https://github.com/DariuszDepta))
-
 
 ## [v2.3.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.1) (2025-01-23)
 

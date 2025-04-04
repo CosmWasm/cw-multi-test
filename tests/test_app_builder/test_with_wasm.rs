@@ -8,7 +8,7 @@ use cw_multi_test::{
     no_init, AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm,
     WasmKeeper, WasmSudo,
 };
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 const EXECUTE_MSG: &str = "wasm execute called";
 const QUERY_MSG: &str = "wasm query called";
@@ -18,7 +18,7 @@ const CONTRACT_DATA_MSG: &str = "wasm contract data called";
 
 const CODE_ID: u64 = 154;
 
-static WASM_RAW: Lazy<Vec<Record>> = Lazy::new(|| vec![(vec![154u8], vec![155u8])]);
+static WASM_RAW: LazyLock<Vec<Record>> = LazyLock::new(|| vec![(vec![154u8], vec![155u8])]);
 
 // This is on purpose derived from module, to check if there are no compilation errors
 // when custom wasm keeper implements also Module trait (although it is not needed).
