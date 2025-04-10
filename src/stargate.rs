@@ -1,5 +1,7 @@
 //! # Handler for `CosmosMsg::Stargate`, `CosmosMsg::Any`, `QueryRequest::Stargate` and `QueryRequest::Grpc` messages
 
+use std::fmt::Debug;
+use std::marker::PhantomData;
 use crate::error::AnyResult;
 use crate::{AppResponse, CosmosRouter};
 use anyhow::bail;
@@ -12,6 +14,11 @@ use serde::de::DeserializeOwned;
 /// Interface of handlers for processing `Stargate`/`Any` message variants
 /// and `Stargate`/`Grpc` queries.
 pub trait Stargate {
+    /// Type of messages processed by the stargate instance.
+    type ExecT;
+    /// Type of queries processed by the stargate instance.
+    type QueryT;
+
     /// Processes `CosmosMsg::Stargate` message variant.
     fn execute_stargate<ExecC, QueryC>(
         &self,
@@ -79,14 +86,42 @@ pub trait Stargate {
 }
 
 /// Always failing handler for `Stargate`/`Any` message variants and `Stargate`/`Grpc` queries.
-pub struct StargateFailing;
+pub struct StargateFailing<ExecT = Empty,QueryT = Empty>(PhantomData<(ExecT, QueryT)>);
 
-impl Stargate for StargateFailing {}
+impl<ExecT, QueryT> StargateFailing<ExecT, QueryT> {
+    /// Creates an instance of a failing stargate.
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<ExecT, QueryT> Stargate for StargateFailing<ExecT,QueryT>
+where
+    ExecT: Debug,
+    QueryT: Debug
+{
+    type ExecT = ExecT;
+    type QueryT = QueryT;
+}
 
 /// Always accepting handler for `Stargate`/`Any` message variants and `Stargate`/`Grpc` queries.
-pub struct StargateAccepting;
+pub struct StargateAccepting<ExecT,QueryT>(PhantomData<(ExecT, QueryT)>);
 
-impl Stargate for StargateAccepting {
+impl<ExecT, QueryT> StargateAccepting<ExecT, QueryT> {
+    /// Creates an instance of an accepting stargate.
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<ExecT, QueryT> Stargate for StargateAccepting<ExecT, QueryT>
+where
+    ExecT: Debug,
+    QueryT: Debug
+{
+    type ExecT = ExecT;
+    type QueryT = QueryT;
+
     fn execute_stargate<ExecC, QueryC>(
         &self,
         _api: &dyn Api,

@@ -1387,7 +1387,7 @@ mod test {
             distribution: DistributionKeeper::new(),
             ibc: IbcFailingModule::new(),
             gov: GovFailingModule::new(),
-            stargate: StargateFailing,
+            stargate: StargateFailing::new(),
         }
     }
 
