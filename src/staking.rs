@@ -6,8 +6,9 @@ use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
-    Delegation, DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier,
-    StakingMsg, StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    Delegation, DelegationResponse, DistributionMsg, DistributionQuery, Empty, Event,
+    FullDelegation, Querier, StakingMsg, StakingQuery, Storage, Timestamp, Uint128, Validator,
+    ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -147,7 +148,10 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
 }
 
 /// A trait defining a behavior of the distribution keeper.
-pub trait Distribution: Module<ExecT = DistributionMsg, QueryT = Empty, SudoT = Empty> {}
+pub trait Distribution:
+    Module<ExecT = DistributionMsg, QueryT = DistributionQuery, SudoT = Empty>
+{
+}
 
 /// A structure representing a default stake keeper.
 pub struct StakeKeeper {
@@ -945,7 +949,7 @@ impl Distribution for DistributionKeeper {}
 
 impl Module for DistributionKeeper {
     type ExecT = DistributionMsg;
-    type QueryT = Empty;
+    type QueryT = DistributionQuery;
     type SudoT = Empty;
 
     fn execute<ExecC: CustomMsg, QueryC: CustomQuery>(
@@ -1013,9 +1017,18 @@ impl Module for DistributionKeeper {
         _storage: &dyn Storage,
         _querier: &dyn Querier,
         _block: &BlockInfo,
-        _request: Empty,
+        request: DistributionQuery,
     ) -> AnyResult<Binary> {
-        bail!("Something went wrong - Distribution doesn't have query messages")
+        match request {
+            #[cfg(feature = "cosmwasm_1_4")]
+            DistributionQuery::DelegatorValidators { .. } => bail!("not yet"),
+            DistributionQuery::DelegatorWithdrawAddress { .. } => bail!("not yet"),
+            #[cfg(feature = "cosmwasm_1_4")]
+            DistributionQuery::DelegationRewards { .. } => bail!("not yet"),
+            #[cfg(feature = "cosmwasm_1_4")]
+            DistributionQuery::DelegationTotalRewards { .. } => bail!("not yet"),
+            other => bail!("Unsupported distribution query: {:?}", other),
+        }
     }
 
     fn sudo<ExecC, QueryC>(
