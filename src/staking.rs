@@ -9,8 +9,8 @@ use cosmwasm_std::{
     Decimal, Decimal256, Delegation, DelegationResponse, DelegationRewardsResponse,
     DelegationTotalRewardsResponse, DelegatorReward, DelegatorValidatorsResponse,
     DelegatorWithdrawAddressResponse, DistributionMsg, DistributionQuery, Empty, Event,
-    FullDelegation, Order, Querier, StakingMsg, StakingQuery, Storage, Timestamp,
-    Uint128, Validator, ValidatorResponse,
+    FullDelegation, Order, Querier, StakingMsg, StakingQuery, Storage, Timestamp, Uint128,
+    Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -952,7 +952,7 @@ impl DistributionKeeper {
         delegator: &Addr,
     ) -> AnyResult<Vec<String>> {
         let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
-        
+
         Ok(STAKES
             .prefix(&delegator)
             .keys(&staking_storage, None, None, Order::Ascending)
