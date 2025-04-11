@@ -1,8 +1,8 @@
 use crate::test_app_builder::MyKeeper;
-use cosmwasm_std::{DistributionMsg, Empty};
+use cosmwasm_std::{DistributionMsg, DistributionQuery, Empty};
 use cw_multi_test::{no_init, AppBuilder, Distribution, Executor};
 
-type MyDistributionKeeper = MyKeeper<DistributionMsg, Empty, Empty>;
+type MyDistributionKeeper = MyKeeper<DistributionMsg, DistributionQuery, Empty>;
 
 impl Distribution for MyDistributionKeeper {}
 
