@@ -8,7 +8,6 @@ use cw_multi_test::{
     no_init, AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm,
     WasmKeeper, WasmSudo,
 };
-use std::sync::LazyLock;
 
 const EXECUTE_MSG: &str = "wasm execute called";
 const QUERY_MSG: &str = "wasm query called";
@@ -18,7 +17,12 @@ const CONTRACT_DATA_MSG: &str = "wasm contract data called";
 
 const CODE_ID: u64 = 154;
 
-static WASM_RAW: LazyLock<Vec<Record>> = LazyLock::new(|| vec![(vec![154u8], vec![155u8])]);
+// Instead of using const or lazy lock.
+macro_rules! wasm_raw {
+    () => {
+        vec![(vec![154u8], vec![155u8])]
+    };
+}
 
 // This is on purpose derived from module, to check if there are no compilation errors
 // when custom wasm keeper implements also Module trait (although it is not needed).
@@ -81,7 +85,7 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
     }
 
     fn dump_wasm_raw(&self, _storage: &dyn Storage, _address: &Addr) -> Vec<Record> {
-        WASM_RAW.clone()
+        wasm_raw!()
     }
 }
 
@@ -113,7 +117,7 @@ fn building_app_with_custom_wasm_should_work() {
     );
 
     // calling dump_wasm_raw should return value defined in custom keeper
-    assert_eq!(*WASM_RAW, app.dump_wasm_raw(&contract_addr));
+    assert_eq!(wasm_raw!(), app.dump_wasm_raw(&contract_addr));
 
     // executing wasm execute should return an error defined in custom keeper
     assert_eq!(
