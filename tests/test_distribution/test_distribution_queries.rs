@@ -33,7 +33,26 @@ fn querying_withdraw_address_should_work() {
     assert_eq!(
         withdraw_address.as_str(),
         app.wrap()
-            .query_delegator_withdraw_address(delegator_addr)
+            .query_delegator_withdraw_address(delegator_addr.clone())
+            .unwrap()
+            .as_str()
+    );
+
+    // Change withdraw address to delegator address (remove withdraw address).
+    app.execute(
+        delegator_addr.clone(),
+        DistributionMsg::SetWithdrawAddress {
+            address: delegator_addr.clone().to_string(),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // The queried address should be equal to the delegator address.
+    assert_eq!(
+        delegator_addr.as_str(),
+        app.wrap()
+            .query_delegator_withdraw_address(delegator_addr.clone())
             .unwrap()
             .as_str()
     );
