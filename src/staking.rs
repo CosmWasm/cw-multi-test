@@ -6,9 +6,9 @@ use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
-    Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
-    DistributionQuery, Empty, Event, FullDelegation, Querier, StakingMsg, StakingQuery, Storage,
-    Timestamp, Uint128, Validator, ValidatorResponse,
+    Delegation, DelegationResponse, DelegatorValidatorsResponse, DelegatorWithdrawAddressResponse,
+    DistributionMsg, DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg,
+    StakingQuery, StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -43,7 +43,8 @@ impl Default for StakingInfo {
     }
 }
 
-/// The number of stake and rewards of this validator the staker has. These can be fractional in case of slashing.
+/// The number of stake and rewards of this validator the staker has.
+/// These can be fractional in case of slashing.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 struct Shares {
     stake: Decimal,
@@ -230,9 +231,7 @@ impl StakeKeeper {
         // calculate rewards using fixed ratio
         let shares = match STAKES.load(&staking_storage, (delegator, validator)) {
             Ok(stakes) => stakes,
-            Err(_) => {
-                return Ok(None);
-            }
+            Err(_) => return Ok(None),
         };
         let validator_info = VALIDATOR_INFO.load(&staking_storage, validator)?;
         Self::get_rewards_internal(
@@ -947,6 +946,19 @@ impl DistributionKeeper {
                 .map_err(|e| e.into())
         }
     }
+
+    /// Returns all validators that have delegated stake from delegator with specified address.
+    pub fn get_delegator_validators(
+        &self,
+        storage: &dyn Storage,
+        delegator_addr: &Addr,
+    ) -> AnyResult<Vec<String>> {
+        let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+        Ok(STAKES
+            .prefix(&delegator_addr)
+            .keys(&staking_storage, None, None, Order::Ascending)
+            .collect::<Result<Vec<String>, StdError>>()?)
+    }
 }
 
 impl Distribution for DistributionKeeper {}
@@ -1025,7 +1037,13 @@ impl Module for DistributionKeeper {
     ) -> AnyResult<Binary> {
         match request {
             #[cfg(feature = "cosmwasm_1_4")]
-            DistributionQuery::DelegatorValidators { .. } => bail!("not yet"),
+            DistributionQuery::DelegatorValidators { delegator_address } => {
+                let address = api.addr_validate(&delegator_address)?;
+                let validators = self.get_delegator_validators(storage, &address)?;
+                Ok(to_json_binary(&DelegatorValidatorsResponse::new(
+                    validators,
+                ))?)
+            }
             DistributionQuery::DelegatorWithdrawAddress { delegator_address } => {
                 let address = api.addr_validate(&delegator_address)?;
                 let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
