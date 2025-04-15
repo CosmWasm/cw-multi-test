@@ -17,11 +17,9 @@ const CONTRACT_DATA_MSG: &str = "wasm contract data called";
 
 const CODE_ID: u64 = 154;
 
-// Instead of using const or lazy lock.
-macro_rules! wasm_raw {
-    () => {
-        vec![(vec![154u8], vec![155u8])]
-    };
+/// Utility function that returns a raw WASM code (without any meaning, just for testing purposes).
+fn wasm_raw() -> Vec<Record> {
+    vec![(vec![154u8], vec![155u8])]
 }
 
 // This is on purpose derived from module, to check if there are no compilation errors
@@ -85,7 +83,7 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
     }
 
     fn dump_wasm_raw(&self, _storage: &dyn Storage, _address: &Addr) -> Vec<Record> {
-        wasm_raw!()
+        wasm_raw()
     }
 }
 
@@ -117,7 +115,7 @@ fn building_app_with_custom_wasm_should_work() {
     );
 
     // calling dump_wasm_raw should return value defined in custom keeper
-    assert_eq!(wasm_raw!(), app.dump_wasm_raw(&contract_addr));
+    assert_eq!(wasm_raw(), app.dump_wasm_raw(&contract_addr));
 
     // executing wasm execute should return an error defined in custom keeper
     assert_eq!(

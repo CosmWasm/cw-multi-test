@@ -28,7 +28,7 @@ cosmwasm_2_1 = ["cosmwasm_2_0", "cosmwasm-std/cosmwasm_2_1"]
 cosmwasm_2_2 = ["cosmwasm_2_1", "cosmwasm-std/cosmwasm_2_2"]
 
 [dependencies]
-anyhow = "1.0.97"
+anyhow = "1.0.98"
 bech32 = "0.11.0"
 cosmwasm-schema = "2.2.2"
 cosmwasm-std = "2.2.2"
