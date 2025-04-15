@@ -61,6 +61,7 @@ fn querying_withdraw_address_should_work() {
 }
 
 // Test for querying delegator validators.
+#[cfg(feature = "cosmwasm_1_4")]
 #[test]
 fn querying_delegator_validators_should_work() {
     const BONDED_DENOM: &str = "stake"; // Denominator of the staking token.

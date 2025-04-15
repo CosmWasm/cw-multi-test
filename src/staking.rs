@@ -3,12 +3,14 @@ use crate::error::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
 use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};
+#[cfg(feature = "cosmwasm_1_4")]
+use cosmwasm_std::DelegatorValidatorsResponse;
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
-    Delegation, DelegationResponse, DelegatorValidatorsResponse, DelegatorWithdrawAddressResponse,
-    DistributionMsg, DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg,
-    StakingQuery, StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
+    DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg, StakingQuery,
+    StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -921,10 +923,13 @@ impl DistributionKeeper {
         storage: &dyn Storage,
         delegator_addr: &Addr,
     ) -> AnyResult<Addr> {
-        Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator_addr)? {
-            Some(withdraw_addr) => withdraw_addr,
-            None => delegator_addr.clone(),
-        })
+        let distribution_storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
+        Ok(
+            match WITHDRAW_ADDRESS.may_load(&distribution_storage, delegator_addr)? {
+                Some(withdraw_addr) => withdraw_addr,
+                None => delegator_addr.clone(),
+            },
+        )
     }
 
     /// Sets (changes) the [withdraw address] of the delegator.
@@ -936,13 +941,14 @@ impl DistributionKeeper {
         delegator: &Addr,
         withdraw_addr: &Addr,
     ) -> AnyResult<()> {
+        let distribution_storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
         if delegator == withdraw_addr {
-            WITHDRAW_ADDRESS.remove(storage, delegator);
+            WITHDRAW_ADDRESS.remove(distribution_storage, delegator);
             Ok(())
         } else {
             // TODO: Technically we should require that this address is not the address of a module. How?
             WITHDRAW_ADDRESS
-                .save(storage, delegator, withdraw_addr)
+                .save(distribution_storage, delegator, withdraw_addr)
                 .map_err(|e| e.into())
         }
     }
@@ -955,7 +961,7 @@ impl DistributionKeeper {
     ) -> AnyResult<Vec<String>> {
         let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
         Ok(STAKES
-            .prefix(&delegator_addr)
+            .prefix(delegator_addr)
             .keys(&staking_storage, None, None, Order::Ascending)
             .collect::<Result<Vec<String>, StdError>>()?)
     }
@@ -981,9 +987,8 @@ impl Module for DistributionKeeper {
             DistributionMsg::WithdrawDelegatorReward { validator } => {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
                 let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
-                let distribution_storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
-                let receiver = self.get_withdraw_address(&distribution_storage, &sender)?;
+                let receiver = self.get_withdraw_address(storage, &sender)?;
                 // directly mint rewards to delegator
                 router.sudo(
                     api,
@@ -1014,7 +1019,6 @@ impl Module for DistributionKeeper {
             DistributionMsg::SetWithdrawAddress { address } => {
                 let address = api.addr_validate(&address)?;
                 // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/msg_server.go#L38
-                let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
                 self.set_withdraw_address(storage, &sender, &address)?;
                 Ok(AppResponse {
                     // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
@@ -1046,8 +1050,7 @@ impl Module for DistributionKeeper {
             }
             DistributionQuery::DelegatorWithdrawAddress { delegator_address } => {
                 let address = api.addr_validate(&delegator_address)?;
-                let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
-                let withdraw_address = self.get_withdraw_address(&storage, &address)?;
+                let withdraw_address = self.get_withdraw_address(storage, &address)?;
                 Ok(to_json_binary(&DelegatorWithdrawAddressResponse::new(
                     withdraw_address,
                 ))?)
