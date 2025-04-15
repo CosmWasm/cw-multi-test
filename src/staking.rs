@@ -888,12 +888,12 @@ impl Module for StakeKeeper {
 pub struct DistributionKeeper {}
 
 impl DistributionKeeper {
-    /// Creates a new distribution keeper with default settings.
+    /// Creates distribution keeper with default settings.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Removes all rewards from the given (delegator, validator) pair and returns the amount
+    /// Removes all rewards from the given delegator-validator pair and returns the amount.
     pub fn remove_rewards(
         &self,
         api: &dyn Api,
@@ -1027,7 +1027,7 @@ impl Module for DistributionKeeper {
                     ..Default::default()
                 })
             }
-            m => bail!("Unsupported distribution message: {:?}", m),
+            other => bail!("Unsupported distribution message: {:?}", other),
         }
     }
 
@@ -1042,15 +1042,15 @@ impl Module for DistributionKeeper {
         match request {
             #[cfg(feature = "cosmwasm_1_4")]
             DistributionQuery::DelegatorValidators { delegator_address } => {
-                let address = api.addr_validate(&delegator_address)?;
-                let validators = self.get_delegator_validators(storage, &address)?;
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let validators = self.get_delegator_validators(storage, &delegator_address)?;
                 Ok(to_json_binary(&DelegatorValidatorsResponse::new(
                     validators,
                 ))?)
             }
             DistributionQuery::DelegatorWithdrawAddress { delegator_address } => {
-                let address = api.addr_validate(&delegator_address)?;
-                let withdraw_address = self.get_withdraw_address(storage, &address)?;
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let withdraw_address = self.get_withdraw_address(storage, &delegator_address)?;
                 Ok(to_json_binary(&DelegatorWithdrawAddressResponse::new(
                     withdraw_address,
                 ))?)
