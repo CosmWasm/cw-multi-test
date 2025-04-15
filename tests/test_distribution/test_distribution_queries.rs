@@ -1,6 +1,20 @@
 use cosmwasm_std::testing::mock_env;
-use cosmwasm_std::{coin, Decimal, DistributionMsg, StakingMsg, Validator};
+use cosmwasm_std::{coin, Decimal, Decimal256, DistributionMsg, StakingMsg, Uint128, Validator};
 use cw_multi_test::{App, AppBuilder, Executor, IntoAddr, StakingInfo};
+
+/// Denominator of the staking token.
+const BONDED_DENOM: &str = "stake";
+
+/// Initial amount of tokens for each delegator.
+const INITIAL_BALANCE: u128 = 1000;
+
+/// Time between unbonding and receiving tokens back, in seconds.
+const UNBONDING_TIME: u64 = 60;
+
+/// Amount of tokens to be delegated.
+const DELEGATION_AMOUNT: u128 = 100;
+
+const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
 
 // Test for querying withdraw addresses.
 #[test]
@@ -64,11 +78,6 @@ fn querying_withdraw_address_should_work() {
 #[cfg(feature = "cosmwasm_1_4")]
 #[test]
 fn querying_delegator_validators_should_work() {
-    const BONDED_DENOM: &str = "stake"; // Denominator of the staking token.
-    const INITIAL_BALANCE: u128 = 1000; // initial amount of tokens for each delegator.
-    const UNBONDING_TIME: u64 = 60; // Time between unbonding and receiving tokens back, in seconds.
-    const DELEGATION_AMOUNT: u128 = 100; // Amount of tokens to be delegated.
-
     // Prepare the delegator addresses.
     let delegator_1_addr = "delegator1".into_addr();
     let delegator_2_addr = "delegator2".into_addr();
@@ -181,4 +190,84 @@ fn querying_delegator_validators_should_work() {
         .unwrap();
     assert_eq!(1, validators.len());
     assert!(validators.contains(&validator_2_addr.to_string()));
+}
+
+#[cfg(feature = "cosmwasm_1_4")]
+#[test]
+fn querying_delegation_rewards_should_work() {
+    // Prepare the delegator address.
+    let delegator_addr = "delegator".into_addr();
+
+    // Prepare the validator address.
+    let validator_addr = "valoper".into_addr();
+
+    // Prepare the validator.
+    let valoper = Validator::new(
+        validator_addr.to_string(),
+        Decimal::percent(10),
+        Decimal::percent(90),
+        Decimal::percent(1),
+    );
+
+    // Prepare the blockchain.
+    let block = mock_env().block;
+    let mut app = AppBuilder::default().build(|router, api, storage| {
+        // Set the initial balance of the delegator.
+        router
+            .bank
+            .init_balance(
+                storage,
+                &delegator_addr,
+                vec![coin(INITIAL_BALANCE, BONDED_DENOM)],
+            )
+            .unwrap();
+        // Set staking parameters.
+        router
+            .staking
+            .setup(
+                storage,
+                StakingInfo {
+                    bonded_denom: BONDED_DENOM.to_string(),
+                    unbonding_time: UNBONDING_TIME,
+                    apr: Decimal::percent(10),
+                },
+            )
+            .unwrap();
+        // Add a validator.
+        router
+            .staking
+            .add_validator(api, storage, &block, valoper)
+            .unwrap();
+    });
+
+    // Delegate tokens to validator from delegator.
+    app.execute(
+        delegator_addr.clone(),
+        StakingMsg::Delegate {
+            validator: validator_addr.to_string(),
+            amount: coin(DELEGATION_AMOUNT, BONDED_DENOM),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // One year fast-forward.
+    app.update_block(|block| {
+        block.height += 1;
+        block.time = block.time.plus_seconds(SECONDS_IN_YEAR);
+    });
+
+    // Query delegation rewards.
+    let rewards = app
+        .wrap()
+        .query_delegation_rewards(delegator_addr, validator_addr)
+        .unwrap();
+
+    assert_eq!(1, rewards.len());
+    let reward = &rewards[0];
+    assert_eq!(
+        Decimal256::from_atomics(Uint128::new(9), 0).unwrap(),
+        reward.amount
+    );
+    assert_eq!(BONDED_DENOM, reward.denom);
 }
