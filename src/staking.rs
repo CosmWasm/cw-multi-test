@@ -6,16 +6,19 @@ use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
-    Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
-    DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg, StakingQuery,
-    StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    Delegation, DelegationResponse, DelegatorReward, DelegatorWithdrawAddressResponse,
+    DistributionMsg, DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg,
+    StakingQuery, StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 #[cfg(feature = "cosmwasm_1_4")]
-use cosmwasm_std::{DecCoin, Decimal256, DelegationRewardsResponse, DelegatorValidatorsResponse};
+use cosmwasm_std::{
+    DecCoin, Decimal256, DelegationRewardsResponse, DelegationTotalRewardsResponse,
+    DelegatorValidatorsResponse,
+};
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// Default denominator of the staking token.
 const BONDED_DENOM: &str = "TOKEN";
@@ -960,6 +963,28 @@ impl DistributionKeeper {
             .keys(&staking_storage, None, None, Order::Ascending)
             .collect::<Result<Vec<String>, StdError>>()?)
     }
+
+    /// Returns the rewards of the given delegator at the given validator.
+    pub fn get_rewards(
+        &self,
+        storage: &dyn Storage,
+        block: &BlockInfo,
+        delegator_address: &Addr,
+        validator_address: &str,
+    ) -> AnyResult<Option<DecCoin>> {
+        Ok(
+            if let Some(coin) =
+                StakeKeeper::get_rewards(storage, block, delegator_address, validator_address)?
+            {
+                Some(DecCoin::new(
+                    Decimal256::from_atomics(coin.amount, 0)?,
+                    coin.denom,
+                ))
+            } else {
+                None
+            },
+        )
+    }
 }
 
 impl Distribution for DistributionKeeper {}
@@ -1057,23 +1082,45 @@ impl Module for DistributionKeeper {
                 validator_address,
             } => {
                 let delegator_address = api.addr_validate(&delegator_address)?;
-                let rewards = if let Some(coin) = StakeKeeper::get_rewards(
-                    storage,
-                    block,
-                    &delegator_address,
-                    &validator_address,
-                )? {
-                    vec![DecCoin::new(
-                        Decimal256::from_atomics(coin.amount, 0)?,
-                        coin.denom,
-                    )]
+                let rewards = if let Some(dec_coin) =
+                    self.get_rewards(storage, block, &delegator_address, &validator_address)?
+                {
+                    vec![dec_coin]
                 } else {
                     vec![]
                 };
                 Ok(to_json_binary(&DelegationRewardsResponse::new(rewards))?)
             }
             #[cfg(feature = "cosmwasm_1_4")]
-            DistributionQuery::DelegationTotalRewards { .. } => bail!("not yet"),
+            DistributionQuery::DelegationTotalRewards { delegator_address } => {
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let mut delegator_rewards = vec![];
+                let mut total_rewards = BTreeMap::new();
+                for validator_address in
+                    self.get_delegator_validators(storage, &delegator_address)?
+                {
+                    if let Some(dec_coin) =
+                        self.get_rewards(storage, block, &delegator_address, &validator_address)?
+                    {
+                        delegator_rewards.push(DelegatorReward::new(
+                            validator_address.clone(),
+                            vec![dec_coin.clone()],
+                        ));
+                        total_rewards
+                            .entry(dec_coin.denom)
+                            .and_modify(|value| *value += dec_coin.amount)
+                            .or_insert(dec_coin.amount);
+                    }
+                }
+                let total_rewards = total_rewards
+                    .iter()
+                    .map(|(denom, amount)| DecCoin::new(*amount, denom))
+                    .collect();
+                Ok(to_json_binary(&DelegationTotalRewardsResponse::new(
+                    delegator_rewards,
+                    total_rewards,
+                ))?)
+            }
             other => bail!("Unsupported distribution query: {:?}", other),
         }
     }

@@ -2,7 +2,7 @@ use cosmwasm_std::testing::mock_env;
 use cosmwasm_std::{coin, Decimal, Decimal256, DistributionMsg, StakingMsg, Uint128, Validator};
 use cw_multi_test::{App, AppBuilder, Executor, IntoAddr, StakingInfo};
 
-/// Denominator of the staking token.
+/// Denominator of the first staking token.
 const BONDED_DENOM: &str = "stake";
 
 /// Initial amount of tokens for each delegator.
@@ -15,6 +15,11 @@ const UNBONDING_TIME: u64 = 60;
 const DELEGATION_AMOUNT: u128 = 100;
 
 const SECONDS_IN_YEAR: u64 = 365 * 24 * 60 * 60;
+
+/// Utility function for creating Decimal256 value.
+fn dec(value: u128) -> Decimal256 {
+    Decimal256::from_atomics(Uint128::new(value), 0).unwrap()
+}
 
 // Test for querying withdraw addresses.
 #[test]
@@ -264,10 +269,261 @@ fn querying_delegation_rewards_should_work() {
         .unwrap();
 
     assert_eq!(1, rewards.len());
-    let reward = &rewards[0];
-    assert_eq!(
-        Decimal256::from_atomics(Uint128::new(9), 0).unwrap(),
-        reward.amount
+    assert_eq!(dec(9), rewards[0].amount);
+    assert_eq!(BONDED_DENOM, rewards[0].denom);
+}
+
+#[cfg(feature = "cosmwasm_1_4")]
+#[test]
+fn querying_delegation_total_rewards_should_work() {
+    // Prepare the delegator addresses.
+    let delegator_1_address = "delegator1".into_addr();
+    let delegator_2_address = "delegator2".into_addr();
+
+    // Prepare the validator addresses.
+    let validator_1_address = "valoper1".into_addr();
+    let validator_2_address = "valoper2".into_addr();
+    let validator_3_address = "valoper3".into_addr();
+
+    // Prepare the validator 1.
+    let valoper1 = Validator::new(
+        validator_1_address.to_string(),
+        Decimal::percent(10),
+        Decimal::percent(90),
+        Decimal::percent(1),
     );
-    assert_eq!(BONDED_DENOM, reward.denom);
+
+    // Prepare the validator 2.
+    let valoper2 = Validator::new(
+        validator_2_address.to_string(),
+        Decimal::percent(10),
+        Decimal::percent(90),
+        Decimal::percent(1),
+    );
+
+    // Prepare the validator 3.
+    let valoper3 = Validator::new(
+        validator_3_address.to_string(),
+        Decimal::percent(10),
+        Decimal::percent(90),
+        Decimal::percent(1),
+    );
+
+    // Prepare the blockchain.
+    let block = mock_env().block;
+    let mut app = AppBuilder::default().build(|router, api, storage| {
+        // Set the initial balances for delegators.
+        router
+            .bank
+            .init_balance(
+                storage,
+                &delegator_1_address,
+                vec![coin(INITIAL_BALANCE, BONDED_DENOM)],
+            )
+            .unwrap();
+        router
+            .bank
+            .init_balance(
+                storage,
+                &delegator_2_address,
+                vec![coin(INITIAL_BALANCE, BONDED_DENOM)],
+            )
+            .unwrap();
+        // Set staking parameters.
+        router
+            .staking
+            .setup(
+                storage,
+                StakingInfo {
+                    bonded_denom: BONDED_DENOM.to_string(),
+                    unbonding_time: UNBONDING_TIME,
+                    apr: Decimal::percent(10),
+                },
+            )
+            .unwrap();
+        // Add validator 1.
+        router
+            .staking
+            .add_validator(api, storage, &block, valoper1)
+            .unwrap();
+        // Add validator 2.
+        router
+            .staking
+            .add_validator(api, storage, &block, valoper2)
+            .unwrap();
+        // Add validator 3.
+        router
+            .staking
+            .add_validator(api, storage, &block, valoper3)
+            .unwrap();
+    });
+
+    // Delegate tokens to validator 1 from delegator 1.
+    app.execute(
+        delegator_1_address.clone(),
+        StakingMsg::Delegate {
+            validator: validator_1_address.to_string(),
+            amount: coin(DELEGATION_AMOUNT, BONDED_DENOM),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // Delegate tokens to validator 2 from delegator 1.
+    app.execute(
+        delegator_1_address.clone(),
+        StakingMsg::Delegate {
+            validator: validator_2_address.to_string(),
+            amount: coin(2 * DELEGATION_AMOUNT, BONDED_DENOM),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // Delegate tokens to validator 1 from delegator 2.
+    app.execute(
+        delegator_2_address.clone(),
+        StakingMsg::Delegate {
+            validator: validator_1_address.to_string(),
+            amount: coin(DELEGATION_AMOUNT, BONDED_DENOM),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // Delegate tokens to validator 2 from delegator 2.
+    app.execute(
+        delegator_2_address.clone(),
+        StakingMsg::Delegate {
+            validator: validator_2_address.to_string(),
+            amount: coin(2 * DELEGATION_AMOUNT, BONDED_DENOM),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // Delegate tokens to validator 3 from delegator 2.
+    app.execute(
+        delegator_2_address.clone(),
+        StakingMsg::Delegate {
+            validator: validator_3_address.to_string(),
+            amount: coin(3 * DELEGATION_AMOUNT, BONDED_DENOM),
+        }
+        .into(),
+    )
+    .unwrap();
+
+    // One year fast-forward.
+    app.update_block(|block| {
+        block.height += 1;
+        block.time = block.time.plus_seconds(SECONDS_IN_YEAR);
+    });
+
+    //==============================================================================================
+    // Total rewards for delegator 1
+    //==============================================================================================
+
+    // Query delegation rewards for delegator 1.
+    let total_rewards_delegator_1 = app
+        .wrap()
+        .query_delegation_total_rewards(delegator_1_address)
+        .unwrap();
+
+    // There should be rewards from two validators.
+    assert_eq!(2, total_rewards_delegator_1.rewards.len());
+
+    // There should be only one total reward, because only one denom was used.
+    assert_eq!(1, total_rewards_delegator_1.total.len());
+
+    // Check the validator addresses.
+    assert_eq!(
+        validator_1_address.as_str(),
+        total_rewards_delegator_1.rewards[0].validator_address
+    );
+    assert_eq!(
+        validator_2_address.as_str(),
+        total_rewards_delegator_1.rewards[1].validator_address
+    );
+
+    // Check the rewards from validators.
+    assert_eq!(
+        dec(9),
+        total_rewards_delegator_1.rewards[0].reward[0].amount
+    );
+    assert_eq!(
+        BONDED_DENOM,
+        total_rewards_delegator_1.rewards[0].reward[0].denom
+    );
+    assert_eq!(
+        dec(18),
+        total_rewards_delegator_1.rewards[1].reward[0].amount
+    );
+    assert_eq!(
+        BONDED_DENOM,
+        total_rewards_delegator_1.rewards[1].reward[0].denom
+    );
+
+    // Check the total rewards.
+    assert_eq!(dec(27), total_rewards_delegator_1.total[0].amount);
+    assert_eq!(BONDED_DENOM, total_rewards_delegator_1.total[0].denom);
+
+    //==============================================================================================
+    // Total rewards for delegator 2
+    //==============================================================================================
+
+    // Query delegation rewards for delegator 1.
+    let total_rewards_delegator_2 = app
+        .wrap()
+        .query_delegation_total_rewards(delegator_2_address)
+        .unwrap();
+
+    // There should be rewards from three validators.
+    assert_eq!(3, total_rewards_delegator_2.rewards.len());
+
+    // There should be only one total reward, because only one denom was used.
+    assert_eq!(1, total_rewards_delegator_2.total.len());
+
+    // Check the validator addresses.
+    assert_eq!(
+        validator_1_address.as_str(),
+        total_rewards_delegator_2.rewards[0].validator_address
+    );
+    assert_eq!(
+        validator_3_address.as_str(),
+        total_rewards_delegator_2.rewards[1].validator_address
+    );
+    assert_eq!(
+        validator_2_address.as_str(),
+        total_rewards_delegator_2.rewards[2].validator_address
+    );
+
+    // Check the rewards from validators.
+    assert_eq!(
+        dec(9),
+        total_rewards_delegator_2.rewards[0].reward[0].amount
+    );
+    assert_eq!(
+        BONDED_DENOM,
+        total_rewards_delegator_2.rewards[0].reward[0].denom
+    );
+    assert_eq!(
+        dec(27),
+        total_rewards_delegator_2.rewards[1].reward[0].amount
+    );
+    assert_eq!(
+        BONDED_DENOM,
+        total_rewards_delegator_2.rewards[1].reward[0].denom
+    );
+    assert_eq!(
+        dec(18),
+        total_rewards_delegator_2.rewards[2].reward[0].amount
+    );
+    assert_eq!(
+        BONDED_DENOM,
+        total_rewards_delegator_2.rewards[2].reward[0].denom
+    );
+
+    // Check the total rewards.
+    assert_eq!(dec(54), total_rewards_delegator_2.total[0].amount);
+    assert_eq!(BONDED_DENOM, total_rewards_delegator_2.total[0].denom);
 }
