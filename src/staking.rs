@@ -6,19 +6,19 @@ use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
-    Delegation, DelegationResponse, DelegatorReward, DelegatorWithdrawAddressResponse,
-    DistributionMsg, DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg,
-    StakingQuery, StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
+    DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg, StakingQuery,
+    StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
 };
 #[cfg(feature = "cosmwasm_1_4")]
 use cosmwasm_std::{
     DecCoin, Decimal256, DelegationRewardsResponse, DelegationTotalRewardsResponse,
-    DelegatorValidatorsResponse,
+    DelegatorReward, DelegatorValidatorsResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeSet, VecDeque};
 
 /// Default denominator of the staking token.
 const BONDED_DENOM: &str = "TOKEN";
@@ -965,6 +965,7 @@ impl DistributionKeeper {
     }
 
     /// Returns the rewards of the given delegator at the given validator.
+    #[cfg(feature = "cosmwasm_1_4")]
     pub fn get_rewards(
         &self,
         storage: &dyn Storage,
@@ -1095,7 +1096,7 @@ impl Module for DistributionKeeper {
             DistributionQuery::DelegationTotalRewards { delegator_address } => {
                 let delegator_address = api.addr_validate(&delegator_address)?;
                 let mut delegator_rewards = vec![];
-                let mut total_rewards = BTreeMap::new();
+                let mut total_rewards = std::collections::BTreeMap::new();
                 for validator_address in
                     self.get_delegator_validators(storage, &delegator_address)?
                 {
