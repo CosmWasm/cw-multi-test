@@ -48,8 +48,7 @@ impl Default for StakingInfo {
     }
 }
 
-/// The number of stake and rewards of this validator the staker has.
-/// These can be fractional in case of slashing.
+/// The number of stake and rewards of this validator the staker has. These can be fractional in case of slashing.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 struct Shares {
     stake: Decimal,
