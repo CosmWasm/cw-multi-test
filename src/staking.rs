@@ -886,7 +886,7 @@ impl Module for StakeKeeper {
 pub struct DistributionKeeper {}
 
 impl DistributionKeeper {
-    /// Creates distribution keeper with default settings.
+    /// Creates a new distribution keeper with default settings.
     pub fn new() -> Self {
         Self::default()
     }
