@@ -1026,7 +1026,7 @@ impl Module for DistributionKeeper {
         _block: &BlockInfo,
         _msg: Empty,
     ) -> AnyResult<AppResponse> {
-        bail!("Something went wrong - Distribution doesn't have sudo messages")
+        bail!("Something went wrong - distribution doesn't have sudo messages")
     }
 }
 
