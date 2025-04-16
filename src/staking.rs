@@ -891,7 +891,7 @@ impl DistributionKeeper {
         Self::default()
     }
 
-    /// Removes all rewards from the given delegator-validator pair and returns the amount.
+    /// Removes all rewards from the given (delegator, validator) pair and returns the amount.
     pub fn remove_rewards(
         &self,
         api: &dyn Api,
