@@ -915,11 +915,7 @@ impl DistributionKeeper {
     }
 
     /// Returns the withdrawal address for specified delegator.
-    pub fn get_withdraw_address(
-        &self,
-        storage: &dyn Storage,
-        delegator_addr: &Addr,
-    ) -> AnyResult<Addr> {
+    pub fn get_withdraw_address(storage: &dyn Storage, delegator_addr: &Addr) -> AnyResult<Addr> {
         let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
         Ok(match WITHDRAW_ADDRESS.may_load(&storage, delegator_addr)? {
             Some(withdraw_addr) => withdraw_addr,
@@ -931,7 +927,6 @@ impl DistributionKeeper {
     ///
     /// [withdraw address]: https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
     pub fn set_withdraw_address(
-        &self,
         storage: &mut dyn Storage,
         delegator_addr: &Addr,
         withdraw_addr: &Addr,
@@ -1006,7 +1001,7 @@ impl Module for DistributionKeeper {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
                 let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
-                let receiver = self.get_withdraw_address(storage, &sender)?;
+                let receiver = Self::get_withdraw_address(storage, &sender)?;
                 // directly mint rewards to delegator
                 router.sudo(
                     api,
@@ -1037,7 +1032,7 @@ impl Module for DistributionKeeper {
             DistributionMsg::SetWithdrawAddress { address } => {
                 let address = api.addr_validate(&address)?;
                 // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/msg_server.go#L38
-                self.set_withdraw_address(storage, &sender, &address)?;
+                Self::set_withdraw_address(storage, &sender, &address)?;
                 Ok(AppResponse {
                     // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
                     events: vec![Event::new("set_withdraw_address")
@@ -1069,7 +1064,7 @@ impl Module for DistributionKeeper {
             }
             DistributionQuery::DelegatorWithdrawAddress { delegator_address } => {
                 let delegator_address = api.addr_validate(&delegator_address)?;
-                let withdraw_address = self.get_withdraw_address(storage, &delegator_address)?;
+                let withdraw_address = Self::get_withdraw_address(storage, &delegator_address)?;
                 Ok(to_json_binary(&DelegatorWithdrawAddressResponse::new(
                     withdraw_address,
                 ))?)
