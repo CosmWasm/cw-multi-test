@@ -913,8 +913,9 @@ impl DistributionKeeper {
     }
 
     /// Returns the withdrawal address for specified delegator.
-    pub fn get_withdraw_address(storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
-        Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator)? {
+    fn get_withdraw_address(&self, storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
+        let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
+        Ok(match WITHDRAW_ADDRESS.may_load(&storage, delegator)? {
             Some(a) => a,
             None => delegator.clone(),
         })
@@ -923,11 +924,13 @@ impl DistributionKeeper {
     /// Sets (changes) the [withdraw address] of the delegator.
     ///
     /// [withdraw address]: https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
-    pub fn set_withdraw_address(
+    fn set_withdraw_address(
+        &self,
         storage: &mut dyn Storage,
         delegator: &Addr,
         withdraw_addr: &Addr,
     ) -> AnyResult<()> {
+        let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
         if delegator == withdraw_addr {
             WITHDRAW_ADDRESS.remove(storage, delegator);
             Ok(())
@@ -961,9 +964,8 @@ impl Module for DistributionKeeper {
             DistributionMsg::WithdrawDelegatorReward { validator } => {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
                 let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
-                let distribution_storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
-                let receiver = Self::get_withdraw_address(&distribution_storage, &sender)?;
+                let receiver = self.get_withdraw_address(storage, &sender)?;
                 // directly mint rewards to delegator
                 router.sudo(
                     api,
@@ -994,8 +996,7 @@ impl Module for DistributionKeeper {
             DistributionMsg::SetWithdrawAddress { address } => {
                 let address = api.addr_validate(&address)?;
                 // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/msg_server.go#L38
-                let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
-                Self::set_withdraw_address(storage, &sender, &address)?;
+                self.set_withdraw_address(storage, &sender, &address)?;
                 Ok(AppResponse {
                     // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
                     events: vec![Event::new("set_withdraw_address")
