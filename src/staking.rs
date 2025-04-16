@@ -923,9 +923,9 @@ impl DistributionKeeper {
         })
     }
 
-    /// Sets (changes) the [withdraw address] of the delegator.
+    /// Sets (changes/removes) the [withdrawal address] of the delegator.
     ///
-    /// [withdraw address]: https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
+    /// [withdrawal address]: https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
     pub fn set_withdraw_address(
         storage: &mut dyn Storage,
         delegator_addr: &Addr,
