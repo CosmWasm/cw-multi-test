@@ -921,13 +921,11 @@ impl DistributionKeeper {
         storage: &dyn Storage,
         delegator_addr: &Addr,
     ) -> AnyResult<Addr> {
-        let distribution_storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
-        Ok(
-            match WITHDRAW_ADDRESS.may_load(&distribution_storage, delegator_addr)? {
-                Some(withdraw_addr) => withdraw_addr,
-                None => delegator_addr.clone(),
-            },
-        )
+        let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
+        Ok(match WITHDRAW_ADDRESS.may_load(&storage, delegator_addr)? {
+            Some(withdraw_addr) => withdraw_addr,
+            None => delegator_addr.clone(),
+        })
     }
 
     /// Sets (changes) the [withdraw address] of the delegator.
@@ -936,17 +934,17 @@ impl DistributionKeeper {
     pub fn set_withdraw_address(
         &self,
         storage: &mut dyn Storage,
-        delegator: &Addr,
+        delegator_addr: &Addr,
         withdraw_addr: &Addr,
     ) -> AnyResult<()> {
-        let distribution_storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
-        if delegator == withdraw_addr {
-            WITHDRAW_ADDRESS.remove(distribution_storage, delegator);
+        let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
+        if delegator_addr == withdraw_addr {
+            WITHDRAW_ADDRESS.remove(storage, delegator_addr);
             Ok(())
         } else {
             // TODO: Technically we should require that this address is not the address of a module. How?
             WITHDRAW_ADDRESS
-                .save(distribution_storage, delegator, withdraw_addr)
+                .save(storage, delegator_addr, withdraw_addr)
                 .map_err(|e| e.into())
         }
     }
@@ -957,10 +955,10 @@ impl DistributionKeeper {
         storage: &dyn Storage,
         delegator_addr: &Addr,
     ) -> AnyResult<Vec<String>> {
-        let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+        let storage = prefixed_read(storage, NAMESPACE_STAKING);
         Ok(STAKES
             .prefix(delegator_addr)
-            .keys(&staking_storage, None, None, Order::Ascending)
+            .keys(&storage, None, None, Order::Ascending)
             .collect::<Result<Vec<String>, StdError>>()?)
     }
 
