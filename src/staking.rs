@@ -1,7 +1,7 @@
 use crate::app::CosmosRouter;
 use crate::error::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
-use crate::prefixed_storage::{prefixed, prefixed_read};
+use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
@@ -13,6 +13,7 @@ use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, VecDeque};
+use std::ops::{Deref, DerefMut};
 
 /// Default denominator of the staking token.
 const BONDED_DENOM: &str = "TOKEN";
@@ -109,8 +110,46 @@ const UNBONDING_QUEUE: Item<VecDeque<Unbonding>> = Item::new("unbonding_queue");
 const WITHDRAW_ADDRESS: Map<&Addr, Addr> = Map::new("withdraw_address");
 
 pub const NAMESPACE_STAKING: &[u8] = b"staking";
-// https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/types/keys.go#L16
+
 pub const NAMESPACE_DISTRIBUTION: &[u8] = b"distribution";
+
+struct DistributionStorage<'a>(ReadonlyPrefixedStorage<'a>);
+
+impl<'a> DistributionStorage<'a> {
+    fn new(storage: &'a dyn Storage) -> Self {
+        Self(prefixed_read(storage, NAMESPACE_DISTRIBUTION))
+    }
+}
+
+impl<'a> Deref for DistributionStorage<'a> {
+    type Target = ReadonlyPrefixedStorage<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+struct DistributionStorageMut<'a>(PrefixedStorage<'a>);
+
+impl<'a> DistributionStorageMut<'a> {
+    fn new(storage: &'a mut dyn Storage) -> Self {
+        Self(prefixed(storage, NAMESPACE_DISTRIBUTION))
+    }
+}
+
+impl<'a> Deref for DistributionStorageMut<'a> {
+    type Target = PrefixedStorage<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> DerefMut for DistributionStorageMut<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 /// Staking privileged action definition.
 ///
@@ -913,12 +952,17 @@ impl DistributionKeeper {
     }
 
     /// Returns the withdrawal address for specified delegator.
-    fn get_withdraw_address(&self, storage: &dyn Storage, delegator: &Addr) -> AnyResult<Addr> {
-        let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
-        Ok(match WITHDRAW_ADDRESS.may_load(&storage, delegator)? {
-            Some(a) => a,
-            None => delegator.clone(),
-        })
+    fn get_withdraw_address(
+        &self,
+        storage: &DistributionStorage,
+        delegator: &Addr,
+    ) -> AnyResult<Addr> {
+        Ok(
+            match WITHDRAW_ADDRESS.may_load(storage.deref(), delegator)? {
+                Some(a) => a,
+                None => delegator.clone(),
+            },
+        )
     }
 
     /// Sets (changes) the [withdraw address] of the delegator.
@@ -926,19 +970,18 @@ impl DistributionKeeper {
     /// [withdraw address]: https://docs.cosmos.network/main/modules/distribution#msgsetwithdrawaddress
     fn set_withdraw_address(
         &self,
-        storage: &mut dyn Storage,
+        storage: &mut DistributionStorageMut,
         delegator: &Addr,
         withdraw_addr: &Addr,
     ) -> AnyResult<()> {
-        let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
         if delegator == withdraw_addr {
-            WITHDRAW_ADDRESS.remove(storage, delegator);
+            WITHDRAW_ADDRESS.remove(storage.deref_mut(), delegator);
             Ok(())
         } else {
             // technically we should require that this address is not
             // the address of a module. TODO: how?
             WITHDRAW_ADDRESS
-                .save(storage, delegator, withdraw_addr)
+                .save(storage.deref_mut(), delegator, withdraw_addr)
                 .map_err(|e| e.into())
         }
     }
@@ -965,7 +1008,8 @@ impl Module for DistributionKeeper {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
                 let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
-                let receiver = self.get_withdraw_address(storage, &sender)?;
+                let distribution_storage = DistributionStorage::new(storage);
+                let receiver = self.get_withdraw_address(&distribution_storage, &sender)?;
                 // directly mint rewards to delegator
                 router.sudo(
                     api,
@@ -996,7 +1040,8 @@ impl Module for DistributionKeeper {
             DistributionMsg::SetWithdrawAddress { address } => {
                 let address = api.addr_validate(&address)?;
                 // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/msg_server.go#L38
-                self.set_withdraw_address(storage, &sender, &address)?;
+                let mut distribution_storage_mut = DistributionStorageMut::new(storage);
+                self.set_withdraw_address(&mut distribution_storage_mut, &sender, &address)?;
                 Ok(AppResponse {
                     // https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/keeper/keeper.go#L74
                     events: vec![Event::new("set_withdraw_address")
