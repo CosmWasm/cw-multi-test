@@ -884,16 +884,6 @@ impl Module for StakeKeeper {
 #[derive(Default)]
 pub struct DistributionKeeper {}
 
-impl Distribution for DistributionKeeper {}
-
-impl StoragePrefix for DistributionKeeper {
-    const PREFIX: &'static [u8] = b"distribution";
-}
-
-type DistributionStorage<'a> = TypedPrefixedStorage<'a, DistributionKeeper>;
-
-type DistributionStorageMut<'a> = TypedPrefixedStorageMut<'a, DistributionKeeper>;
-
 impl DistributionKeeper {
     /// Creates a new distribution keeper with default settings.
     pub fn new() -> Self {
@@ -959,6 +949,16 @@ impl DistributionKeeper {
         }
     }
 }
+
+impl Distribution for DistributionKeeper {}
+
+impl StoragePrefix for DistributionKeeper {
+    const PREFIX: &'static [u8] = b"distribution";
+}
+
+type DistributionStorage<'a> = TypedPrefixedStorage<'a, DistributionKeeper>;
+
+type DistributionStorageMut<'a> = TypedPrefixedStorageMut<'a, DistributionKeeper>;
 
 impl Module for DistributionKeeper {
     type ExecT = DistributionMsg;
