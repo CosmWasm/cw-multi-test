@@ -292,18 +292,18 @@ impl StakeKeeper {
     /// Always call this to update rewards before changing anything that influences future rewards.
     fn update_rewards(
         _api: &dyn Api,
-        staking_storage: &mut StakingStorageMut,
+        storage: &mut StakingStorageMut,
         block: &BlockInfo,
         validator: &str,
     ) -> AnyResult<()> {
-        let staking_info = Self::get_staking_info(staking_storage)?;
+        let staking_info = Self::get_staking_info(storage)?;
 
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
+            .may_load(storage, validator)?
             // https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L15
             .ok_or_else(|| anyhow!("validator does not exist"))?;
 
-        let validator_obj = VALIDATOR_MAP.load(staking_storage, validator)?;
+        let validator_obj = VALIDATOR_MAP.load(storage, validator)?;
 
         if validator_info.last_rewards_calculation >= block.time {
             return Ok(());
@@ -319,14 +319,14 @@ impl StakeKeeper {
 
         // update validator info
         validator_info.last_rewards_calculation = block.time;
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(storage, validator, &validator_info)?;
 
         // update delegators
         if !new_rewards.is_zero() {
             // update all delegators
             for staker in validator_info.stakers.iter() {
                 STAKES.update(
-                    staking_storage,
+                    storage,
                     (staker, &validator_obj.address),
                     |shares| -> AnyResult<_> {
                         let mut shares =
