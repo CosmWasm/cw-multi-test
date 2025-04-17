@@ -506,10 +506,9 @@ impl StakeKeeper {
         }
         // go through the queue to slash all pending unbondings
         let mut unbonding_queue = UNBONDING_QUEUE.may_load(storage)?.unwrap_or_default();
-        #[allow(clippy::op_ref)]
         unbonding_queue
             .iter_mut()
-            .filter(|ub| &ub.validator == validator)
+            .filter(|ub| ub.validator == validator)
             .for_each(|ub| {
                 ub.amount = ub.amount.mul_floor(remaining_percentage);
             });
@@ -1387,7 +1386,7 @@ mod test {
             .router
             .staking
             .get_stake(
-                &StakingStorage::new(&mut env.storage),
+                &StakingStorage::new(&env.storage),
                 &delegator_addr_1,
                 &validator_addr_1,
             )
@@ -1415,7 +1414,7 @@ mod test {
             .router
             .staking
             .get_stake(
-                &StakingStorage::new(&mut env.storage),
+                &StakingStorage::new(&env.storage),
                 &delegator_addr_1,
                 &validator_addr_1,
             )
