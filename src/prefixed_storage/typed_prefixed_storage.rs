@@ -1,7 +1,6 @@
 use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
 use cosmwasm_std::Storage;
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
 
 pub trait StoragePrefix {
     const PREFIX: &'static [u8];
@@ -15,11 +14,17 @@ impl<'a, T: StoragePrefix> TypedPrefixedStorage<'a, T> {
     }
 }
 
-impl<'a, T> Deref for TypedPrefixedStorage<'a, T> {
-    type Target = ReadonlyPrefixedStorage<'a>;
+impl<T> Storage for TypedPrefixedStorage<'_, T> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.0.get(key)
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    fn set(&mut self, key: &[u8], value: &[u8]) {
+        self.0.set(key, value)
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.0.remove(key)
     }
 }
 
@@ -31,16 +36,16 @@ impl<'a, T: StoragePrefix> TypedPrefixedStorageMut<'a, T> {
     }
 }
 
-impl<'a, T> Deref for TypedPrefixedStorageMut<'a, T> {
-    type Target = PrefixedStorage<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl<T> Storage for TypedPrefixedStorageMut<'_, T> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.0.get(key)
     }
-}
 
-impl<T> DerefMut for TypedPrefixedStorageMut<'_, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+    fn set(&mut self, key: &[u8], value: &[u8]) {
+        self.0.set(key, value)
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        self.0.remove(key)
     }
 }

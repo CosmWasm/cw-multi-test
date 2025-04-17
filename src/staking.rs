@@ -16,7 +16,6 @@ use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, VecDeque};
-use std::ops::{Deref, DerefMut};
 
 /// Default denominator of the staking token.
 const BONDED_DENOM: &str = "TOKEN";
@@ -928,12 +927,10 @@ impl DistributionKeeper {
         storage: &DistributionStorage,
         delegator: &Addr,
     ) -> AnyResult<Addr> {
-        Ok(
-            match WITHDRAW_ADDRESS.may_load(storage.deref(), delegator)? {
-                Some(a) => a,
-                None => delegator.clone(),
-            },
-        )
+        Ok(match WITHDRAW_ADDRESS.may_load(storage, delegator)? {
+            Some(a) => a,
+            None => delegator.clone(),
+        })
     }
 
     /// Sets (changes) the [withdraw address] of the delegator.
@@ -946,13 +943,13 @@ impl DistributionKeeper {
         withdraw_addr: &Addr,
     ) -> AnyResult<()> {
         if delegator == withdraw_addr {
-            WITHDRAW_ADDRESS.remove(storage.deref_mut(), delegator);
+            WITHDRAW_ADDRESS.remove(storage, delegator);
             Ok(())
         } else {
             // technically we should require that this address is not
             // the address of a module. TODO: how?
             WITHDRAW_ADDRESS
-                .save(storage.deref_mut(), delegator, withdraw_addr)
+                .save(storage, delegator, withdraw_addr)
                 .map_err(|e| e.into())
         }
     }
