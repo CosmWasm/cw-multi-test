@@ -8,7 +8,7 @@ pub trait StoragePrefix {
     const PREFIX: &'static [u8];
 }
 
-pub struct TypedPrefixedStorage<'a, T> {
+pub struct TypedPrefixedStorage<'a, T: StoragePrefix> {
     storage: &'a dyn Storage,
     prefix: &'static [u8],
     data: PhantomData<T>,
@@ -24,7 +24,7 @@ impl<'a, T: StoragePrefix> TypedPrefixedStorage<'a, T> {
     }
 }
 
-impl<T> Storage for TypedPrefixedStorage<'_, T> {
+impl<T: StoragePrefix> Storage for TypedPrefixedStorage<'_, T> {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         get_with_prefix(self.storage, self.prefix, key)
     }
@@ -47,7 +47,7 @@ impl<T> Storage for TypedPrefixedStorage<'_, T> {
     }
 }
 
-pub struct TypedPrefixedStorageMut<'a, T> {
+pub struct TypedPrefixedStorageMut<'a, T: StoragePrefix> {
     storage: &'a mut dyn Storage,
     prefix: &'static [u8],
     data: PhantomData<T>,
@@ -63,7 +63,7 @@ impl<'a, T: StoragePrefix> TypedPrefixedStorageMut<'a, T> {
     }
 }
 
-impl<T> Storage for TypedPrefixedStorageMut<'_, T> {
+impl<T: StoragePrefix> Storage for TypedPrefixedStorageMut<'_, T> {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         get_with_prefix(self.storage, self.prefix, key)
     }
@@ -83,5 +83,15 @@ impl<T> Storage for TypedPrefixedStorageMut<'_, T> {
 
     fn remove(&mut self, key: &[u8]) {
         remove_with_prefix(self.storage, self.prefix, key);
+    }
+}
+
+impl<T: StoragePrefix> TypedPrefixedStorageMut<'_, T> {
+    pub fn borrow(&self) -> TypedPrefixedStorage<'_, T> {
+        TypedPrefixedStorage {
+            storage: self.storage,
+            prefix: self.prefix,
+            data: PhantomData,
+        }
     }
 }

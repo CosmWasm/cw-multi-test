@@ -203,7 +203,7 @@ impl StakeKeeper {
         Ok(())
     }
 
-    fn get_staking_info(storage: &dyn Storage) -> AnyResult<StakingInfo> {
+    fn get_staking_info(storage: &StakingStorage) -> AnyResult<StakingInfo> {
         Ok(STAKING_INFO.may_load(storage)?.unwrap_or_default())
     }
 
@@ -296,7 +296,7 @@ impl StakeKeeper {
         block: &BlockInfo,
         validator: &str,
     ) -> AnyResult<()> {
-        let staking_info = Self::get_staking_info(storage)?;
+        let staking_info = Self::get_staking_info(&storage.borrow())?;
 
         let mut validator_info = VALIDATOR_INFO
             .may_load(storage, validator)?
@@ -380,7 +380,7 @@ impl StakeKeeper {
         validator: &str,
         amount: Coin,
     ) -> AnyResult<()> {
-        self.validate_denom(storage, &amount)?;
+        self.validate_denom(&storage.borrow(), &amount)?;
         self.update_stake(
             api,
             storage,
@@ -401,7 +401,7 @@ impl StakeKeeper {
         validator: &str,
         amount: Coin,
     ) -> AnyResult<()> {
-        self.validate_denom(storage, &amount)?;
+        self.validate_denom(&storage.borrow(), &amount)?;
         self.update_stake(
             api,
             storage,
@@ -519,8 +519,8 @@ impl StakeKeeper {
     }
 
     // Asserts that the given coin has the proper denominator
-    fn validate_denom(&self, staking_storage: &dyn Storage, amount: &Coin) -> AnyResult<()> {
-        let staking_info = Self::get_staking_info(staking_storage)?;
+    fn validate_denom(&self, storage: &StakingStorage, amount: &Coin) -> AnyResult<()> {
+        let staking_info = Self::get_staking_info(storage)?;
         ensure_eq!(
             amount.denom,
             staking_info.bonded_denom,
@@ -685,7 +685,7 @@ impl Module for StakeKeeper {
                 })
             }
             StakingMsg::Undelegate { validator, amount } => {
-                self.validate_denom(&staking_storage_mut, &amount)?;
+                self.validate_denom(&staking_storage_mut.borrow(), &amount)?;
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
                 if amount.amount.is_zero() {
@@ -706,7 +706,7 @@ impl Module for StakeKeeper {
                     amount.clone(),
                 )?;
                 // add tokens to unbonding queue
-                let staking_info = Self::get_staking_info(&staking_storage_mut)?;
+                let staking_info = Self::get_staking_info(&staking_storage_mut.borrow())?;
                 let mut unbonding_queue = UNBONDING_QUEUE
                     .may_load(&staking_storage_mut)?
                     .unwrap_or_default();
