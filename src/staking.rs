@@ -553,6 +553,8 @@ impl StakeKeeper {
             match unbonding_queue.front() {
                 // assuming the queue is sorted by payout_at
                 Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
+                    let mut staking_storage_mut = StakingStorageMut::new(storage);
+
                     // remove from queue
                     let Unbonding {
                         delegator,
@@ -563,7 +565,7 @@ impl StakeKeeper {
 
                     // remove staking entry if it is empty
                     let delegation = self
-                        .get_stake(&StakingStorage::new(storage), &delegator, &validator)?
+                        .get_stake(&staking_storage_mut.borrow(), &delegator, &validator)?
                         .map(|mut stake| {
                             // add unbonding amounts
                             stake.amount += unbonding_queue
@@ -575,21 +577,15 @@ impl StakeKeeper {
                         });
                     match delegation {
                         Some(delegation) if delegation.amount.is_zero() => {
-                            STAKES.remove(
-                                &mut StakingStorageMut::new(storage),
-                                (&delegator, &validator),
-                            );
+                            STAKES.remove(&mut staking_storage_mut, (&delegator, &validator));
                         }
                         None => {
-                            STAKES.remove(
-                                &mut StakingStorageMut::new(storage),
-                                (&delegator, &validator),
-                            );
+                            STAKES.remove(&mut staking_storage_mut, (&delegator, &validator));
                         }
                         _ => {}
                     }
 
-                    let staking_info = Self::get_staking_info(&StakingStorage::new(storage))?;
+                    let staking_info = Self::get_staking_info(&staking_storage_mut.borrow())?;
                     if !amount.is_zero() {
                         router.execute(
                             api,
