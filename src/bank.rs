@@ -2,7 +2,9 @@ use crate::app::CosmosRouter;
 use crate::error::{bail, AnyResult};
 use crate::executor::AppResponse;
 use crate::module::Module;
-use crate::prefixed_storage::{prefixed, prefixed_read};
+use crate::prefixed_storage::typed_prefixed_storage::{
+    StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
+};
 use cosmwasm_std::{
     coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
     Binary, BlockInfo, Coin, DenomMetadata, Event, Querier, Storage,
@@ -21,9 +23,6 @@ const BALANCES: Map<&Addr, NativeBalance> = Map::new("balances");
 
 /// Collection of metadata for denomination.
 const DENOM_METADATA: Map<String, DenomMetadata> = Map::new("metadata");
-
-/// Default storage namespace for bank module.
-const NAMESPACE_BANK: &[u8] = b"bank";
 
 /// A message representing privileged actions in bank module.
 #[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -52,6 +51,14 @@ pub trait Bank: Module<ExecT = BankMsg, QueryT = BankQuery, SudoT = BankSudo> {}
 #[derive(Default)]
 pub struct BankKeeper {}
 
+impl StoragePrefix for BankKeeper {
+    const PREFIX: &'static [u8] = b"bank";
+}
+
+type BankStorage<'a> = TypedPrefixedStorage<'a, BankKeeper>;
+
+type BankStorageMut<'a> = TypedPrefixedStorageMut<'a, BankKeeper>;
+
 impl BankKeeper {
     /// Creates a new instance of a bank keeper with default settings.
     pub fn new() -> Self {
@@ -65,46 +72,45 @@ impl BankKeeper {
         account: &Addr,
         amount: Vec<Coin>,
     ) -> AnyResult<()> {
-        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
-        self.set_balance(&mut bank_storage, account, amount)
+        self.set_balance(&mut BankStorageMut::new(storage), account, amount)
     }
 
     /// Administration function for adjusting bank accounts.
     fn set_balance(
         &self,
-        bank_storage: &mut dyn Storage,
+        storage: &mut BankStorageMut,
         account: &Addr,
         amount: Vec<Coin>,
     ) -> AnyResult<()> {
         let mut balance = NativeBalance(amount);
         balance.normalize();
         BALANCES
-            .save(bank_storage, account, &balance)
+            .save(storage, account, &balance)
             .map_err(Into::into)
     }
 
     /// Administration function for adjusting denomination metadata.
     pub fn set_denom_metadata(
         &self,
-        bank_storage: &mut dyn Storage,
+        storage: &mut BankStorageMut,
         denom: String,
         metadata: DenomMetadata,
     ) -> AnyResult<()> {
         DENOM_METADATA
-            .save(bank_storage, denom, &metadata)
+            .save(storage, denom, &metadata)
             .map_err(Into::into)
     }
 
     /// Returns balance for specified address.
-    fn get_balance(&self, bank_storage: &dyn Storage, addr: &Addr) -> AnyResult<Vec<Coin>> {
-        let val = BALANCES.may_load(bank_storage, addr)?;
+    fn get_balance(&self, storage: &BankStorage, addr: &Addr) -> AnyResult<Vec<Coin>> {
+        let val = BALANCES.may_load(storage, addr)?;
         Ok(val.unwrap_or_default().into_vec())
     }
 
     #[cfg(feature = "cosmwasm_1_1")]
-    fn get_supply(&self, bank_storage: &dyn Storage, denom: String) -> AnyResult<Coin> {
+    fn get_supply(&self, storage: &BankStorage, denom: String) -> AnyResult<Coin> {
         let supply: Uint128 = BALANCES
-            .range(bank_storage, None, None, Order::Ascending)
+            .range(storage, None, None, Order::Ascending)
             .collect::<StdResult<Vec<_>>>()?
             .into_iter()
             .map(|a| a.1)
@@ -122,37 +128,37 @@ impl BankKeeper {
 
     fn send(
         &self,
-        bank_storage: &mut dyn Storage,
+        storage: &mut BankStorageMut,
         from_address: Addr,
         to_address: Addr,
         amount: Vec<Coin>,
     ) -> AnyResult<()> {
-        self.burn(bank_storage, from_address, amount.clone())?;
-        self.mint(bank_storage, to_address, amount)
+        self.burn(storage, from_address, amount.clone())?;
+        self.mint(storage, to_address, amount)
     }
 
     fn mint(
         &self,
-        bank_storage: &mut dyn Storage,
+        storage: &mut BankStorageMut,
         to_address: Addr,
         amount: Vec<Coin>,
     ) -> AnyResult<()> {
         let amount = self.normalize_amount(amount)?;
-        let b = self.get_balance(bank_storage, &to_address)?;
+        let b = self.get_balance(&storage.borrow(), &to_address)?;
         let b = NativeBalance(b) + NativeBalance(amount);
-        self.set_balance(bank_storage, &to_address, b.into_vec())
+        self.set_balance(storage, &to_address, b.into_vec())
     }
 
     fn burn(
         &self,
-        bank_storage: &mut dyn Storage,
+        storage: &mut BankStorageMut,
         from_address: Addr,
         amount: Vec<Coin>,
     ) -> AnyResult<()> {
         let amount = self.normalize_amount(amount)?;
-        let a = self.get_balance(bank_storage, &from_address)?;
+        let a = self.get_balance(&storage.borrow(), &from_address)?;
         let a = (NativeBalance(a) - amount)?;
-        self.set_balance(bank_storage, &from_address, a.into_vec())
+        self.set_balance(storage, &from_address, a.into_vec())
     }
 
     /// Filters out all `0` value coins and returns an error if the resulting vector is empty.
@@ -189,7 +195,7 @@ impl Module for BankKeeper {
         sender: Addr,
         msg: BankMsg,
     ) -> AnyResult<AppResponse> {
-        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
+        let mut bank_storage_mut = BankStorageMut::new(storage);
         match msg {
             BankMsg::Send { to_address, amount } => {
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.42.7/x/bank/keeper/send.go#L142-L147
@@ -198,7 +204,7 @@ impl Module for BankKeeper {
                     .add_attribute("sender", &sender)
                     .add_attribute("amount", coins_to_string(&amount))];
                 self.send(
-                    &mut bank_storage,
+                    &mut bank_storage_mut,
                     sender,
                     Addr::unchecked(to_address),
                     amount,
@@ -210,7 +216,7 @@ impl Module for BankKeeper {
             }
             BankMsg::Burn { amount } => {
                 // burn doesn't seem to emit any events
-                self.burn(&mut bank_storage, sender, amount)?;
+                self.burn(&mut bank_storage_mut, sender, amount)?;
                 Ok(AppResponse::default())
             }
             other => unimplemented!("bank message: {other:?}"),
@@ -225,7 +231,7 @@ impl Module for BankKeeper {
         _block: &BlockInfo,
         request: BankQuery,
     ) -> AnyResult<Binary> {
-        let bank_storage = prefixed_read(storage, NAMESPACE_BANK);
+        let bank_storage = BankStorage::new(storage);
         match request {
             #[allow(deprecated)]
             BankQuery::AllBalances { address } => {
@@ -252,20 +258,22 @@ impl Module for BankKeeper {
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::DenomMetadata { denom } => {
-                let meta = DENOM_METADATA.may_load(storage, denom)?.unwrap_or_default();
+                let meta = DENOM_METADATA
+                    .may_load(&bank_storage, denom)?
+                    .unwrap_or_default();
                 let res = DenomMetadataResponse::new(meta);
                 to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::AllDenomMetadata { pagination: _ } => {
                 let mut metadata = vec![];
-                for key in DENOM_METADATA.keys(storage, None, None, Order::Ascending) {
+                for key in DENOM_METADATA.keys(&bank_storage, None, None, Order::Ascending) {
                     metadata.push(DENOM_METADATA.may_load(storage, key?)?.unwrap_or_default());
                 }
                 let res = AllDenomMetadataResponse::new(metadata, None);
                 to_json_binary(&res).map_err(Into::into)
             }
-            other => unimplemented!("bank query: {other:?}"),
+            other => unimplemented!("bank query: {:?}", other),
         }
     }
 
@@ -277,11 +285,11 @@ impl Module for BankKeeper {
         _block: &BlockInfo,
         msg: BankSudo,
     ) -> AnyResult<AppResponse> {
-        let mut bank_storage = prefixed(storage, NAMESPACE_BANK);
+        let mut bank_storage_mut = BankStorageMut::new(storage);
         match msg {
             BankSudo::Mint { to_address, amount } => {
                 let to_address = api.addr_validate(&to_address)?;
-                self.mint(&mut bank_storage, to_address, amount)?;
+                self.mint(&mut bank_storage_mut, to_address, amount)?;
                 Ok(AppResponse::default())
             }
         }
@@ -331,7 +339,8 @@ mod test {
         // set money
         let bank = BankKeeper::new();
         bank.init_balance(&mut store, &owner, init_funds).unwrap();
-        let bank_storage = prefixed_read(&store, NAMESPACE_BANK);
+
+        let bank_storage = BankStorage::new(&store);
 
         // get balance work
         let rich = bank.get_balance(&bank_storage, &owner).unwrap();
@@ -519,10 +528,11 @@ mod test {
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let bank = BankKeeper::new();
+        let mut bank_storage = BankStorageMut::new(&mut store);
         // set metadata for Ether
         let denom_eth_name = "eth".to_string();
         bank.set_denom_metadata(
-            &mut store,
+            &mut bank_storage,
             denom_eth_name.clone(),
             DenomMetadata {
                 name: denom_eth_name.clone(),
@@ -547,10 +557,11 @@ mod test {
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let bank = BankKeeper::new();
+        let mut bank_storage = BankStorageMut::new(&mut store);
         // set metadata for Bitcoin
         let denom_btc_name = "btc".to_string();
         bank.set_denom_metadata(
-            &mut store,
+            &mut bank_storage,
             denom_btc_name.clone(),
             DenomMetadata {
                 name: denom_btc_name.clone(),
@@ -561,7 +572,7 @@ mod test {
         // set metadata for Ether
         let denom_eth_name = "eth".to_string();
         bank.set_denom_metadata(
-            &mut store,
+            &mut bank_storage,
             denom_eth_name.clone(),
             DenomMetadata {
                 name: denom_eth_name.clone(),
