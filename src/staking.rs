@@ -145,7 +145,7 @@ impl<'a> Deref for DistributionStorageMut<'a> {
     }
 }
 
-impl<'a> DerefMut for DistributionStorageMut<'a> {
+impl DerefMut for DistributionStorageMut<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
