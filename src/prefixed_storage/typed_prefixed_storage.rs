@@ -1,7 +1,8 @@
-use crate::prefixed_storage::length_prefixed::to_length_prefixed;
+use crate::prefixed_storage::length_prefixed::{to_length_prefixed, to_length_prefixed_nested};
 use crate::prefixed_storage::namespace_helpers::{
     get_with_prefix, range_with_prefix, remove_with_prefix, set_with_prefix,
 };
+use crate::prefixed_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 use cosmwasm_std::{Order, Record, Storage};
 use std::marker::PhantomData;
 
@@ -12,7 +13,7 @@ pub trait StoragePrefix {
 pub struct TypedPrefixedStorage<'a, T: StoragePrefix> {
     storage: &'a dyn Storage,
     prefix: Vec<u8>,
-    data: PhantomData<T>,
+    _data: PhantomData<T>,
 }
 
 impl<'a, T: StoragePrefix> TypedPrefixedStorage<'a, T> {
@@ -20,7 +21,15 @@ impl<'a, T: StoragePrefix> TypedPrefixedStorage<'a, T> {
         Self {
             storage,
             prefix: to_length_prefixed(T::NAMESPACE),
-            data: PhantomData,
+            _data: PhantomData,
+        }
+    }
+
+    pub fn multilevel(storage: &'a dyn Storage, namespace: &[u8]) -> Self {
+        Self {
+            storage,
+            prefix: to_length_prefixed_nested(&[T::NAMESPACE, namespace]),
+            _data: PhantomData,
         }
     }
 }
@@ -48,10 +57,19 @@ impl<T: StoragePrefix> Storage for TypedPrefixedStorage<'_, T> {
     }
 }
 
+impl<'a, T: StoragePrefix> From<TypedPrefixedStorage<'a, T>> for ReadonlyPrefixedStorage<'a> {
+    fn from(value: TypedPrefixedStorage<'a, T>) -> Self {
+        Self {
+            storage: value.storage,
+            prefix: value.prefix,
+        }
+    }
+}
+
 pub struct TypedPrefixedStorageMut<'a, T: StoragePrefix> {
     storage: &'a mut dyn Storage,
     prefix: Vec<u8>,
-    data: PhantomData<T>,
+    _data: PhantomData<T>,
 }
 
 impl<'a, T: StoragePrefix> TypedPrefixedStorageMut<'a, T> {
@@ -59,7 +77,15 @@ impl<'a, T: StoragePrefix> TypedPrefixedStorageMut<'a, T> {
         Self {
             storage,
             prefix: to_length_prefixed(T::NAMESPACE),
-            data: PhantomData,
+            _data: PhantomData,
+        }
+    }
+
+    pub fn multilevel(storage: &'a mut dyn Storage, namespace: &[u8]) -> Self {
+        Self {
+            storage,
+            prefix: to_length_prefixed_nested(&[T::NAMESPACE, namespace]),
+            _data: PhantomData,
         }
     }
 }
@@ -87,12 +113,21 @@ impl<T: StoragePrefix> Storage for TypedPrefixedStorageMut<'_, T> {
     }
 }
 
+impl<'a, T: StoragePrefix> From<TypedPrefixedStorageMut<'a, T>> for PrefixedStorage<'a> {
+    fn from(value: TypedPrefixedStorageMut<'a, T>) -> Self {
+        Self {
+            storage: value.storage,
+            prefix: value.prefix,
+        }
+    }
+}
+
 impl<T: StoragePrefix> TypedPrefixedStorageMut<'_, T> {
     pub fn borrow(&self) -> TypedPrefixedStorage<'_, T> {
         TypedPrefixedStorage {
             storage: self.storage,
             prefix: self.prefix.clone(),
-            data: PhantomData,
+            _data: PhantomData,
         }
     }
 }

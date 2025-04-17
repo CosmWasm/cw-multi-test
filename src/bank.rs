@@ -54,9 +54,7 @@ pub struct BankKeeper {}
 impl StoragePrefix for BankKeeper {
     const NAMESPACE: &'static [u8] = b"bank";
 }
-
 type BankStorage<'a> = TypedPrefixedStorage<'a, BankKeeper>;
-
 type BankStorageMut<'a> = TypedPrefixedStorageMut<'a, BankKeeper>;
 
 impl BankKeeper {
