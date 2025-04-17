@@ -1,7 +1,10 @@
 use crate::app::CosmosRouter;
 use crate::error::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
-use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
+use crate::prefixed_storage::typed_prefixed_storage::{
+    StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
+};
+use crate::prefixed_storage::{prefixed, prefixed_read};
 use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
@@ -110,46 +113,6 @@ const UNBONDING_QUEUE: Item<VecDeque<Unbonding>> = Item::new("unbonding_queue");
 const WITHDRAW_ADDRESS: Map<&Addr, Addr> = Map::new("withdraw_address");
 
 pub const NAMESPACE_STAKING: &[u8] = b"staking";
-
-pub const NAMESPACE_DISTRIBUTION: &[u8] = b"distribution";
-
-struct DistributionStorage<'a>(ReadonlyPrefixedStorage<'a>);
-
-impl<'a> DistributionStorage<'a> {
-    fn new(storage: &'a dyn Storage) -> Self {
-        Self(prefixed_read(storage, NAMESPACE_DISTRIBUTION))
-    }
-}
-
-impl<'a> Deref for DistributionStorage<'a> {
-    type Target = ReadonlyPrefixedStorage<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-struct DistributionStorageMut<'a>(PrefixedStorage<'a>);
-
-impl<'a> DistributionStorageMut<'a> {
-    fn new(storage: &'a mut dyn Storage) -> Self {
-        Self(prefixed(storage, NAMESPACE_DISTRIBUTION))
-    }
-}
-
-impl<'a> Deref for DistributionStorageMut<'a> {
-    type Target = PrefixedStorage<'a>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for DistributionStorageMut<'_> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
 
 /// Staking privileged action definition.
 ///
@@ -921,6 +884,16 @@ impl Module for StakeKeeper {
 #[derive(Default)]
 pub struct DistributionKeeper {}
 
+impl Distribution for DistributionKeeper {}
+
+impl StoragePrefix for DistributionKeeper {
+    const PREFIX: &'static [u8] = b"distribution";
+}
+
+type DistributionStorage<'a> = TypedPrefixedStorage<'a, DistributionKeeper>;
+
+type DistributionStorageMut<'a> = TypedPrefixedStorageMut<'a, DistributionKeeper>;
+
 impl DistributionKeeper {
     /// Creates a new distribution keeper with default settings.
     pub fn new() -> Self {
@@ -986,8 +959,6 @@ impl DistributionKeeper {
         }
     }
 }
-
-impl Distribution for DistributionKeeper {}
 
 impl Module for DistributionKeeper {
     type ExecT = DistributionMsg;
