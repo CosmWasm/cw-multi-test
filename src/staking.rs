@@ -621,7 +621,7 @@ impl Staking for StakeKeeper {
 }
 
 impl StoragePrefix for StakeKeeper {
-    const PREFIX: &'static [u8] = b"staking";
+    const NAMESPACE: &'static [u8] = b"staking";
 }
 
 type StakingStorage<'a> = TypedPrefixedStorage<'a, StakeKeeper>;
@@ -941,7 +941,7 @@ impl DistributionKeeper {
 impl Distribution for DistributionKeeper {}
 
 impl StoragePrefix for DistributionKeeper {
-    const PREFIX: &'static [u8] = b"distribution";
+    const NAMESPACE: &'static [u8] = b"distribution";
 }
 
 type DistributionStorage<'a> = TypedPrefixedStorage<'a, DistributionKeeper>;

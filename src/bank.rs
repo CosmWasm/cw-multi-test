@@ -52,7 +52,7 @@ pub trait Bank: Module<ExecT = BankMsg, QueryT = BankQuery, SudoT = BankSudo> {}
 pub struct BankKeeper {}
 
 impl StoragePrefix for BankKeeper {
-    const PREFIX: &'static [u8] = b"bank";
+    const NAMESPACE: &'static [u8] = b"bank";
 }
 
 type BankStorage<'a> = TypedPrefixedStorage<'a, BankKeeper>;
@@ -72,7 +72,8 @@ impl BankKeeper {
         account: &Addr,
         amount: Vec<Coin>,
     ) -> AnyResult<()> {
-        self.set_balance(&mut BankStorageMut::new(storage), account, amount)
+        let mut bank_storage = BankStorageMut::new(storage);
+        self.set_balance(&mut bank_storage, account, amount)
     }
 
     /// Administration function for adjusting bank accounts.
@@ -92,7 +93,7 @@ impl BankKeeper {
     /// Administration function for adjusting denomination metadata.
     pub fn set_denom_metadata(
         &self,
-        storage: &mut BankStorageMut,
+        storage: &mut dyn Storage,
         denom: String,
         metadata: DenomMetadata,
     ) -> AnyResult<()> {
@@ -258,16 +259,14 @@ impl Module for BankKeeper {
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::DenomMetadata { denom } => {
-                let meta = DENOM_METADATA
-                    .may_load(&bank_storage, denom)?
-                    .unwrap_or_default();
+                let meta = DENOM_METADATA.may_load(storage, denom)?.unwrap_or_default();
                 let res = DenomMetadataResponse::new(meta);
                 to_json_binary(&res).map_err(Into::into)
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::AllDenomMetadata { pagination: _ } => {
                 let mut metadata = vec![];
-                for key in DENOM_METADATA.keys(&bank_storage, None, None, Order::Ascending) {
+                for key in DENOM_METADATA.keys(storage, None, None, Order::Ascending) {
                     metadata.push(DENOM_METADATA.may_load(storage, key?)?.unwrap_or_default());
                 }
                 let res = AllDenomMetadataResponse::new(metadata, None);
@@ -528,11 +527,10 @@ mod test {
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let bank = BankKeeper::new();
-        let mut bank_storage = BankStorageMut::new(&mut store);
         // set metadata for Ether
         let denom_eth_name = "eth".to_string();
         bank.set_denom_metadata(
-            &mut bank_storage,
+            &mut store,
             denom_eth_name.clone(),
             DenomMetadata {
                 name: denom_eth_name.clone(),
@@ -557,11 +555,10 @@ mod test {
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
         let bank = BankKeeper::new();
-        let mut bank_storage = BankStorageMut::new(&mut store);
         // set metadata for Bitcoin
         let denom_btc_name = "btc".to_string();
         bank.set_denom_metadata(
-            &mut bank_storage,
+            &mut store,
             denom_btc_name.clone(),
             DenomMetadata {
                 name: denom_btc_name.clone(),
@@ -572,7 +569,7 @@ mod test {
         // set metadata for Ether
         let denom_eth_name = "eth".to_string();
         bank.set_denom_metadata(
-            &mut bank_storage,
+            &mut store,
             denom_eth_name.clone(),
             DenomMetadata {
                 name: denom_eth_name.clone(),
