@@ -29,21 +29,21 @@ impl<T: StoragePrefix> Storage for TypedPrefixedStorage<'_, T> {
         get_with_prefix(self.storage, self.prefix, key)
     }
 
-    fn range<'b>(
-        &'b self,
+    fn range<'x>(
+        &'x self,
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> Box<dyn Iterator<Item = Record> + 'b> {
+    ) -> Box<dyn Iterator<Item = Record> + 'x> {
         range_with_prefix(self.storage, self.prefix, start, end, order)
     }
 
     fn set(&mut self, _key: &[u8], _value: &[u8]) {
-        unimplemented!();
+        unreachable!();
     }
 
     fn remove(&mut self, _key: &[u8]) {
-        unimplemented!();
+        unreachable!();
     }
 }
 
@@ -68,12 +68,12 @@ impl<T: StoragePrefix> Storage for TypedPrefixedStorageMut<'_, T> {
         get_with_prefix(self.storage, self.prefix, key)
     }
 
-    fn range<'b>(
-        &'b self,
+    fn range<'y>(
+        &'y self,
         start: Option<&[u8]>,
         end: Option<&[u8]>,
         order: Order,
-    ) -> Box<dyn Iterator<Item = Record> + 'b> {
+    ) -> Box<dyn Iterator<Item = Record> + 'y> {
         range_with_prefix(self.storage, self.prefix, start, end, order)
     }
 
