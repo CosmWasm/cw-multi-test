@@ -634,6 +634,14 @@ impl Staking for StakeKeeper {
     }
 }
 
+impl StoragePrefix for StakeKeeper {
+    const PREFIX: &'static [u8] = b"staking";
+}
+
+type StakingStorage<'a> = TypedPrefixedStorage<'a, StakeKeeper>;
+
+type StakingStorageMut<'a> = TypedPrefixedStorageMut<'a, StakeKeeper>;
+
 impl Module for StakeKeeper {
     type ExecT = StakingMsg;
     type QueryT = StakingQuery;
