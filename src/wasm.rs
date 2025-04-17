@@ -4,7 +4,10 @@ use crate::checksums::{ChecksumGenerator, SimpleChecksumGenerator};
 use crate::contracts::Contract;
 use crate::error::{bail, AnyContext, AnyError, AnyResult, Error};
 use crate::executor::AppResponse;
-use crate::prefixed_storage::{prefixed, prefixed_read, PrefixedStorage, ReadonlyPrefixedStorage};
+use crate::prefixed_storage::typed_prefixed_storage::{
+    StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
+};
+use crate::prefixed_storage::{PrefixedStorage, ReadonlyPrefixedStorage};
 use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 #[cfg(feature = "stargate")]
@@ -28,9 +31,6 @@ use std::fmt::Debug;
 
 /// Contract state kept in storage, separate from the contracts themselves (contract code).
 const CONTRACTS: Map<&Addr, ContractData> = Map::new("contracts");
-
-/// Wasm module namespace.
-const NAMESPACE_WASM: &[u8] = b"wasm";
 
 /// Contract [address namespace].
 ///
@@ -153,8 +153,10 @@ pub trait Wasm<ExecC, QueryC> {
         // We double-namespace this, once from global storage -> wasm_storage
         // then from wasm_storage -> the contracts subspace
         let namespace = self.contract_namespace(address);
-        let storage = ReadonlyPrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
-        Box::new(storage)
+        let storage: TypedPrefixedStorage<'_, WasmKeeper<ExecC, QueryC>> =
+            WasmStorage::multilevel(storage, &namespace);
+        let prefixed_storage: ReadonlyPrefixedStorage = storage.into();
+        Box::new(prefixed_storage)
     }
 
     /// Returns **read-write** (mutable) contract storage.
@@ -166,8 +168,10 @@ pub trait Wasm<ExecC, QueryC> {
         // We double-namespace this, once from global storage -> wasm_storage
         // then from wasm_storage -> the contracts subspace
         let namespace = self.contract_namespace(address);
-        let storage = PrefixedStorage::multilevel(storage, &[NAMESPACE_WASM, &namespace]);
-        Box::new(storage)
+        let storage: TypedPrefixedStorageMut<'_, WasmKeeper<ExecC, QueryC>> =
+            WasmStorageMut::multilevel(storage, &namespace);
+        let prefixed_storage: PrefixedStorage = storage.into();
+        Box::new(prefixed_storage)
     }
 }
 
@@ -184,6 +188,12 @@ pub struct WasmKeeper<ExecC, QueryC> {
     /// Just markers to make type elision fork when using it as `Wasm` trait
     _p: std::marker::PhantomData<QueryC>,
 }
+
+impl<ExecC, QueryC> StoragePrefix for WasmKeeper<ExecC, QueryC> {
+    const NAMESPACE: &'static [u8] = b"wasm";
+}
+type WasmStorage<'a, ExecC, QueryC> = TypedPrefixedStorage<'a, WasmKeeper<ExecC, QueryC>>;
+type WasmStorageMut<'a, ExecC, QueryC> = TypedPrefixedStorageMut<'a, WasmKeeper<ExecC, QueryC>>;
 
 impl<ExecC, QueryC> Default for WasmKeeper<ExecC, QueryC> {
     /// Returns the default value for [WasmKeeper].
@@ -329,9 +339,9 @@ where
 
     /// Returns `ContractData` for the contract with specified address.
     fn contract_data(&self, storage: &dyn Storage, address: &Addr) -> AnyResult<ContractData> {
-        CONTRACTS
-            .load(&prefixed_read(storage, NAMESPACE_WASM), address)
-            .map_err(Into::into)
+        let storage: TypedPrefixedStorage<'_, WasmKeeper<ExecC, QueryC>> =
+            WasmStorage::new(storage);
+        CONTRACTS.load(&storage, address).map_err(Into::into)
     }
 
     /// Returns a raw state dump of all key-values held by a contract with specified address.
@@ -1230,20 +1240,19 @@ where
         address: &Addr,
         contract: &ContractData,
     ) -> AnyResult<()> {
+        let mut storage: TypedPrefixedStorageMut<'_, WasmKeeper<ExecC, QueryC>> =
+            WasmStorageMut::new(storage);
         CONTRACTS
-            .save(&mut prefixed(storage, NAMESPACE_WASM), address, contract)
+            .save(&mut storage, address, contract)
             .map_err(Into::into)
     }
 
     /// Returns the number of all contract instances.
     fn instance_count(&self, storage: &dyn Storage) -> usize {
+        let storage: TypedPrefixedStorage<'_, WasmKeeper<ExecC, QueryC>> =
+            WasmStorage::new(storage);
         CONTRACTS
-            .range_raw(
-                &prefixed_read(storage, NAMESPACE_WASM),
-                None,
-                None,
-                Order::Ascending,
-            )
+            .range_raw(&storage, None, None, Order::Ascending)
             .count()
     }
 

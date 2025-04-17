@@ -5,6 +5,7 @@ use namespace_helpers::{get_with_prefix, range_with_prefix, remove_with_prefix, 
 
 mod length_prefixed;
 mod namespace_helpers;
+pub mod typed_prefixed_storage;
 
 /// An alias of [PrefixedStorage::new] for less verbose usage.
 pub fn prefixed<'a>(storage: &'a mut dyn Storage, namespace: &[u8]) -> PrefixedStorage<'a> {
