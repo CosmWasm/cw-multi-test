@@ -227,8 +227,7 @@ impl StakeKeeper {
         Self::get_rewards_internal(storage, block, delegator, validator)
     }
 
-    /// Returns internally the rewards of the given delegator from the given validator.
-    pub fn get_rewards_internal(
+    fn get_rewards_internal(
         storage: &dyn Storage,
         block: &BlockInfo,
         delegator: &Addr,
