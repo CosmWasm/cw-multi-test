@@ -216,7 +216,7 @@ impl StakeKeeper {
         Ok(STAKING_INFO.may_load(storage)?.unwrap_or_default())
     }
 
-    /// Returns the rewards of the given delegator from at the given validator.
+    /// Returns the rewards of the given delegator at the given validator.
     pub fn get_rewards(
         &self,
         storage: &dyn Storage,
