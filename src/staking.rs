@@ -1062,8 +1062,7 @@ impl Module for DistributionKeeper {
         api: &dyn Api,
         storage: &dyn Storage,
         _querier: &dyn Querier,
-        #[cfg(feature = "cosmwasm_1_4")] block: &BlockInfo,
-        #[cfg(not(feature = "cosmwasm_1_4"))] _block: &BlockInfo,
+        block: &BlockInfo,
         request: DistributionQuery,
     ) -> AnyResult<Binary> {
         match request {
@@ -1127,7 +1126,10 @@ impl Module for DistributionKeeper {
                     total_rewards,
                 ))?)
             }
-            other => bail!("Unsupported distribution query: {:?}", other),
+            other => {
+                let _ = block; // Just to avoid clippy warnings, will be discarded by compiler anyway.
+                bail!("Unsupported distribution query: {:?}", other)
+            }
         }
     }
 
