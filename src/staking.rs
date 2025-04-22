@@ -216,8 +216,19 @@ impl StakeKeeper {
         Ok(STAKING_INFO.may_load(storage)?.unwrap_or_default())
     }
 
-    /// Returns the rewards of the given delegator at the given validator.
+    /// Returns the rewards of the given delegator from the given validator.
     pub fn get_rewards(
+        &self,
+        storage: &dyn Storage,
+        block: &BlockInfo,
+        delegator: &Addr,
+        validator: &str,
+    ) -> AnyResult<Option<Coin>> {
+        Self::get_rewards_internal(storage, block, delegator, validator)
+    }
+
+    /// Returns internally the rewards of the given delegator from the given validator.
+    pub fn get_rewards_internal(
         storage: &dyn Storage,
         block: &BlockInfo,
         delegator: &Addr,
@@ -234,7 +245,7 @@ impl StakeKeeper {
             Err(_) => return Ok(None),
         };
         let validator_info = VALIDATOR_INFO.load(&staking_storage, validator)?;
-        Self::get_rewards_internal(
+        Self::get_rewards_from_validator(
             &staking_storage,
             block,
             &shares,
@@ -244,7 +255,7 @@ impl StakeKeeper {
         .map(Some)
     }
 
-    fn get_rewards_internal(
+    fn get_rewards_from_validator(
         storage: &StakingStorage,
         block: &BlockInfo,
         shares: &Shares,
@@ -804,7 +815,7 @@ impl Module for StakeKeeper {
                     .unwrap_or_default();
 
                 let validator_info = VALIDATOR_INFO.load(&staking_storage, &validator)?;
-                let reward = Self::get_rewards_internal(
+                let reward = Self::get_rewards_from_validator(
                     &staking_storage,
                     block,
                     &shares,
@@ -960,9 +971,12 @@ impl DistributionKeeper {
         validator_address: &str,
     ) -> AnyResult<Option<DecCoin>> {
         Ok(
-            if let Some(coin) =
-                StakeKeeper::get_rewards(storage, block, delegator_address, validator_address)?
-            {
+            if let Some(coin) = StakeKeeper::get_rewards_internal(
+                storage,
+                block,
+                delegator_address,
+                validator_address,
+            )? {
                 Some(DecCoin::new(
                     Decimal256::from_atomics(coin.amount, 0)?,
                     coin.denom,
@@ -1528,14 +1542,17 @@ mod test {
         env.block.time = env.block.time.plus_seconds(YEAR / 2);
 
         // should now have 200 * 10% / 2 - 10% commission = 9 tokens reward
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(9, rewards.amount.u128());
 
         // withdraw rewards
@@ -1554,27 +1571,33 @@ mod test {
             .unwrap();
 
         // should have no rewards left
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(0, rewards.amount.u128());
 
         // wait another 1/2 year
         env.block.time = env.block.time.plus_seconds(YEAR / 2);
         // should now have 9 tokens again
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(9, rewards.amount.u128());
     }
 
@@ -1614,25 +1637,31 @@ mod test {
         env.block.time = env.block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 100 * 10% - 10% commission = 9 tokens
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(rewards.amount.u128(), 9);
 
         // delegator2 should now have 200 * 10% - 10% commission = 18 tokens
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_2,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_2,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(rewards.amount.u128(), 18);
 
         // delegator1 stakes 100 more
@@ -1652,25 +1681,31 @@ mod test {
         env.block.time = env.block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 9 + 200 * 10% - 10% commission = 27 tokens
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(rewards.amount.u128(), 27);
 
         // delegator2 should now have 18 + 200 * 10% - 10% commission = 36 tokens
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_2,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_2,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(rewards.amount.u128(), 36);
 
         // delegator2 unstakes 100 (has 100 left after that)
@@ -1719,39 +1754,48 @@ mod test {
         .unwrap();
         assert_eq!(27, balance.amount.amount.u128());
 
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(0, rewards.amount.u128());
 
         // wait another year
         env.block.time = env.block.time.plus_seconds(YEAR);
 
         // delegator1 should now have 0 + 200 * 10% - 10% commission = 18 tokens
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_1,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(18, rewards.amount.u128());
 
         // delegator2 should now have 36 + 100 * 10% - 10% commission = 45 tokens
-        let rewards = StakeKeeper::get_rewards(
-            &env.storage,
-            &env.block,
-            &delegator_addr_2,
-            &validator_addr_1,
-        )
-        .unwrap()
-        .unwrap();
+        let rewards = env
+            .router
+            .staking
+            .get_rewards(
+                &env.storage,
+                &env.block,
+                &delegator_addr_2,
+                &validator_addr_1,
+            )
+            .unwrap()
+            .unwrap();
         assert_eq!(45, rewards.amount.u128());
     }
 
