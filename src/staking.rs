@@ -1,7 +1,9 @@
 use crate::app::CosmosRouter;
 use crate::error::{anyhow, bail, AnyResult};
 use crate::executor::AppResponse;
-use crate::prefixed_storage::{prefixed, prefixed_read};
+use crate::prefixed_storage::typed_prefixed_storage::{
+    StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
+};
 use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
@@ -114,10 +116,6 @@ const UNBONDING_QUEUE: Item<VecDeque<Unbonding>> = Item::new("unbonding_queue");
 /// has been set.
 const WITHDRAW_ADDRESS: Map<&Addr, Addr> = Map::new("withdraw_address");
 
-pub const NAMESPACE_STAKING: &[u8] = b"staking";
-// https://github.com/cosmos/cosmos-sdk/blob/4f6f6c00021f4b5ee486bbb71ae2071a8ceb47c9/x/distribution/types/keys.go#L16
-pub const NAMESPACE_DISTRIBUTION: &[u8] = b"distribution";
-
 /// Staking privileged action definition.
 ///
 /// We need to expand on this, but we will need this to properly test out staking
@@ -182,8 +180,7 @@ impl StakeKeeper {
 
     /// Provides some general parameters to the stake keeper
     pub fn setup(&self, storage: &mut dyn Storage, staking_info: StakingInfo) -> AnyResult<()> {
-        let mut storage = prefixed(storage, NAMESPACE_STAKING);
-        STAKING_INFO.save(&mut storage, &staking_info)?;
+        STAKING_INFO.save(&mut StakingStorageMut::new(storage), &staking_info)?;
         Ok(())
     }
 
@@ -195,7 +192,7 @@ impl StakeKeeper {
         block: &BlockInfo,
         validator: Validator,
     ) -> AnyResult<()> {
-        let mut storage = prefixed(storage, NAMESPACE_STAKING);
+        let mut storage = StakingStorageMut::new(storage);
         if VALIDATOR_MAP
             .may_load(&storage, &validator.address)?
             .is_some()
@@ -215,8 +212,8 @@ impl StakeKeeper {
         Ok(())
     }
 
-    fn get_staking_info(staking_storage: &dyn Storage) -> AnyResult<StakingInfo> {
-        Ok(STAKING_INFO.may_load(staking_storage)?.unwrap_or_default())
+    fn get_staking_info(storage: &StakingStorage) -> AnyResult<StakingInfo> {
+        Ok(STAKING_INFO.may_load(storage)?.unwrap_or_default())
     }
 
     /// Returns the rewards of the given delegator at the given validator.
@@ -226,7 +223,7 @@ impl StakeKeeper {
         delegator: &Addr,
         validator: &str,
     ) -> AnyResult<Option<Coin>> {
-        let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+        let staking_storage = StakingStorage::new(storage);
         let validator_obj = match Self::get_validator(&staking_storage, validator)? {
             Some(validator) => validator,
             None => bail!("validator {} not found", validator),
@@ -248,13 +245,13 @@ impl StakeKeeper {
     }
 
     fn get_rewards_internal(
-        staking_storage: &dyn Storage,
+        storage: &StakingStorage,
         block: &BlockInfo,
         shares: &Shares,
         validator: &Validator,
         validator_info: &ValidatorInfo,
     ) -> AnyResult<Coin> {
-        let staking_info = Self::get_staking_info(staking_storage)?;
+        let staking_info = Self::get_staking_info(storage)?;
 
         // calculate missing rewards without updating the validator to reduce rounding errors
         let new_validator_rewards = Self::calculate_rewards(
@@ -301,18 +298,18 @@ impl StakeKeeper {
     /// Always call this to update rewards before changing anything that influences future rewards.
     fn update_rewards(
         _api: &dyn Api,
-        staking_storage: &mut dyn Storage,
+        storage: &mut StakingStorageMut,
         block: &BlockInfo,
         validator: &str,
     ) -> AnyResult<()> {
-        let staking_info = Self::get_staking_info(staking_storage)?;
+        let staking_info = Self::get_staking_info(&storage.borrow())?;
 
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
+            .may_load(storage, validator)?
             // https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L15
             .ok_or_else(|| anyhow!("validator does not exist"))?;
 
-        let validator_obj = VALIDATOR_MAP.load(staking_storage, validator)?;
+        let validator_obj = VALIDATOR_MAP.load(storage, validator)?;
 
         if validator_info.last_rewards_calculation >= block.time {
             return Ok(());
@@ -328,14 +325,14 @@ impl StakeKeeper {
 
         // update validator info
         validator_info.last_rewards_calculation = block.time;
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(storage, validator, &validator_info)?;
 
         // update delegators
         if !new_rewards.is_zero() {
             // update all delegators
             for staker in validator_info.stakers.iter() {
                 STAKES.update(
-                    staking_storage,
+                    storage,
                     (staker, &validator_obj.address),
                     |shares| -> AnyResult<_> {
                         let mut shares =
@@ -350,25 +347,24 @@ impl StakeKeeper {
     }
 
     /// Returns the single validator with the given address (or `None` if there is no such validator).
-    fn get_validator(staking_storage: &dyn Storage, address: &str) -> AnyResult<Option<Validator>> {
-        Ok(VALIDATOR_MAP.may_load(staking_storage, address)?)
+    fn get_validator(storage: &StakingStorage, address: &str) -> AnyResult<Option<Validator>> {
+        Ok(VALIDATOR_MAP.may_load(storage, address)?)
     }
 
     /// Returns all available validators
-    fn get_validators(&self, staking_storage: &dyn Storage) -> AnyResult<Vec<Validator>> {
-        let res: Result<_, _> = VALIDATORS.iter(staking_storage)?.collect();
+    fn get_validators(&self, storage: &StakingStorage) -> AnyResult<Vec<Validator>> {
+        let res: Result<_, _> = VALIDATORS.iter(storage)?.collect();
         Ok(res?)
     }
 
     fn get_stake(
         &self,
-        staking_storage: &dyn Storage,
+        storage: &StakingStorage,
         account: &Addr,
         validator: &str,
     ) -> AnyResult<Option<Coin>> {
-        let shares = STAKES.may_load(staking_storage, (account, validator))?;
-        let staking_info = Self::get_staking_info(staking_storage)?;
-
+        let shares = STAKES.may_load(storage, (account, validator))?;
+        let staking_info = Self::get_staking_info(storage)?;
         Ok(shares.map(|shares| {
             Coin {
                 denom: staking_info.bonded_denom,
@@ -380,16 +376,16 @@ impl StakeKeeper {
     fn add_stake(
         &self,
         api: &dyn Api,
-        staking_storage: &mut dyn Storage,
+        storage: &mut StakingStorageMut,
         block: &BlockInfo,
         to_address: &Addr,
         validator: &str,
         amount: Coin,
     ) -> AnyResult<()> {
-        self.validate_denom(staking_storage, &amount)?;
+        self.validate_denom(&storage.borrow(), &amount)?;
         self.update_stake(
             api,
-            staking_storage,
+            storage,
             block,
             to_address,
             validator,
@@ -401,16 +397,16 @@ impl StakeKeeper {
     fn remove_stake(
         &self,
         api: &dyn Api,
-        staking_storage: &mut dyn Storage,
+        storage: &mut StakingStorageMut,
         block: &BlockInfo,
         from_address: &Addr,
         validator: &str,
         amount: Coin,
     ) -> AnyResult<()> {
-        self.validate_denom(staking_storage, &amount)?;
+        self.validate_denom(&storage.borrow(), &amount)?;
         self.update_stake(
             api,
-            staking_storage,
+            storage,
             block,
             from_address,
             validator,
@@ -422,7 +418,7 @@ impl StakeKeeper {
     fn update_stake(
         &self,
         api: &dyn Api,
-        staking_storage: &mut dyn Storage,
+        storage: &mut StakingStorageMut,
         block: &BlockInfo,
         delegator: &Addr,
         validator: &str,
@@ -432,13 +428,13 @@ impl StakeKeeper {
         let amount = amount.into();
 
         // update rewards for this validator
-        Self::update_rewards(api, staking_storage, block, validator)?;
+        Self::update_rewards(api, storage, block, validator)?;
 
         // now, we can update the stake of the delegator and validator
         let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
+            .may_load(storage, validator)?
             .unwrap_or_else(|| ValidatorInfo::new(block.time));
-        let shares = STAKES.may_load(staking_storage, (delegator, validator))?;
+        let shares = STAKES.may_load(storage, (delegator, validator))?;
         let mut shares = if sub {
             // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1005-L1007
             // and https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L31
@@ -463,14 +459,14 @@ impl StakeKeeper {
         // save updated values
         if shares.stake.is_zero() {
             // no more stake, so remove
-            STAKES.remove(staking_storage, (delegator, validator));
+            STAKES.remove(storage, (delegator, validator));
             validator_info.stakers.remove(delegator);
         } else {
-            STAKES.save(staking_storage, (delegator, validator), &shares)?;
+            STAKES.save(storage, (delegator, validator), &shares)?;
             validator_info.stakers.insert(delegator.clone());
         }
         // save updated validator info
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(storage, validator, &validator_info)?;
 
         Ok(())
     }
@@ -478,18 +474,16 @@ impl StakeKeeper {
     fn slash(
         &self,
         api: &dyn Api,
-        staking_storage: &mut dyn Storage,
+        storage: &mut StakingStorageMut,
         block: &BlockInfo,
         validator: &str,
         percentage: Decimal,
     ) -> AnyResult<()> {
         // calculate rewards before slashing
-        Self::update_rewards(api, staking_storage, block, validator)?;
+        Self::update_rewards(api, storage, block, validator)?;
 
         // update stake of validator and stakers
-        let mut validator_info = VALIDATOR_INFO
-            .may_load(staking_storage, validator)?
-            .unwrap();
+        let mut validator_info = VALIDATOR_INFO.may_load(storage, validator)?.unwrap();
 
         let remaining_percentage = Decimal::one() - percentage;
         validator_info.stake = validator_info.stake.mul_floor(remaining_percentage);
@@ -498,44 +492,37 @@ impl StakeKeeper {
         if validator_info.stake.is_zero() {
             // need to remove all stakes
             for delegator in validator_info.stakers.iter() {
-                STAKES.remove(staking_storage, (delegator, validator));
+                STAKES.remove(storage, (delegator, validator));
             }
             validator_info.stakers.clear();
         } else {
             // otherwise we update all stakers
             for delegator in validator_info.stakers.iter() {
-                STAKES.update(
-                    staking_storage,
-                    (delegator, validator),
-                    |stake| -> AnyResult<_> {
-                        let mut stake = stake.expect("all stakers in validator_info should exist");
-                        stake.stake *= remaining_percentage;
+                STAKES.update(storage, (delegator, validator), |stake| -> AnyResult<_> {
+                    let mut stake = stake.expect("all stakers in validator_info should exist");
+                    stake.stake *= remaining_percentage;
 
-                        Ok(stake)
-                    },
-                )?;
+                    Ok(stake)
+                })?;
             }
         }
         // go through the queue to slash all pending unbondings
-        let mut unbonding_queue = UNBONDING_QUEUE
-            .may_load(staking_storage)?
-            .unwrap_or_default();
-        #[allow(clippy::op_ref)]
+        let mut unbonding_queue = UNBONDING_QUEUE.may_load(storage)?.unwrap_or_default();
         unbonding_queue
             .iter_mut()
-            .filter(|ub| &ub.validator == validator)
+            .filter(|ub| ub.validator == validator)
             .for_each(|ub| {
                 ub.amount = ub.amount.mul_floor(remaining_percentage);
             });
-        UNBONDING_QUEUE.save(staking_storage, &unbonding_queue)?;
+        UNBONDING_QUEUE.save(storage, &unbonding_queue)?;
 
-        VALIDATOR_INFO.save(staking_storage, validator, &validator_info)?;
+        VALIDATOR_INFO.save(storage, validator, &validator_info)?;
         Ok(())
     }
 
     // Asserts that the given coin has the proper denominator
-    fn validate_denom(&self, staking_storage: &dyn Storage, amount: &Coin) -> AnyResult<()> {
-        let staking_info = Self::get_staking_info(staking_storage)?;
+    fn validate_denom(&self, storage: &StakingStorage, amount: &Coin) -> AnyResult<()> {
+        let staking_info = Self::get_staking_info(storage)?;
         ensure_eq!(
             amount.denom,
             staking_info.bonded_denom,
@@ -561,15 +548,15 @@ impl StakeKeeper {
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
     ) -> AnyResult<AppResponse> {
-        let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
         let mut unbonding_queue = UNBONDING_QUEUE
-            .may_load(&staking_storage)?
+            .may_load(&StakingStorage::new(storage))?
             .unwrap_or_default();
         loop {
-            let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
             match unbonding_queue.front() {
                 // assuming the queue is sorted by payout_at
                 Some(Unbonding { payout_at, .. }) if payout_at <= &block.time => {
+                    let mut staking_storage_mut = StakingStorageMut::new(storage);
+
                     // remove from queue
                     let Unbonding {
                         delegator,
@@ -580,7 +567,7 @@ impl StakeKeeper {
 
                     // remove staking entry if it is empty
                     let delegation = self
-                        .get_stake(&staking_storage, &delegator, &validator)?
+                        .get_stake(&staking_storage_mut.borrow(), &delegator, &validator)?
                         .map(|mut stake| {
                             // add unbonding amounts
                             stake.amount += unbonding_queue
@@ -592,13 +579,15 @@ impl StakeKeeper {
                         });
                     match delegation {
                         Some(delegation) if delegation.amount.is_zero() => {
-                            STAKES.remove(&mut staking_storage, (&delegator, &validator));
+                            STAKES.remove(&mut staking_storage_mut, (&delegator, &validator));
                         }
-                        None => STAKES.remove(&mut staking_storage, (&delegator, &validator)),
+                        None => {
+                            STAKES.remove(&mut staking_storage_mut, (&delegator, &validator));
+                        }
                         _ => {}
                     }
 
-                    let staking_info = Self::get_staking_info(&staking_storage)?;
+                    let staking_info = Self::get_staking_info(&staking_storage_mut.borrow())?;
                     if !amount.is_zero() {
                         router.execute(
                             api,
@@ -616,8 +605,7 @@ impl StakeKeeper {
                 _ => break,
             }
         }
-        let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
-        UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
+        UNBONDING_QUEUE.save(&mut StakingStorageMut::new(storage), &unbonding_queue)?;
         Ok(AppResponse::default())
     }
 }
@@ -634,6 +622,12 @@ impl Staking for StakeKeeper {
     }
 }
 
+impl StoragePrefix for StakeKeeper {
+    const NAMESPACE: &'static [u8] = b"staking";
+}
+type StakingStorage<'a> = TypedPrefixedStorage<'a, StakeKeeper>;
+type StakingStorageMut<'a> = TypedPrefixedStorageMut<'a, StakeKeeper>;
+
 impl Module for StakeKeeper {
     type ExecT = StakingMsg;
     type QueryT = StakingQuery;
@@ -648,7 +642,7 @@ impl Module for StakeKeeper {
         sender: Addr,
         msg: StakingMsg,
     ) -> AnyResult<AppResponse> {
-        let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+        let mut staking_storage_mut = StakingStorageMut::new(storage);
         match msg {
             StakingMsg::Delegate { validator, amount } => {
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L202-L207
@@ -663,7 +657,7 @@ impl Module for StakeKeeper {
                     .add_attribute("new_shares", amount.amount.to_string())]; // TODO: calculate shares?
                 self.add_stake(
                     api,
-                    &mut staking_storage,
+                    &mut staking_storage_mut,
                     block,
                     &sender,
                     &validator,
@@ -687,7 +681,7 @@ impl Module for StakeKeeper {
                 })
             }
             StakingMsg::Undelegate { validator, amount } => {
-                self.validate_denom(&staking_storage, &amount)?;
+                self.validate_denom(&staking_storage_mut.borrow(), &amount)?;
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
                 if amount.amount.is_zero() {
@@ -701,16 +695,16 @@ impl Module for StakeKeeper {
                     .add_attribute("completion_time", "2022-09-27T14:00:00+00:00")]; // TODO: actual date?
                 self.remove_stake(
                     api,
-                    &mut staking_storage,
+                    &mut staking_storage_mut,
                     block,
                     &sender,
                     &validator,
                     amount.clone(),
                 )?;
                 // add tokens to unbonding queue
-                let staking_info = Self::get_staking_info(&staking_storage)?;
+                let staking_info = Self::get_staking_info(&staking_storage_mut.borrow())?;
                 let mut unbonding_queue = UNBONDING_QUEUE
-                    .may_load(&staking_storage)?
+                    .may_load(&staking_storage_mut)?
                     .unwrap_or_default();
                 unbonding_queue.push_back(Unbonding {
                     delegator: sender.clone(),
@@ -718,7 +712,7 @@ impl Module for StakeKeeper {
                     amount: amount.amount,
                     payout_at: block.time.plus_seconds(staking_info.unbonding_time),
                 });
-                UNBONDING_QUEUE.save(&mut staking_storage, &unbonding_queue)?;
+                UNBONDING_QUEUE.save(&mut staking_storage_mut, &unbonding_queue)?;
                 Ok(AppResponse {
                     events,
                     ..Default::default()
@@ -737,7 +731,7 @@ impl Module for StakeKeeper {
 
                 self.remove_stake(
                     api,
-                    &mut staking_storage,
+                    &mut staking_storage_mut,
                     block,
                     &sender,
                     &src_validator,
@@ -745,7 +739,7 @@ impl Module for StakeKeeper {
                 )?;
                 self.add_stake(
                     api,
-                    &mut staking_storage,
+                    &mut staking_storage_mut,
                     block,
                     &sender,
                     &dst_validator,
@@ -769,7 +763,7 @@ impl Module for StakeKeeper {
         block: &BlockInfo,
         request: StakingQuery,
     ) -> AnyResult<Binary> {
-        let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+        let staking_storage = StakingStorage::new(storage);
         match request {
             StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse::new(
                 Self::get_staking_info(&staking_storage)?.bonded_denom,
@@ -867,7 +861,7 @@ impl Module for StakeKeeper {
                 validator,
                 percentage,
             } => {
-                let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+                let mut staking_storage = StakingStorageMut::new(storage);
                 self.validate_percentage(percentage)?;
                 self.slash(api, &mut staking_storage, block, &validator, percentage)?;
                 Ok(AppResponse::default())
@@ -899,24 +893,24 @@ impl DistributionKeeper {
         delegator: &Addr,
         validator: &str,
     ) -> AnyResult<Uint128> {
-        let mut staking_storage = prefixed(storage, NAMESPACE_STAKING);
+        let mut staking_storage_mut = StakingStorageMut::new(storage);
         // update the validator and staker rewards
-        StakeKeeper::update_rewards(api, &mut staking_storage, block, validator)?;
+        StakeKeeper::update_rewards(api, &mut staking_storage_mut, block, validator)?;
 
         // load updated rewards for delegator
-        let mut shares = STAKES.load(&staking_storage, (delegator, validator))?;
+        let mut shares = STAKES.load(&staking_storage_mut, (delegator, validator))?;
         let rewards = Uint128::new(1).mul_floor(shares.rewards); // convert to Uint128
 
         // remove rewards from delegator
         shares.rewards = Decimal::zero();
-        STAKES.save(&mut staking_storage, (delegator, validator), &shares)?;
+        STAKES.save(&mut staking_storage_mut, (delegator, validator), &shares)?;
 
         Ok(rewards)
     }
 
     /// Returns the withdrawal address for specified delegator.
     pub fn get_withdraw_address(storage: &dyn Storage, delegator_addr: &Addr) -> AnyResult<Addr> {
-        let storage = prefixed_read(storage, NAMESPACE_DISTRIBUTION);
+        let storage = DistributionStorage::new(storage);
         Ok(match WITHDRAW_ADDRESS.may_load(&storage, delegator_addr)? {
             Some(withdraw_addr) => withdraw_addr,
             None => delegator_addr.clone(),
@@ -931,14 +925,14 @@ impl DistributionKeeper {
         delegator_addr: &Addr,
         withdraw_addr: &Addr,
     ) -> AnyResult<()> {
-        let storage = &mut prefixed(storage, NAMESPACE_DISTRIBUTION);
+        let mut storage = DistributionStorageMut::new(storage);
         if delegator_addr == withdraw_addr {
-            WITHDRAW_ADDRESS.remove(storage, delegator_addr);
+            WITHDRAW_ADDRESS.remove(&mut storage, delegator_addr);
             Ok(())
         } else {
             // TODO: Technically we should require that this address is not the address of a module. How?
             WITHDRAW_ADDRESS
-                .save(storage, delegator_addr, withdraw_addr)
+                .save(&mut storage, delegator_addr, withdraw_addr)
                 .map_err(|e| e.into())
         }
     }
@@ -949,7 +943,7 @@ impl DistributionKeeper {
         storage: &dyn Storage,
         delegator_addr: &Addr,
     ) -> AnyResult<Vec<String>> {
-        let storage = prefixed_read(storage, NAMESPACE_STAKING);
+        let storage = StakingStorage::new(storage);
         Ok(STAKES
             .prefix(delegator_addr)
             .keys(&storage, None, None, Order::Ascending)
@@ -982,6 +976,12 @@ impl DistributionKeeper {
 
 impl Distribution for DistributionKeeper {}
 
+impl StoragePrefix for DistributionKeeper {
+    const NAMESPACE: &'static [u8] = b"distribution";
+}
+type DistributionStorage<'a> = TypedPrefixedStorage<'a, DistributionKeeper>;
+type DistributionStorageMut<'a> = TypedPrefixedStorageMut<'a, DistributionKeeper>;
+
 impl Module for DistributionKeeper {
     type ExecT = DistributionMsg;
     type QueryT = DistributionQuery;
@@ -999,7 +999,7 @@ impl Module for DistributionKeeper {
         match msg {
             DistributionMsg::WithdrawDelegatorReward { validator } => {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
-                let staking_storage = prefixed_read(storage, NAMESPACE_STAKING);
+                let staking_storage = StakingStorage::new(storage);
                 let staking_info = StakeKeeper::get_staking_info(&staking_storage)?;
                 let receiver = Self::get_withdraw_address(storage, &sender)?;
                 // directly mint rewards to delegator
@@ -1402,8 +1402,7 @@ mod test {
             .unwrap();
 
         // get the newly created validator
-        let staking_storage = prefixed_read(&env.storage, NAMESPACE_STAKING);
-        let val = StakeKeeper::get_validator(&staking_storage, &validator_addr_3)
+        let val = StakeKeeper::get_validator(&StakingStorage::new(&env.storage), &validator_addr_3)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
@@ -1421,8 +1420,7 @@ mod test {
             .unwrap_err();
 
         // validator no. 3 should still have the original values of its attributes
-        let staking_storage = prefixed_read(&env.storage, NAMESPACE_STAKING);
-        let val = StakeKeeper::get_validator(&staking_storage, &validator_addr_3)
+        let val = StakeKeeper::get_validator(&StakingStorage::new(&env.storage), &validator_addr_3)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
@@ -1436,12 +1434,12 @@ mod test {
         let delegator_addr_1 = env.delegator_addr_1();
 
         // stake (delegate) 100 tokens from delegator to validator
-        let mut staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
+        let mut staking_storage_mut = StakingStorageMut::new(&mut env.storage);
         env.router
             .staking
             .add_stake(
                 &env.api,
-                &mut staking_storage,
+                &mut staking_storage_mut,
                 &env.block,
                 &delegator_addr_1,
                 &validator_addr_1,
@@ -1465,11 +1463,14 @@ mod test {
             .unwrap();
 
         // check the remaining stake
-        let staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
         let stake_left = env
             .router
             .staking
-            .get_stake(&staking_storage, &delegator_addr_1, &validator_addr_1)
+            .get_stake(
+                &StakingStorage::new(&env.storage),
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
             .unwrap()
             .unwrap();
         assert_eq!(50, stake_left.amount.u128());
@@ -1490,11 +1491,14 @@ mod test {
             .unwrap();
 
         // check the current stake
-        let staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
         let stake_left = env
             .router
             .staking
-            .get_stake(&staking_storage, &delegator_addr_1, &validator_addr_1)
+            .get_stake(
+                &StakingStorage::new(&env.storage),
+                &delegator_addr_1,
+                &validator_addr_1,
+            )
             .unwrap();
         assert_eq!(None, stake_left);
     }
@@ -1506,13 +1510,13 @@ mod test {
         let validator_addr_1 = env.validator_addr_1();
         let delegator_addr_1 = env.delegator_addr_1();
 
-        let mut staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
+        let mut staking_storage_mut = StakingStorageMut::new(&mut env.storage);
         // stake 200 tokens
         env.router
             .staking
             .add_stake(
                 &env.api,
-                &mut staking_storage,
+                &mut staking_storage_mut,
                 &env.block,
                 &delegator_addr_1,
                 &validator_addr_1,
@@ -1582,14 +1586,12 @@ mod test {
         let delegator_addr_1 = env.delegator_addr_1();
         let delegator_addr_2 = env.delegator_addr_2();
 
-        let mut staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
-
         // add 100 stake to delegator1 and 200 to delegator2
         env.router
             .staking
             .add_stake(
                 &env.api,
-                &mut staking_storage,
+                &mut StakingStorageMut::new(&mut env.storage),
                 &env.block,
                 &delegator_addr_1,
                 &validator_addr_1,
@@ -1600,7 +1602,7 @@ mod test {
             .staking
             .add_stake(
                 &env.api,
-                &mut staking_storage,
+                &mut StakingStorageMut::new(&mut env.storage),
                 &env.block,
                 &delegator_addr_2,
                 &validator_addr_1,
@@ -1634,12 +1636,11 @@ mod test {
         assert_eq!(rewards.amount.u128(), 18);
 
         // delegator1 stakes 100 more
-        let mut staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
         env.router
             .staking
             .add_stake(
                 &env.api,
-                &mut staking_storage,
+                &mut StakingStorageMut::new(&mut env.storage),
                 &env.block,
                 &delegator_addr_1,
                 &validator_addr_1,
@@ -1673,12 +1674,11 @@ mod test {
         assert_eq!(rewards.amount.u128(), 36);
 
         // delegator2 unstakes 100 (has 100 left after that)
-        let mut staking_storage = prefixed(&mut env.storage, NAMESPACE_STAKING);
         env.router
             .staking
             .remove_stake(
                 &env.api,
-                &mut staking_storage,
+                &mut StakingStorageMut::new(&mut env.storage),
                 &env.block,
                 &delegator_addr_2,
                 &validator_addr_1,
