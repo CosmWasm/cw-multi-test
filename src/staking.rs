@@ -8,8 +8,14 @@ use crate::{BankSudo, Module};
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
     Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
-    Delegation, DelegationResponse, DistributionMsg, Empty, Event, FullDelegation, Querier,
-    StakingMsg, StakingQuery, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
+    DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg, StakingQuery,
+    StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+};
+#[cfg(feature = "cosmwasm_1_4")]
+use cosmwasm_std::{
+    DecCoin, Decimal256, DelegationRewardsResponse, DelegationTotalRewardsResponse,
+    DelegatorReward, DelegatorValidatorsResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -145,7 +151,10 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
 }
 
 /// A trait defining a behavior of the distribution keeper.
-pub trait Distribution: Module<ExecT = DistributionMsg, QueryT = Empty, SudoT = Empty> {}
+pub trait Distribution:
+    Module<ExecT = DistributionMsg, QueryT = DistributionQuery, SudoT = Empty>
+{
+}
 
 /// A structure representing a default stake keeper.
 pub struct StakeKeeper {
@@ -215,20 +224,27 @@ impl StakeKeeper {
         delegator: &Addr,
         validator: &str,
     ) -> AnyResult<Option<Coin>> {
+        Self::get_rewards_internal(storage, block, delegator, validator)
+    }
+
+    fn get_rewards_internal(
+        storage: &dyn Storage,
+        block: &BlockInfo,
+        delegator: &Addr,
+        validator: &str,
+    ) -> AnyResult<Option<Coin>> {
         let staking_storage = StakingStorage::new(storage);
-        let validator_obj = match self.get_validator(&staking_storage, validator)? {
+        let validator_obj = match Self::get_validator(&staking_storage, validator)? {
             Some(validator) => validator,
             None => bail!("validator {} not found", validator),
         };
         // calculate rewards using fixed ratio
         let shares = match STAKES.load(&staking_storage, (delegator, validator)) {
             Ok(stakes) => stakes,
-            Err(_) => {
-                return Ok(None);
-            }
+            Err(_) => return Ok(None),
         };
         let validator_info = VALIDATOR_INFO.load(&staking_storage, validator)?;
-        Self::get_rewards_internal(
+        Self::get_rewards_from_validator(
             &staking_storage,
             block,
             &shares,
@@ -238,7 +254,7 @@ impl StakeKeeper {
         .map(Some)
     }
 
-    fn get_rewards_internal(
+    fn get_rewards_from_validator(
         storage: &StakingStorage,
         block: &BlockInfo,
         shares: &Shares,
@@ -341,11 +357,7 @@ impl StakeKeeper {
     }
 
     /// Returns the single validator with the given address (or `None` if there is no such validator).
-    fn get_validator(
-        &self,
-        storage: &StakingStorage,
-        address: &str,
-    ) -> AnyResult<Option<Validator>> {
+    fn get_validator(storage: &StakingStorage, address: &str) -> AnyResult<Option<Validator>> {
         Ok(VALIDATOR_MAP.may_load(storage, address)?)
     }
 
@@ -791,7 +803,7 @@ impl Module for StakeKeeper {
                 delegator,
                 validator,
             } => {
-                let validator_obj = match self.get_validator(&staking_storage, &validator)? {
+                let validator_obj = match Self::get_validator(&staking_storage, &validator)? {
                     Some(validator) => validator,
                     None => bail!("non-existent validator {}", validator),
                 };
@@ -802,7 +814,7 @@ impl Module for StakeKeeper {
                     .unwrap_or_default();
 
                 let validator_info = VALIDATOR_INFO.load(&staking_storage, &validator)?;
-                let reward = Self::get_rewards_internal(
+                let reward = Self::get_rewards_from_validator(
                     &staking_storage,
                     block,
                     &shares,
@@ -840,7 +852,7 @@ impl Module for StakeKeeper {
                 self.get_validators(&staking_storage)?,
             ))?),
             StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(
-                self.get_validator(&staking_storage, &address)?,
+                Self::get_validator(&staking_storage, &address)?,
             ))?),
             q => bail!("Unsupported staking sudo message: {:?}", q),
         }
@@ -882,7 +894,7 @@ impl DistributionKeeper {
         Self::default()
     }
 
-    /// Removes all rewards from the given (delegator, validator) pair and returns the amount
+    /// Removes all rewards from the given (delegator, validator) pair and returns the amount.
     pub fn remove_rewards(
         &self,
         api: &dyn Api,
@@ -934,6 +946,45 @@ impl DistributionKeeper {
                 .map_err(|e| e.into())
         }
     }
+
+    /// Returns all validators that have delegated stake from delegator with specified address.
+    pub fn get_delegator_validators(
+        &self,
+        storage: &dyn Storage,
+        delegator_addr: &Addr,
+    ) -> AnyResult<Vec<String>> {
+        let storage = StakingStorage::new(storage);
+        Ok(STAKES
+            .prefix(delegator_addr)
+            .keys(&storage, None, None, Order::Ascending)
+            .collect::<Result<Vec<String>, StdError>>()?)
+    }
+
+    /// Returns the rewards of the given delegator at the given validator.
+    #[cfg(feature = "cosmwasm_1_4")]
+    pub fn get_rewards(
+        &self,
+        storage: &dyn Storage,
+        block: &BlockInfo,
+        delegator_address: &Addr,
+        validator_address: &str,
+    ) -> AnyResult<Option<DecCoin>> {
+        Ok(
+            if let Some(coin) = StakeKeeper::get_rewards_internal(
+                storage,
+                block,
+                delegator_address,
+                validator_address,
+            )? {
+                Some(DecCoin::new(
+                    Decimal256::from_atomics(coin.amount, 0)?,
+                    coin.denom,
+                ))
+            } else {
+                None
+            },
+        )
+    }
 }
 
 impl Distribution for DistributionKeeper {}
@@ -946,7 +997,7 @@ type DistributionStorageMut<'a> = TypedPrefixedStorageMut<'a, DistributionKeeper
 
 impl Module for DistributionKeeper {
     type ExecT = DistributionMsg;
-    type QueryT = Empty;
+    type QueryT = DistributionQuery;
     type SudoT = Empty;
 
     fn execute<ExecC: CustomMsg, QueryC: CustomQuery>(
@@ -1002,19 +1053,84 @@ impl Module for DistributionKeeper {
                     ..Default::default()
                 })
             }
-            m => bail!("Unsupported distribution message: {:?}", m),
+            other => bail!("Unsupported distribution message: {:?}", other),
         }
     }
 
     fn query(
         &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
+        api: &dyn Api,
+        storage: &dyn Storage,
         _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: Empty,
+        block: &BlockInfo,
+        request: DistributionQuery,
     ) -> AnyResult<Binary> {
-        bail!("Something went wrong - Distribution doesn't have query messages")
+        match request {
+            #[cfg(feature = "cosmwasm_1_4")]
+            DistributionQuery::DelegatorValidators { delegator_address } => {
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let validators = self.get_delegator_validators(storage, &delegator_address)?;
+                Ok(to_json_binary(&DelegatorValidatorsResponse::new(
+                    validators,
+                ))?)
+            }
+            DistributionQuery::DelegatorWithdrawAddress { delegator_address } => {
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let withdraw_address = Self::get_withdraw_address(storage, &delegator_address)?;
+                Ok(to_json_binary(&DelegatorWithdrawAddressResponse::new(
+                    withdraw_address,
+                ))?)
+            }
+            #[cfg(feature = "cosmwasm_1_4")]
+            DistributionQuery::DelegationRewards {
+                delegator_address,
+                validator_address,
+            } => {
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let rewards = if let Some(dec_coin) =
+                    self.get_rewards(storage, block, &delegator_address, &validator_address)?
+                {
+                    vec![dec_coin]
+                } else {
+                    vec![]
+                };
+                Ok(to_json_binary(&DelegationRewardsResponse::new(rewards))?)
+            }
+            #[cfg(feature = "cosmwasm_1_4")]
+            DistributionQuery::DelegationTotalRewards { delegator_address } => {
+                let delegator_address = api.addr_validate(&delegator_address)?;
+                let mut delegator_rewards = vec![];
+                let mut total_rewards = std::collections::BTreeMap::new();
+                for validator_address in
+                    self.get_delegator_validators(storage, &delegator_address)?
+                {
+                    if let Some(dec_coin) =
+                        self.get_rewards(storage, block, &delegator_address, &validator_address)?
+                    {
+                        delegator_rewards.push(DelegatorReward::new(
+                            validator_address.clone(),
+                            vec![dec_coin.clone()],
+                        ));
+                        total_rewards
+                            .entry(dec_coin.denom)
+                            .and_modify(|value| *value += dec_coin.amount)
+                            .or_insert(dec_coin.amount);
+                    }
+                }
+                let total_rewards = total_rewards
+                    .iter()
+                    .map(|(denom, amount)| DecCoin::new(*amount, denom))
+                    .collect();
+                Ok(to_json_binary(&DelegationTotalRewardsResponse::new(
+                    delegator_rewards,
+                    total_rewards,
+                ))?)
+            }
+            other => {
+                let _ = block; // Just to avoid clippy warnings, will be discarded by compiler anyway.
+                bail!("Unsupported distribution query: {:?}", other)
+            }
+        }
     }
 
     fn sudo<ExecC, QueryC>(
@@ -1301,10 +1417,7 @@ mod test {
             .unwrap();
 
         // get the newly created validator
-        let val = env
-            .router
-            .staking
-            .get_validator(&StakingStorage::new(&env.storage), &validator_addr_3)
+        let val = StakeKeeper::get_validator(&StakingStorage::new(&env.storage), &validator_addr_3)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
@@ -1322,10 +1435,7 @@ mod test {
             .unwrap_err();
 
         // validator no. 3 should still have the original values of its attributes
-        let val = env
-            .router
-            .staking
-            .get_validator(&StakingStorage::new(&env.storage), &validator_addr_3)
+        let val = StakeKeeper::get_validator(&StakingStorage::new(&env.storage), &validator_addr_3)
             .unwrap()
             .unwrap();
         assert_eq!(val, validator);
