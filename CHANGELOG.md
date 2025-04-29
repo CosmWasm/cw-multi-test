@@ -1,5 +1,21 @@
 # Changelog
 
+## [v2.4.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.4.0) (2025-04-28)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.3...v2.4.0)
+
+**Closed issues:**
+
+- Add `QueryRequest::Distribution` to query [\#249](https://github.com/CosmWasm/cw-multi-test/issues/249) (reported by [KevinK](https://github.com/kevzzsk))
+
+**Merged pull requests:**
+
+- Distribution queries [\#251](https://github.com/CosmWasm/cw-multi-test/pull/251) ([DariuszDepta](https://github.com/DariuszDepta))
+- Refactored distribution withdraw address [\#252](https://github.com/CosmWasm/cw-multi-test/pull/252) ([DariuszDepta](https://github.com/DariuszDepta))
+- Tested distribution sudo [\#253](https://github.com/CosmWasm/cw-multi-test/pull/253) ([DariuszDepta](https://github.com/DariuszDepta))
+- Reverted breaking change [\#254](https://github.com/CosmWasm/cw-multi-test/pull/254) ([DariuszDepta](https://github.com/DariuszDepta))
+- Typed prefixed storage [\#255](https://github.com/CosmWasm/cw-multi-test/pull/255) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.3.3](https://github.com/CosmWasm/cw-multi-test/tree/v2.3.3) (2025-04-04)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.2...v2.3.3)

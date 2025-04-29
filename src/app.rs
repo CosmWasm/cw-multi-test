@@ -736,6 +736,10 @@ where
             QueryRequest::Custom(req) => self.custom.query(api, storage, &querier, block, req),
             #[cfg(feature = "staking")]
             QueryRequest::Staking(req) => self.staking.query(api, storage, &querier, block, req),
+            #[cfg(all(feature = "cosmwasm_1_3", feature = "staking"))]
+            QueryRequest::Distribution(req) => {
+                self.distribution.query(api, storage, &querier, block, req)
+            }
             #[cfg(feature = "stargate")]
             QueryRequest::Ibc(req) => self.ibc.query(api, storage, &querier, block, req.into()),
             #[allow(deprecated)]

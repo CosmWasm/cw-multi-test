@@ -9,7 +9,7 @@ mod test_default;
 mod test_with_api;
 mod test_with_bank;
 mod test_with_block;
-#[cfg(feature = "staking")]
+#[cfg(all(feature = "cosmwasm_1_3", feature = "staking"))]
 mod test_with_distribution;
 #[cfg(feature = "stargate")]
 mod test_with_gov;
