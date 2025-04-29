@@ -173,7 +173,7 @@ pub mod error;
 mod executor;
 mod featured;
 mod gov;
-mod ibc;
+pub mod ibc;
 mod module;
 mod prefixed_storage;
 #[cfg(feature = "staking")]

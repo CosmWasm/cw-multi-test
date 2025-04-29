@@ -4,6 +4,7 @@ use crate::checksums::{ChecksumGenerator, SimpleChecksumGenerator};
 use crate::contracts::Contract;
 use crate::error::{bail, AnyContext, AnyError, AnyResult, Error};
 use crate::executor::AppResponse;
+use crate::ibc::types::{AppIbcBasicResponse, AppIbcReceiveResponse};
 use crate::prefixed_storage::typed_prefixed_storage::{
     StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
 };
@@ -15,8 +16,11 @@ use cosmwasm_std::GovMsg;
 use cosmwasm_std::{
     to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
     ContractInfoResponse, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event,
-    MessageInfo, MsgResponse, Order, Querier, QuerierWrapper, Record, Reply, ReplyOn, Response,
-    StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo, WasmMsg, WasmQuery,
+    IbcBasicResponse, IbcChannelCloseMsg, IbcChannelConnectMsg, IbcChannelOpenMsg,
+    IbcChannelOpenResponse, IbcPacketAckMsg, IbcPacketReceiveMsg, IbcPacketTimeoutMsg,
+    IbcReceiveResponse, MessageInfo, MsgResponse, Order, Querier, QuerierWrapper, Record, Reply,
+    ReplyOn, Response, StdResult, Storage, SubMsg, SubMsgResponse, SubMsgResult, TransactionInfo,
+    WasmMsg, WasmQuery,
 };
 #[cfg(feature = "staking")]
 use cosmwasm_std::{DistributionMsg, StakingMsg};
@@ -172,6 +176,82 @@ pub trait Wasm<ExecC, QueryC> {
             WasmStorageMut::multilevel(storage, &namespace);
         let prefixed_storage: PrefixedStorage = storage.into();
         Box::new(prefixed_storage)
+    }
+    /// Executes the contract ibc_channel_open endpoint
+    fn ibc_channel_open(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _request: IbcChannelOpenMsg,
+    ) -> AnyResult<IbcChannelOpenResponse> {
+        panic!("No ibc channel open implemented");
+    }
+    /// Executes the contract ibc_channel_connect endpoint
+    fn ibc_channel_connect(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _request: IbcChannelConnectMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        panic!("No ibc channel connect implemented");
+    }
+
+    /// Executes the contract ibc_channel_close endpoint
+    fn ibc_channel_close(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _request: IbcChannelCloseMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        panic!("No ibc channel close implemented");
+    }
+
+    /// Executes the contract ibc_packet_receive endpoint
+    fn ibc_packet_receive(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _request: IbcPacketReceiveMsg,
+    ) -> AnyResult<AppIbcReceiveResponse> {
+        panic!("No ibc packet receive implemented");
+    }
+
+    /// Executes the contract ibc_packet_acknowledge endpoint
+    fn ibc_packet_acknowledge(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _request: IbcPacketAckMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        panic!("No ibc packet acknowledgement implemented");
+    }
+
+    /// Executes the contract ibc_packet_timeout endpoint
+    fn ibc_packet_timeout(
+        &self,
+        _api: &dyn Api,
+        _contract_addr: Addr,
+        _storage: &mut dyn Storage,
+        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        _block: &BlockInfo,
+        _request: IbcPacketTimeoutMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        panic!("No ibc packet timeout implemented");
     }
 }
 
@@ -349,6 +429,135 @@ where
         let storage = self.contract_storage(storage, address);
         storage.range(None, None, Order::Ascending).collect()
     }
+
+    // The following ibc endpoints can only be used by the ibc module.
+    // For channels
+    fn ibc_channel_open(
+        &self,
+        api: &dyn Api,
+        contract: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        request: IbcChannelOpenMsg,
+    ) -> AnyResult<IbcChannelOpenResponse> {
+        // For channel open, we simply return the result directly to the ibc module
+        let contract_response = self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            contract,
+            |contract, deps, env| contract.ibc_channel_open(deps, env, request),
+        )?;
+
+        Ok(contract_response)
+    }
+
+    fn ibc_channel_connect(
+        &self,
+        api: &dyn Api,
+        contract_addr: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        request: IbcChannelConnectMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        let res = Self::verify_ibc_response(self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            contract_addr.clone(),
+            |contract, deps, env| contract.ibc_channel_connect(deps, env, request),
+        )?)?;
+
+        self.process_ibc_response(api, contract_addr, storage, router, block, res)
+    }
+
+    fn ibc_channel_close(
+        &self,
+        api: &dyn Api,
+        contract_addr: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        request: IbcChannelCloseMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        let res = Self::verify_ibc_response(self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            contract_addr.clone(),
+            |contract, deps, env| contract.ibc_channel_close(deps, env, request),
+        )?)?;
+
+        self.process_ibc_response(api, contract_addr, storage, router, block, res)
+    }
+
+    fn ibc_packet_receive(
+        &self,
+        api: &dyn Api,
+        contract_addr: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        request: IbcPacketReceiveMsg,
+    ) -> AnyResult<AppIbcReceiveResponse> {
+        let res = Self::verify_packet_response(self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            contract_addr.clone(),
+            |contract, deps, env| contract.ibc_packet_receive(deps, env, request),
+        )?)?;
+
+        self.process_ibc_receive_response(api, contract_addr, storage, router, block, res)
+    }
+
+    fn ibc_packet_acknowledge(
+        &self,
+        api: &dyn Api,
+        contract_addr: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        request: IbcPacketAckMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        let res = Self::verify_ibc_response(self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            contract_addr.clone(),
+            |contract, deps, env| contract.ibc_packet_ack(deps, env, request),
+        )?)?;
+
+        self.process_ibc_response(api, contract_addr, storage, router, block, res)
+    }
+
+    fn ibc_packet_timeout(
+        &self,
+        api: &dyn Api,
+        contract_addr: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        request: IbcPacketTimeoutMsg,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        let res = Self::verify_ibc_response(self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            contract_addr.clone(),
+            |contract, deps, env| contract.ibc_packet_timeout(deps, env, request),
+        )?)?;
+
+        self.process_ibc_response(api, contract_addr, storage, router, block, res)
+    }
 }
 
 impl<ExecC, QueryC> WasmKeeper<ExecC, QueryC>
@@ -477,6 +686,42 @@ where
             }
         }
         Ok(())
+    }
+
+    fn verify_ibc_response<T>(response: IbcBasicResponse<T>) -> AnyResult<IbcBasicResponse<T>>
+    where
+        T: Clone + Debug + PartialEq + JsonSchema,
+    {
+        Self::verify_attributes(&response.attributes)?;
+
+        for event in &response.events {
+            Self::verify_attributes(&event.attributes)?;
+            let ty = event.ty.trim();
+            if ty.len() < 2 {
+                bail!(Error::event_type_too_short(ty));
+            }
+        }
+
+        Ok(response)
+    }
+
+    fn verify_packet_response<T>(
+        response: IbcReceiveResponse<T>,
+    ) -> AnyResult<IbcReceiveResponse<T>>
+    where
+        T: Clone + Debug + PartialEq + JsonSchema,
+    {
+        Self::verify_attributes(&response.attributes)?;
+
+        for event in &response.events {
+            Self::verify_attributes(&event.attributes)?;
+            let ty = event.ty.trim();
+            if ty.len() < 2 {
+                bail!(Error::event_type_too_short(ty));
+            }
+        }
+
+        Ok(response)
     }
 
     fn verify_response<T>(response: Response<T>) -> AnyResult<Response<T>>
@@ -1001,6 +1246,60 @@ where
         // all processed sub messages. Note that events and message responses are collected,
         // but the data is replaced with the data from the last processes submessage.
         Ok(AppResponse { events, data })
+    }
+
+    fn process_ibc_response(
+        &self,
+        api: &dyn Api,
+        contract: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        res: IbcBasicResponse<ExecC>,
+    ) -> AnyResult<AppIbcBasicResponse> {
+        // We format the events correctly because we are executing wasm
+        let contract_response = Response::new()
+            .add_submessages(res.messages)
+            .add_attributes(res.attributes)
+            .add_events(res.events);
+
+        let (res, msgs) = self.build_app_response(&contract, Event::new("ibc"), contract_response);
+
+        // We process eventual messages that were sent out with the response
+        let res = self.process_response(api, router, storage, block, contract, res, msgs)?;
+
+        // We transfer back to an IbcBasicResponse
+        Ok(AppIbcBasicResponse { events: res.events })
+    }
+
+    fn process_ibc_receive_response(
+        &self,
+        api: &dyn Api,
+        contract: Addr,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        original_res: IbcReceiveResponse<ExecC>,
+    ) -> AnyResult<AppIbcReceiveResponse> {
+        // We format the events correctly because we are executing wasm
+        let contract_response = Response::new()
+            .add_submessages(original_res.messages)
+            .add_attributes(original_res.attributes)
+            .add_events(original_res.events);
+
+        let (res, msgs) = self.build_app_response(&contract, Event::new("ibc"), contract_response);
+
+        // We process eventual messages that were sent out with the response
+        let res = self.process_response(api, router, storage, block, contract, res, msgs)?;
+
+        // If the data field was overwritten by the response propagation, we replace the ibc ack
+        let acknowledgement = res.data.or(original_res.acknowledgement);
+
+        // We transfer back to an IbcBasicResponse
+        Ok(AppIbcReceiveResponse {
+            events: res.events,
+            acknowledgement,
+        })
     }
 
     /// Creates a contract address and empty storage instance.
