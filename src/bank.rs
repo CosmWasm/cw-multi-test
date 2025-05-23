@@ -6,13 +6,13 @@ use crate::prefixed_storage::typed_prefixed_storage::{
     StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
 };
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
-    Binary, BlockInfo, Coin, DenomMetadata, Event, Querier, Storage,
+    coin, to_json_binary, Addr, Api, BalanceResponse, BankMsg, BankQuery, Binary, BlockInfo, Coin,
+    DenomMetadata, Event, Querier, Storage,
 };
 #[cfg(feature = "cosmwasm_1_3")]
 use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
 #[cfg(feature = "cosmwasm_1_1")]
-use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint128};
+use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint256};
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
 use itertools::Itertools;
@@ -108,13 +108,13 @@ impl BankKeeper {
 
     #[cfg(feature = "cosmwasm_1_1")]
     fn get_supply(&self, storage: &BankStorage, denom: String) -> AnyResult<Coin> {
-        let supply: Uint128 = BALANCES
+        let supply: Uint256 = BALANCES
             .range(storage, None, None, Order::Ascending)
             .collect::<StdResult<Vec<_>>>()?
             .into_iter()
             .map(|a| a.1)
-            .fold(Uint128::zero(), |accum, item| {
-                let mut subtotal = Uint128::zero();
+            .fold(Uint256::zero(), |accum, item| {
+                let mut subtotal = Uint256::zero();
                 for coin in item.into_vec() {
                     if coin.denom == denom {
                         subtotal += coin.amount;
@@ -122,7 +122,7 @@ impl BankKeeper {
                 }
                 accum + subtotal
             });
-        Ok(coin(supply.into(), denom))
+        Ok(Coin::new(supply, denom))
     }
 
     fn send(
@@ -233,12 +233,6 @@ impl Module for BankKeeper {
         let bank_storage = BankStorage::new(storage);
         match request {
             #[allow(deprecated)]
-            BankQuery::AllBalances { address } => {
-                let address = api.addr_validate(&address)?;
-                let amount = self.get_balance(&bank_storage, &address)?;
-                let res = AllBalanceResponse::new(amount);
-                to_json_binary(&res).map_err(Into::into)
-            }
             BankQuery::Balance { address, denom } => {
                 let address = api.addr_validate(&address)?;
                 let all_amounts = self.get_balance(&bank_storage, &address)?;

@@ -255,6 +255,7 @@ where
                     contract.admin,
                     false,
                     None,
+                    None,
                 );
                 to_json_binary(&res).map_err(Into::into)
             }
@@ -1311,6 +1312,7 @@ where
                 GovMsg::Vote { .. } => "/cosmos.gov.v1beta1.MsgVoteResponse",
                 #[cfg(feature = "cosmwasm_1_2")]
                 GovMsg::VoteWeighted { .. } => "/cosmos.gov.v1beta1.MsgVoteWeightedResponse",
+                _ => UNKNOWN,
             },
             _ => UNKNOWN,
         }
@@ -1539,7 +1541,7 @@ mod test {
 
         let actual: ContractInfoResponse = from_json(contract_info).unwrap();
         let expected =
-            ContractInfoResponse::new(code_id, creator_addr, admin_addr.into(), false, None);
+            ContractInfoResponse::new(code_id, creator_addr, admin_addr.into(), false, None, None);
         assert_eq!(expected, actual);
     }
 

@@ -6,16 +6,16 @@ use crate::prefixed_storage::typed_prefixed_storage::{
 };
 use crate::{BankSudo, Module};
 use cosmwasm_std::{
-    coin, ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse,
-    Api, BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal,
+    ensure, ensure_eq, to_json_binary, Addr, AllDelegationsResponse, AllValidatorsResponse, Api,
+    BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal256,
     Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
     DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg, StakingQuery,
-    StdError, Storage, Timestamp, Uint128, Validator, ValidatorResponse,
+    StdError, Storage, Timestamp, Uint256, Validator, ValidatorResponse,
 };
 #[cfg(feature = "cosmwasm_1_4")]
 use cosmwasm_std::{
-    DecCoin, Decimal256, DelegationRewardsResponse, DelegationTotalRewardsResponse,
-    DelegatorReward, DelegatorValidatorsResponse,
+    DecCoin, DelegationRewardsResponse, DelegationTotalRewardsResponse, DelegatorReward,
+    DelegatorValidatorsResponse,
 };
 use cw_storage_plus::{Deque, Item, Map};
 use schemars::JsonSchema;
@@ -36,7 +36,7 @@ pub struct StakingInfo {
     /// Time between unbonding and receiving tokens back (in seconds).
     pub unbonding_time: u64,
     /// Annual percentage rate (interest rate and any additional fees associated with bonding).
-    pub apr: Decimal,
+    pub apr: Decimal256,
 }
 
 impl Default for StakingInfo {
@@ -45,7 +45,7 @@ impl Default for StakingInfo {
         StakingInfo {
             bonded_denom: BONDED_DENOM.to_string(),
             unbonding_time: 60,
-            apr: Decimal::percent(10),
+            apr: Decimal256::percent(10),
         }
     }
 }
@@ -53,15 +53,19 @@ impl Default for StakingInfo {
 /// The number of stake and rewards of this validator the staker has. These can be fractional in case of slashing.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
 struct Shares {
-    stake: Decimal,
-    rewards: Decimal,
+    stake: Decimal256,
+    rewards: Decimal256,
 }
 
 impl Shares {
     /// Calculates the share of validator's rewards that should be given to this staker.
-    pub fn share_of_rewards(&self, validator_info: &ValidatorInfo, rewards: Decimal) -> Decimal {
+    pub fn share_of_rewards(
+        &self,
+        validator_info: &ValidatorInfo,
+        rewards: Decimal256,
+    ) -> Decimal256 {
         if validator_info.stake.is_zero() {
-            return Decimal::zero();
+            return Decimal256::zero();
         }
         rewards * self.stake / validator_info.stake
     }
@@ -74,7 +78,7 @@ struct ValidatorInfo {
     /// We need to track them for updating their rewards.
     stakers: BTreeSet<Addr>,
     /// The whole stake of all stakers
-    stake: Uint128,
+    stake: Uint256,
     /// The block time when this validator's rewards were last update. This is needed for rewards calculation.
     last_rewards_calculation: Timestamp,
 }
@@ -83,7 +87,7 @@ impl ValidatorInfo {
     pub fn new(block_time: Timestamp) -> Self {
         Self {
             stakers: BTreeSet::new(),
-            stake: Uint128::zero(),
+            stake: Uint256::zero(),
             last_rewards_calculation: block_time,
         }
     }
@@ -96,7 +100,7 @@ struct Unbonding {
     /// Validator address.
     pub validator: String,
     /// Amount of stakes to be unbonded.
-    pub amount: Uint128,
+    pub amount: Uint256,
     /// Timestamp at which unbonding will take place (simulates unbonding timeout).
     pub payout_at: Timestamp,
 }
@@ -127,7 +131,7 @@ pub enum StakingSudo {
         /// Validator's address.
         validator: String,
         /// Percentage of the validator's stake.
-        percentage: Decimal,
+        percentage: Decimal256,
     },
 }
 
@@ -268,7 +272,7 @@ impl StakeKeeper {
             block.time,
             validator_info.last_rewards_calculation,
             staking_info.apr,
-            validator.commission,
+            validator.commission.into(),
             validator_info.stake,
         );
 
@@ -278,7 +282,7 @@ impl StakeKeeper {
 
         Ok(Coin {
             denom: staking_info.bonded_denom,
-            amount: Uint128::new(1).mul_floor(delegator_rewards), // multiplying by 1 to convert Decimal to Uint128
+            amount: Uint256::new(1).mul_floor(delegator_rewards), // multiplying by 1 to convert Decimal to Uint128
         })
     }
 
@@ -286,18 +290,18 @@ impl StakeKeeper {
     fn calculate_rewards(
         current_time: Timestamp,
         since: Timestamp,
-        interest_rate: Decimal,
-        validator_commission: Decimal,
-        stake: Uint128,
-    ) -> Decimal {
+        interest_rate: Decimal256,
+        validator_commission: Decimal256,
+        stake: Uint256,
+    ) -> Decimal256 {
         // calculate time since last update (in seconds)
         let time_diff = current_time.minus_seconds(since.seconds()).seconds();
 
         // using decimal here to reduce rounding error when calling this function a lot
-        let reward = Decimal::from_ratio(stake, 1u128)
+        let reward = Decimal256::from_ratio(stake, 1u128)
             * interest_rate
-            * Decimal::from_ratio(time_diff, 1u128)
-            / Decimal::from_ratio(YEAR, 1u128);
+            * Decimal256::from_ratio(time_diff, 1u128)
+            / Decimal256::from_ratio(YEAR, 1u128);
         let commission = reward * validator_commission;
 
         reward - commission
@@ -329,7 +333,7 @@ impl StakeKeeper {
             block.time,
             validator_info.last_rewards_calculation,
             staking_info.apr,
-            validator_obj.commission,
+            validator_obj.commission.into(),
             validator_info.stake,
         );
 
@@ -378,7 +382,7 @@ impl StakeKeeper {
         Ok(shares.map(|shares| {
             Coin {
                 denom: staking_info.bonded_denom,
-                amount: Uint128::new(1).mul_floor(shares.stake), // multiplying by 1 to convert Decimal to Uint128
+                amount: Uint256::new(1).mul_floor(shares.stake), // multiplying by 1 to convert Decimal to Uint128
             }
         }))
     }
@@ -432,7 +436,7 @@ impl StakeKeeper {
         block: &BlockInfo,
         delegator: &Addr,
         validator: &str,
-        amount: impl Into<Uint128>,
+        amount: impl Into<Uint256>,
         sub: bool,
     ) -> AnyResult<()> {
         let amount = amount.into();
@@ -453,7 +457,7 @@ impl StakeKeeper {
             shares.unwrap_or_default()
         };
 
-        let amount_dec = Decimal::from_ratio(amount, 1u128);
+        let amount_dec = Decimal256::from_ratio(amount, 1u128);
         if sub {
             // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1019-L1022
             if amount_dec > shares.stake {
@@ -487,7 +491,7 @@ impl StakeKeeper {
         storage: &mut StakingStorageMut,
         block: &BlockInfo,
         validator: &str,
-        percentage: Decimal,
+        percentage: Decimal256,
     ) -> AnyResult<()> {
         // calculate rewards before slashing
         Self::update_rewards(api, storage, block, validator)?;
@@ -495,7 +499,7 @@ impl StakeKeeper {
         // update stake of validator and stakers
         let mut validator_info = VALIDATOR_INFO.may_load(storage, validator)?.unwrap();
 
-        let remaining_percentage = Decimal::one() - percentage;
+        let remaining_percentage = Decimal256::one() - percentage;
         validator_info.stake = validator_info.stake.mul_floor(remaining_percentage);
 
         // if the stake is completely gone, we clear all stakers and reinitialize the validator
@@ -546,8 +550,11 @@ impl StakeKeeper {
     }
 
     // Asserts that the given coin has the proper denominator
-    fn validate_percentage(&self, percentage: Decimal) -> AnyResult<()> {
-        ensure!(percentage <= Decimal::one(), anyhow!("expected percentage"));
+    fn validate_percentage(&self, percentage: Decimal256) -> AnyResult<()> {
+        ensure!(
+            percentage <= Decimal256::one(),
+            anyhow!("expected percentage")
+        );
         Ok(())
     }
 
@@ -584,7 +591,7 @@ impl StakeKeeper {
                                 .iter()
                                 .filter(|u| u.delegator == delegator && u.validator == validator)
                                 .map(|u| u.amount)
-                                .sum::<Uint128>();
+                                .sum::<Uint256>();
                             stake
                         });
                     match delegation {
@@ -606,7 +613,7 @@ impl StakeKeeper {
                             self.module_addr.clone(),
                             BankMsg::Send {
                                 to_address: delegator.into_string(),
-                                amount: vec![coin(amount.u128(), &staking_info.bonded_denom)],
+                                amount: vec![Coin::new(amount, &staking_info.bonded_denom)],
                             }
                             .into(),
                         )?;
@@ -823,8 +830,8 @@ impl Module for StakeKeeper {
                 )?;
                 let staking_info = Self::get_staking_info(&staking_storage)?;
 
-                let amount = coin(
-                    Uint128::new(1).mul_floor(shares.stake).u128(),
+                let amount = Coin::new(
+                    Uint256::new(1).mul_floor(shares.stake),
                     staking_info.bonded_denom,
                 );
 
@@ -902,17 +909,17 @@ impl DistributionKeeper {
         block: &BlockInfo,
         delegator: &Addr,
         validator: &str,
-    ) -> AnyResult<Uint128> {
+    ) -> AnyResult<Uint256> {
         let mut staking_storage_mut = StakingStorageMut::new(storage);
         // update the validator and staker rewards
         StakeKeeper::update_rewards(api, &mut staking_storage_mut, block, validator)?;
 
         // load updated rewards for delegator
         let mut shares = STAKES.load(&staking_storage_mut, (delegator, validator))?;
-        let rewards = Uint128::new(1).mul_floor(shares.rewards); // convert to Uint128
+        let rewards = Uint256::new(1).mul_floor(shares.rewards); // convert to Uint128
 
         // remove rewards from delegator
-        shares.rewards = Decimal::zero();
+        shares.rewards = Decimal256::zero();
         STAKES.save(&mut staking_storage_mut, (delegator, validator), &shares)?;
 
         Ok(rewards)

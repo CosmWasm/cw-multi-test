@@ -1,6 +1,6 @@
 use super::*;
 use crate::test_payload::test_contracts::payloader::Payload;
-use cosmwasm_std::{from_json, Addr, Coin, Empty, Uint128};
+use cosmwasm_std::{from_json, Addr, Coin, Empty, Uint256};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
 
 const DENOM: &str = "pao";
@@ -19,7 +19,7 @@ pub fn payloader_contract() -> Box<dyn Contract<Empty>> {
 fn coins(amount: u128) -> Vec<Coin> {
     vec![Coin {
         denom: DENOM.to_string(),
-        amount: Uint128::new(amount),
+        amount: Uint256::new(amount),
     }]
 }
 
