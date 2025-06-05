@@ -1171,7 +1171,7 @@ where
             contract: ContractInfo {
                 address: address.into(),
             },
-            transaction: Some(TransactionInfo { index: 0 }),
+            transaction: Some(TransactionInfo::new(0, Binary::default())),
         }
     }
 
