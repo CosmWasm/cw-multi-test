@@ -224,8 +224,7 @@ where
     ) -> AnyResult<AppResponse> {
         self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
             .context(format!(
-                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
-                sender, msg
+                "Error executing WasmMsg:\n  sender: {sender}\n  {msg:?}"
             ))
     }
 
@@ -885,7 +884,7 @@ where
                     id,
                     payload,
                     gas_used: 0,
-                    result: SubMsgResult::Err(format!("{:?}", e)),
+                    result: SubMsgResult::Err(format!("{e:?}")),
                 };
                 self.reply(api, router, storage, block, contract, reply)
             } else {
@@ -1260,6 +1259,7 @@ where
     /// Returns the response type for specified message.
     fn response_type_url(msg: &CosmosMsg<ExecC>) -> String {
         const UNKNOWN: &str = "/unknown";
+        #[allow(clippy::collapsible_match)]
         match &msg {
             CosmosMsg::Bank(bank_msg) => match bank_msg {
                 BankMsg::Send { .. } => "/cosmos.bank.v1beta1.MsgSendResponse",
@@ -1372,6 +1372,7 @@ mod test {
     use cosmwasm_std::{
         coin, from_json, to_json_vec, CanonicalAddr, CosmosMsg, Empty, HexBinary, StdError,
     };
+    use std::slice;
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<
@@ -1738,9 +1739,9 @@ mod test {
         match &res.messages[0].msg {
             CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
-                assert_eq!(amount.as_slice(), &[payout.clone()]);
+                assert_eq!(amount.as_slice(), slice::from_ref(&payout));
             }
-            m => panic!("Unexpected message {:?}", m),
+            m => panic!("Unexpected message {m:?}"),
         }
 
         // and flush before query
@@ -1780,15 +1781,15 @@ mod test {
         match &res.messages[0].msg {
             CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
-                assert_eq!(amount.as_slice(), &[payout.clone()]);
+                assert_eq!(amount.as_slice(), slice::from_ref(payout));
             }
-            m => panic!("Unexpected message {:?}", m),
+            m => panic!("Unexpected message {m:?}"),
         }
     }
 
     fn assert_no_contract(storage: &dyn Storage, contract_addr: &Addr) {
         let contract = CONTRACTS.may_load(storage, contract_addr).unwrap();
-        assert!(contract.is_none(), "{:?}", contract_addr);
+        assert!(contract.is_none(), "{contract_addr:?}");
     }
 
     #[test]

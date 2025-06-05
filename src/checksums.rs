@@ -19,6 +19,6 @@ impl ChecksumGenerator for SimpleChecksumGenerator {
     /// Calculates the checksum based on code identifier. The resulting
     /// checksum is 32-byte length SHA2 digest.
     fn checksum(&self, _creator: &Addr, code_id: u64) -> Checksum {
-        Checksum::generate(format!("contract code {}", code_id).as_bytes())
+        Checksum::generate(format!("contract code {code_id}").as_bytes())
     }
 }

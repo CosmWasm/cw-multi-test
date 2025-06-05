@@ -25,10 +25,8 @@ fn coins(amount: u128) -> Vec<Coin> {
 
 fn assert_balance(app: &App, amount: u128, addr: &Addr) {
     #[allow(deprecated)]
-    let coins = app.wrap().query_all_balances(addr).unwrap();
-    assert_eq!(1, coins.len());
-    assert_eq!(amount, coins[0].amount.u128());
-    assert_eq!(DENOM, coins[0].denom);
+    let coin = app.wrap().query_balance(addr, DENOM).unwrap();
+    assert_eq!(Uint256::new(amount), coin.amount);
 }
 
 #[test]

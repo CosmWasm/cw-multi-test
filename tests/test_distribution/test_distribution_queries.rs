@@ -136,7 +136,7 @@ mod cosmwasm_1_4_dependent {
                     StakingInfo {
                         bonded_denom: BONDED_DENOM.to_string(),
                         unbonding_time: UNBONDING_TIME,
-                        apr: Decimal::percent(10),
+                        apr: Decimal256::percent(10),
                     },
                 )
                 .unwrap();
@@ -238,7 +238,7 @@ mod cosmwasm_1_4_dependent {
                     StakingInfo {
                         bonded_denom: BONDED_DENOM.to_string(),
                         unbonding_time: UNBONDING_TIME,
-                        apr: Decimal::percent(10),
+                        apr: Decimal256::percent(10),
                     },
                 )
                 .unwrap();
@@ -340,7 +340,7 @@ mod cosmwasm_1_4_dependent {
                     StakingInfo {
                         bonded_denom: BONDED_DENOM.to_string(),
                         unbonding_time: UNBONDING_TIME,
-                        apr: Decimal::percent(10),
+                        apr: Decimal256::percent(10),
                     },
                 )
                 .unwrap();

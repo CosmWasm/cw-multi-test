@@ -55,7 +55,7 @@ fn building_app_with_custom_staking_should_work() {
 
     // executing staking query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {}", QUERY_MSG),
+        format!("Generic error: Querier contract error: {QUERY_MSG}"),
         app.wrap().query_all_validators().unwrap_err().to_string()
     );
 }

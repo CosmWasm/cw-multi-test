@@ -1160,9 +1160,9 @@ mod test {
         StargateFailing, WasmKeeper,
     };
     use cosmwasm_std::{
-        coins, from_json,
+        coin, coins, from_json,
         testing::{mock_env, MockApi, MockStorage},
-        BalanceResponse, BankQuery, QuerierWrapper,
+        BalanceResponse, BankQuery, Decimal, QuerierWrapper, Uint256,
     };
     use serde::de::DeserializeOwned;
 
@@ -1401,7 +1401,7 @@ mod test {
                 },
             )
             .unwrap();
-            assert_eq!(balance.amount.amount.u128(), amount);
+            assert_eq!(balance.amount.amount, Uint256::new(amount));
         }
     }
 
@@ -1479,7 +1479,7 @@ mod test {
                 &env.block,
                 StakingSudo::Slash {
                     validator: validator_addr_1.to_string(),
-                    percentage: Decimal::percent(50),
+                    percentage: Decimal256::percent(50),
                 },
             )
             .unwrap();
@@ -1495,7 +1495,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(50, stake_left.amount.u128());
+        assert_eq!(Uint256::new(50), stake_left.amount);
 
         // slash all
         env.router
@@ -1507,7 +1507,7 @@ mod test {
                 &env.block,
                 StakingSudo::Slash {
                     validator: validator_addr_1.to_string(),
-                    percentage: Decimal::percent(100),
+                    percentage: Decimal256::percent(100),
                 },
             )
             .unwrap();
@@ -1561,7 +1561,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(9, rewards.amount.u128());
+        assert_eq!(Uint256::new(9), rewards.amount);
 
         // withdraw rewards
         env.router
@@ -1590,7 +1590,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(0, rewards.amount.u128());
+        assert_eq!(Uint256::zero(), rewards.amount);
 
         // wait another 1/2 year
         env.block.time = env.block.time.plus_seconds(YEAR / 2);
@@ -1606,7 +1606,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(9, rewards.amount.u128());
+        assert_eq!(Uint256::new(9), rewards.amount);
     }
 
     #[test]
@@ -1656,7 +1656,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 9);
+        assert_eq!(Uint256::new(9), rewards.amount);
 
         // delegator2 should now have 200 * 10% - 10% commission = 18 tokens
         let rewards = env
@@ -1670,7 +1670,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 18);
+        assert_eq!(Uint256::new(18), rewards.amount);
 
         // delegator1 stakes 100 more
         env.router
@@ -1700,7 +1700,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 27);
+        assert_eq!(Uint256::new(27), rewards.amount);
 
         // delegator2 should now have 18 + 200 * 10% - 10% commission = 36 tokens
         let rewards = env
@@ -1714,7 +1714,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(rewards.amount.u128(), 36);
+        assert_eq!(Uint256::new(36), rewards.amount);
 
         // delegator2 unstakes 100 (has 100 left after that)
         env.router
@@ -1760,7 +1760,7 @@ mod test {
                 .unwrap(),
         )
         .unwrap();
-        assert_eq!(27, balance.amount.amount.u128());
+        assert_eq!(Uint256::new(27), balance.amount.amount);
 
         let rewards = env
             .router
@@ -1773,7 +1773,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(0, rewards.amount.u128());
+        assert_eq!(Uint256::zero(), rewards.amount);
 
         // wait another year
         env.block.time = env.block.time.plus_seconds(YEAR);
@@ -1790,7 +1790,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(18, rewards.amount.u128());
+        assert_eq!(Uint256::new(18), rewards.amount);
 
         // delegator2 should now have 36 + 100 * 10% - 10% commission = 45 tokens
         let rewards = env
@@ -1804,7 +1804,7 @@ mod test {
             )
             .unwrap()
             .unwrap();
-        assert_eq!(45, rewards.amount.u128());
+        assert_eq!(Uint256::new(45), rewards.amount);
     }
 
     #[test]
@@ -2108,7 +2108,7 @@ mod test {
                 &env.block,
                 StakingSudo::Slash {
                     validator: validator_addr_3,
-                    percentage: Decimal::percent(50),
+                    percentage: Decimal256::percent(50),
                 },
             )
             .unwrap_err();
@@ -2597,7 +2597,7 @@ mod test {
                 &env.block,
                 StakingSudo::Slash {
                     validator: validator_addr_1.to_string(),
-                    percentage: Decimal::percent(50),
+                    percentage: Decimal256::percent(50),
                 },
             )
             .unwrap();
@@ -2629,7 +2629,7 @@ mod test {
             QuerierWrapper::<Empty>::new(&env.router.querier(&env.api, &env.storage, &env.block))
                 .query_balance(delegator_addr_1, BONDED_DENOM)
                 .unwrap();
-        assert_eq!(55, balance.amount.u128());
+        assert_eq!(Uint256::new(55), balance.amount);
     }
 
     #[test]

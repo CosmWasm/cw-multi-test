@@ -2,7 +2,7 @@ use super::*;
 use crate::test_responses::test_contracts::responder::{
     ResponderInstantiateMessage, ResponderResponse,
 };
-use cosmwasm_std::{from_json, Addr, Binary, Coin, Empty, Uint128};
+use cosmwasm_std::{from_json, Addr, Binary, Coin, Empty, Uint256};
 use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
 
 const DENOM: &str = "pao";
@@ -21,16 +21,13 @@ pub fn responder_contract() -> Box<dyn Contract<Empty>> {
 fn coins(amount: u128) -> Vec<Coin> {
     vec![Coin {
         denom: DENOM.to_string(),
-        amount: Uint128::new(amount),
+        amount: Uint256::new(amount),
     }]
 }
 
 fn assert_balance(app: &App, amount: u128, addr: &Addr) {
-    #[allow(deprecated)]
-    let coins = app.wrap().query_all_balances(addr).unwrap();
-    assert_eq!(1, coins.len());
-    assert_eq!(amount, coins[0].amount.u128());
-    assert_eq!(DENOM, coins[0].denom);
+    let coin = app.wrap().query_balance(addr, DENOM).unwrap();
+    assert_eq!(Uint256::new(amount), coin.amount);
 }
 
 #[test]

@@ -56,7 +56,7 @@ fn building_app_with_custom_bank_should_work() {
 
     // executing bank query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {}", QUERY_MSG),
+        format!("Generic error: Querier contract error: {QUERY_MSG}"),
         app.wrap()
             .query_balance(recipient_addr, denom)
             .unwrap_err()

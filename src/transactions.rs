@@ -259,11 +259,11 @@ mod test {
     use std::cell::RefCell;
     use std::ops::{Deref, DerefMut};
 
-    use cosmwasm_std::MemoryStorage;
+    use cosmwasm_std::testing::MockStorage;
 
     #[test]
     fn wrap_storage() {
-        let mut store = MemoryStorage::new();
+        let mut store = MockStorage::new();
         let mut wrap = StorageTransaction::new(&store);
         wrap.set(b"foo", b"bar");
 
@@ -274,7 +274,7 @@ mod test {
 
     #[test]
     fn wrap_ref_cell() {
-        let store = RefCell::new(MemoryStorage::new());
+        let store = RefCell::new(MockStorage::new());
         let ops = {
             let refer = store.borrow();
             let mut wrap = StorageTransaction::new(refer.deref());
@@ -288,7 +288,7 @@ mod test {
 
     #[test]
     fn wrap_box_storage() {
-        let mut store: Box<MemoryStorage> = Box::new(MemoryStorage::new());
+        let mut store: Box<MockStorage> = Box::new(MockStorage::new());
         let mut wrap = StorageTransaction::new(store.as_ref());
         wrap.set(b"foo", b"bar");
 
@@ -299,7 +299,7 @@ mod test {
 
     #[test]
     fn wrap_box_dyn_storage() {
-        let mut store: Box<dyn Storage> = Box::new(MemoryStorage::new());
+        let mut store: Box<dyn Storage> = Box::new(MockStorage::new());
         let mut wrap = StorageTransaction::new(store.as_ref());
         wrap.set(b"foo", b"bar");
 
@@ -310,7 +310,7 @@ mod test {
 
     #[test]
     fn wrap_ref_cell_dyn_storage() {
-        let inner: Box<dyn Storage> = Box::new(MemoryStorage::new());
+        let inner: Box<dyn Storage> = Box::new(MockStorage::new());
         let store = RefCell::new(inner);
         // Tricky but working
         // 1. we cannot inline StorageTransaction::new(store.borrow().as_ref()) as Ref must outlive StorageTransaction
@@ -469,7 +469,7 @@ mod test {
 
     #[test]
     fn delete_local() {
-        let mut base = Box::new(MemoryStorage::new());
+        let mut base = Box::new(MockStorage::new());
         let mut check = StorageTransaction::new(base.as_ref());
         check.set(b"foo", b"bar");
         check.set(b"food", b"bank");
@@ -486,7 +486,7 @@ mod test {
 
     #[test]
     fn delete_from_base() {
-        let mut base = Box::new(MemoryStorage::new());
+        let mut base = Box::new(MockStorage::new());
         base.set(b"foo", b"bar");
         let mut check = StorageTransaction::new(base.as_ref());
         check.set(b"food", b"bank");
@@ -503,7 +503,7 @@ mod test {
 
     #[test]
     fn storage_transaction_iterator_empty_base() {
-        let base = MemoryStorage::new();
+        let base = MockStorage::new();
         let mut check = StorageTransaction::new(&base);
         check.set(b"foo", b"bar");
         iterator_test_suite(&mut check);
@@ -511,7 +511,7 @@ mod test {
 
     #[test]
     fn storage_transaction_iterator_with_base_data() {
-        let mut base = MemoryStorage::new();
+        let mut base = MockStorage::new();
         base.set(b"foo", b"bar");
         let mut check = StorageTransaction::new(&base);
         iterator_test_suite(&mut check);
@@ -519,7 +519,7 @@ mod test {
 
     #[test]
     fn storage_transaction_iterator_removed_items_from_base() {
-        let mut base = Box::new(MemoryStorage::new());
+        let mut base = Box::new(MockStorage::new());
         base.set(b"foo", b"bar");
         base.set(b"food", b"bank");
         let mut check = StorageTransaction::new(base.as_ref());
@@ -529,7 +529,7 @@ mod test {
 
     #[test]
     fn commit_writes_through() {
-        let mut base = Box::new(MemoryStorage::new());
+        let mut base = Box::new(MockStorage::new());
         base.set(b"foo", b"bar");
 
         let mut check = StorageTransaction::new(base.as_ref());
@@ -542,7 +542,7 @@ mod test {
 
     #[test]
     fn storage_remains_readable() {
-        let mut base = MemoryStorage::new();
+        let mut base = MockStorage::new();
         base.set(b"foo", b"bar");
 
         let mut stx1 = StorageTransaction::new(&base);
@@ -561,7 +561,7 @@ mod test {
 
     #[test]
     fn ignore_same_as_rollback() {
-        let mut base = MemoryStorage::new();
+        let mut base = MockStorage::new();
         base.set(b"foo", b"bar");
 
         let mut check = StorageTransaction::new(&base);
