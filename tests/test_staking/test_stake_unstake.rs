@@ -1,14 +1,14 @@
 use cosmwasm_std::testing::mock_env;
-use cosmwasm_std::{coin, Decimal, StakingMsg, Validator};
+use cosmwasm_std::{coin, Coin, Decimal, Decimal256, StakingMsg, Uint256, Validator};
 use cw_multi_test::{AppBuilder, Executor, IntoBech32, StakingInfo};
 
 #[test]
 fn stake_unstake_should_work() {
-    const BONDED_DENOM: &str = "stake"; // denominator of the staking token
-    const UNBONDING_TIME: u64 = 60; // time between unbonding and receiving tokens back (in seconds)
-    const DELEGATION_AMOUNT: u128 = 100; // amount of tokens to be (re)delegated
-    const INITIAL_AMOUNT: u128 = 1000; // initial amount of tokens for delegator
-    const FEWER_AMOUNT: u128 = INITIAL_AMOUNT - DELEGATION_AMOUNT; // amount of tokens after delegation
+    const BONDED_DENOM: &str = "stake"; // Denominator of the staking token.
+    const UNBONDING_TIME: u64 = 60; // Time between unbonding and receiving tokens back (in seconds).
+    const DELEGATION_AMOUNT: u128 = 100; // Amount of tokens to be (re)delegated.
+    const INITIAL_AMOUNT: u128 = 1000; // Initial amount of tokens for delegator.
+    const FEWER_AMOUNT: u128 = INITIAL_AMOUNT - DELEGATION_AMOUNT; // Amount of tokens after delegation.
 
     let delegator_addr = "delegator".into_bech32();
     let validator_addr = "valoper".into_bech32();
@@ -29,7 +29,7 @@ fn stake_unstake_should_work() {
             .init_balance(
                 storage,
                 &delegator_addr,
-                vec![coin(INITIAL_AMOUNT, BONDED_DENOM)],
+                vec![Coin::new(INITIAL_AMOUNT, BONDED_DENOM)],
             )
             .unwrap();
         // setup staking parameters
@@ -40,7 +40,7 @@ fn stake_unstake_should_work() {
                 StakingInfo {
                     bonded_denom: BONDED_DENOM.to_string(),
                     unbonding_time: UNBONDING_TIME,
-                    apr: Decimal::percent(10),
+                    apr: Decimal256::percent(10),
                 },
             )
             .unwrap();
@@ -67,7 +67,7 @@ fn stake_unstake_should_work() {
         .wrap()
         .query_balance(delegator_addr.clone(), BONDED_DENOM)
         .unwrap();
-    assert_eq!(FEWER_AMOUNT, delegator_balance.amount.u128());
+    assert_eq!(Uint256::new(FEWER_AMOUNT), delegator_balance.amount);
 
     // validator should have now DELEGATION_AMOUNT of tokens assigned
     let delegation = app
@@ -75,7 +75,7 @@ fn stake_unstake_should_work() {
         .query_delegation(delegator_addr.clone(), validator_addr.clone())
         .unwrap()
         .unwrap();
-    assert_eq!(DELEGATION_AMOUNT, delegation.amount.amount.u128());
+    assert_eq!(Uint256::new(DELEGATION_AMOUNT), delegation.amount.amount);
 
     // now, undelegate all bonded tokens
     app.execute(
@@ -94,7 +94,7 @@ fn stake_unstake_should_work() {
         .wrap()
         .query_balance(delegator_addr.clone(), BONDED_DENOM)
         .unwrap();
-    assert_eq!(FEWER_AMOUNT, delegator_balance.amount.u128());
+    assert_eq!(Uint256::new(FEWER_AMOUNT), delegator_balance.amount);
 
     // now we update the block but with time that is shorter than unbonding time
     app.update_block(|block| {
@@ -107,7 +107,7 @@ fn stake_unstake_should_work() {
         .wrap()
         .query_balance(delegator_addr.clone(), BONDED_DENOM)
         .unwrap();
-    assert_eq!(FEWER_AMOUNT, delegator_balance.amount.u128());
+    assert_eq!(Uint256::new(FEWER_AMOUNT), delegator_balance.amount);
 
     // now we update the block so unbonding time is reached
     app.update_block(|block| {
@@ -120,7 +120,7 @@ fn stake_unstake_should_work() {
         .wrap()
         .query_balance(delegator_addr.clone(), BONDED_DENOM)
         .unwrap();
-    assert_eq!(INITIAL_AMOUNT, delegator_balance.amount.u128());
+    assert_eq!(Uint256::new(INITIAL_AMOUNT), delegator_balance.amount);
 
     // there should be no more delegations
     let delegation = app

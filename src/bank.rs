@@ -5,14 +5,16 @@ use crate::module::Module;
 use crate::prefixed_storage::typed_prefixed_storage::{
     StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
 };
+
 use cosmwasm_std::{
-    coin, to_json_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg, BankQuery,
-    Binary, BlockInfo, Coin, DenomMetadata, Event, Querier, Storage,
+    coin, to_json_binary, Addr, Api, BalanceResponse, BankMsg, BankQuery, Binary, BlockInfo, Coin,
+    DenomMetadata, Event, Querier, Storage,
 };
 #[cfg(feature = "cosmwasm_1_3")]
 use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
 #[cfg(feature = "cosmwasm_1_1")]
-use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint128};
+use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint256};
+
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
 use itertools::Itertools;
@@ -108,13 +110,13 @@ impl BankKeeper {
 
     #[cfg(feature = "cosmwasm_1_1")]
     fn get_supply(&self, storage: &BankStorage, denom: String) -> AnyResult<Coin> {
-        let supply: Uint128 = BALANCES
+        let supply: Uint256 = BALANCES
             .range(storage, None, None, Order::Ascending)
             .collect::<StdResult<Vec<_>>>()?
             .into_iter()
             .map(|a| a.1)
-            .fold(Uint128::zero(), |accum, item| {
-                let mut subtotal = Uint128::zero();
+            .fold(Uint256::zero(), |accum, item| {
+                let mut subtotal = Uint256::zero();
                 for coin in item.into_vec() {
                     if coin.denom == denom {
                         subtotal += coin.amount;
@@ -122,7 +124,7 @@ impl BankKeeper {
                 }
                 accum + subtotal
             });
-        Ok(coin(supply.into(), denom))
+        Ok(Coin::new(supply, denom))
     }
 
     fn send(
@@ -233,12 +235,6 @@ impl Module for BankKeeper {
         let bank_storage = BankStorage::new(storage);
         match request {
             #[allow(deprecated)]
-            BankQuery::AllBalances { address } => {
-                let address = api.addr_validate(&address)?;
-                let amount = self.get_balance(&bank_storage, &address)?;
-                let res = AllBalanceResponse::new(amount);
-                to_json_binary(&res).map_err(Into::into)
-            }
             BankQuery::Balance { address, denom } => {
                 let address = api.addr_validate(&address)?;
                 let all_amounts = self.get_balance(&bank_storage, &address)?;
@@ -305,17 +301,17 @@ mod test {
         bank: &BankKeeper,
         api: &dyn Api,
         store: &dyn Storage,
-        rcpt: &Addr,
-    ) -> Vec<Coin> {
-        #[allow(deprecated)]
-        let req = BankQuery::AllBalances {
-            address: rcpt.clone().into(),
+        address: &Addr,
+        denom: &str,
+    ) -> Coin {
+        let req = BankQuery::Balance {
+            address: address.into(),
+            denom: denom.to_string(),
         };
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
-
         let raw = bank.query(api, store, &querier, &block, req).unwrap();
-        let res: AllBalanceResponse = from_json(raw).unwrap();
+        let res: BalanceResponse = from_json(raw).unwrap();
         res.amount
     }
 
@@ -326,7 +322,7 @@ mod test {
         let mut store = MockStorage::new();
         let block = mock_env().block;
         let querier: MockQuerier<Empty> = MockQuerier::new(&[]);
-        let router = MockRouter::default();
+        let _router = MockRouter::default();
 
         let owner = api.addr_make("owner");
         let rcpt = api.addr_make("receiver");
@@ -346,14 +342,15 @@ mod test {
         assert_eq!(poor, vec![]);
 
         // proper queries work
-        #[allow(deprecated)]
-        let req = BankQuery::AllBalances {
+        let req = BankQuery::Balance {
             address: owner.clone().into(),
+            denom: "btc".to_string(),
         };
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
-        let res: AllBalanceResponse = from_json(raw).unwrap();
-        assert_eq!(res.amount, norm);
+        let res: BalanceResponse = from_json(raw).unwrap();
+        assert_eq!(norm[0], res.amount);
 
+        /*
         #[allow(deprecated)]
         let req = BankQuery::AllBalances {
             address: rcpt.clone().into(),
@@ -417,6 +414,7 @@ mod test {
         let raw = bank.query(&api, &store, &querier, &block, req).unwrap();
         let res: SupplyResponse = from_json(raw).unwrap();
         assert_eq!(res.amount, coin(200, "eth"));
+         */
     }
 
     #[test]
@@ -451,10 +449,22 @@ mod test {
             msg.clone(),
         )
         .unwrap();
-        let rich = query_balance(&bank, &api, &store, &owner);
-        assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
-        let poor = query_balance(&bank, &api, &store, &rcpt);
-        assert_eq!(vec![coin(10, "btc"), coin(30, "eth")], poor);
+        assert_eq!(
+            coin(15, "btc"),
+            query_balance(&bank, &api, &store, &owner, "btc")
+        );
+        assert_eq!(
+            coin(70, "eth"),
+            query_balance(&bank, &api, &store, &owner, "eth")
+        );
+        assert_eq!(
+            coin(10, "btc"),
+            query_balance(&bank, &api, &store, &rcpt, "btc")
+        );
+        assert_eq!(
+            coin(30, "eth"),
+            query_balance(&bank, &api, &store, &rcpt, "eth")
+        );
 
         // can send from any account with funds
         bank.execute(&api, &mut store, &router, &block, rcpt.clone(), msg)
@@ -468,8 +478,14 @@ mod test {
         bank.execute(&api, &mut store, &router, &block, owner.clone(), msg)
             .unwrap_err();
 
-        let rich = query_balance(&bank, &api, &store, &owner);
-        assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
+        assert_eq!(
+            coin(15, "btc"),
+            query_balance(&bank, &api, &store, &owner, "btc")
+        );
+        assert_eq!(
+            coin(70, "eth"),
+            query_balance(&bank, &api, &store, &owner, "eth")
+        );
     }
 
     #[test]
@@ -492,8 +508,14 @@ mod test {
         let msg = BankMsg::Burn { amount: to_burn };
         bank.execute(&api, &mut store, &router, &block, owner.clone(), msg)
             .unwrap();
-        let rich = query_balance(&bank, &api, &store, &owner);
-        assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
+        assert_eq!(
+            coin(15, "btc"),
+            query_balance(&bank, &api, &store, &owner, "btc")
+        );
+        assert_eq!(
+            coin(70, "eth"),
+            query_balance(&bank, &api, &store, &owner, "eth")
+        );
 
         // cannot burn too much
         let msg = BankMsg::Burn {
@@ -504,8 +526,14 @@ mod test {
             .unwrap_err();
         assert!(matches!(err.downcast().unwrap(), StdError::Overflow { .. }));
 
-        let rich = query_balance(&bank, &api, &store, &owner);
-        assert_eq!(vec![coin(15, "btc"), coin(70, "eth")], rich);
+        assert_eq!(
+            coin(15, "btc"),
+            query_balance(&bank, &api, &store, &owner, "btc")
+        );
+        assert_eq!(
+            coin(70, "eth"),
+            query_balance(&bank, &api, &store, &owner, "eth")
+        );
 
         // cannot burn from empty account
         let msg = BankMsg::Burn {

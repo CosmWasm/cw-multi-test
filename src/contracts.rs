@@ -459,7 +459,7 @@ where
             CosmosMsg::Ibc(ibc) => CosmosMsg::Ibc(ibc),
             #[cfg(feature = "cosmwasm_2_0")]
             CosmosMsg::Any(any) => CosmosMsg::Any(any),
-            other => panic!("unknown message variant {:?}", other),
+            other => panic!("unknown message variant {other:?}"),
         },
         gas_limit: msg.gas_limit,
         reply_on: msg.reply_on,
