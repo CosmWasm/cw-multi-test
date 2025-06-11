@@ -45,13 +45,15 @@ mod closures {
     use super::*;
 
     // function types
-    pub type ContractFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
+    pub type InstantiateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
+    pub type ExecuteFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
     pub type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
     pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
     pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
 
     // closure types
-    pub type ContractClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
+    pub type InstantiateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
+    pub type ExecuteClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
     pub type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
     pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
     pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
@@ -155,8 +157,8 @@ pub struct ContractWrapper<
     C: CustomMsg,         // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
-    execute_fn: ContractClosure<T1, C, E1, Q>,
-    instantiate_fn: ContractClosure<T2, C, E2, Q>,
+    execute_fn: ExecuteClosure<T1, C, E1, Q>,
+    instantiate_fn: InstantiateClosure<T2, C, E2, Q>,
     query_fn: QueryClosure<T3, E3, Q>,
     sudo_fn: Option<PermissionedClosure<T4, C, E4, Q>>,
     reply_fn: Option<ReplyClosure<C, E5, Q>>,
@@ -177,8 +179,8 @@ where
 {
     /// Creates a new contract wrapper with default settings.
     pub fn new(
-        execute_fn: ContractFn<T1, C, E1, Q>,
-        instantiate_fn: ContractFn<T2, C, E2, Q>,
+        execute_fn: ExecuteFn<T1, C, E1, Q>,
+        instantiate_fn: InstantiateFn<T2, C, E2, Q>,
         query_fn: QueryFn<T3, E3, Q>,
     ) -> Self {
         Self {
@@ -195,13 +197,13 @@ where
     /// This will take a contract that returns `Response<Empty>` and will _upgrade_ it
     /// to `Response<C>` if needed, to be compatible with a chain-specific extension.
     pub fn new_with_empty(
-        execute_fn: ContractFn<T1, Empty, E1, Empty>,
-        instantiate_fn: ContractFn<T2, Empty, E2, Empty>,
+        execute_fn: ExecuteFn<T1, Empty, E1, Empty>,
+        instantiate_fn: InstantiateFn<T2, Empty, E2, Empty>,
         query_fn: QueryFn<T3, E3, Empty>,
     ) -> Self {
         Self {
-            execute_fn: customize_contract_fn(execute_fn),
-            instantiate_fn: customize_contract_fn(instantiate_fn),
+            execute_fn: customize_execute_fn(execute_fn),
+            instantiate_fn: customize_instantiate_fn(instantiate_fn),
             query_fn: customize_query_fn(query_fn),
             sudo_fn: None,
             reply_fn: None,
@@ -354,9 +356,30 @@ where
     }
 }
 
-fn customize_contract_fn<T, C, E, Q>(
-    raw_fn: ContractFn<T, Empty, E, Empty>,
-) -> ContractClosure<T, C, E, Q>
+fn customize_instantiate_fn<T, C, E, Q>(
+    raw_fn: InstantiateFn<T, Empty, E, Empty>,
+) -> InstantiateClosure<T, C, E, Q>
+where
+    T: DeserializeOwned + 'static,
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
+{
+    Box::new(
+        move |mut deps: DepsMut<Q>,
+              env: Env,
+              info: MessageInfo,
+              msg: T|
+              -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, info, msg).map(customize_response::<C>)
+        },
+    )
+}
+
+fn customize_execute_fn<T, C, E, Q>(
+    raw_fn: ExecuteFn<T, Empty, E, Empty>,
+) -> ExecuteClosure<T, C, E, Q>
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
