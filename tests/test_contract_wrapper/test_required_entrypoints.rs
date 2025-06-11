@@ -55,40 +55,61 @@ fn required_entrypoints_should_work() {
     let mut app = App::default();
 
     // Store the contract code on chain.
-    let code_id = app.store_code(contract);
+    let code_id_1 = app.store_code(contract);
 
-    assert_eq!(1, code_id);
+    assert_eq!(1, code_id_1);
 
     // Prepare addresses.
     let owner_addr = "owner".into_addr();
+    let admin_addr = "admin".into_addr();
 
     // Calling `instantiate` entrypoint should work.
     let contract_addr = app
         .instantiate_contract(
-            code_id,
+            code_id_1,
             owner_addr.clone(),
             &Empty {},
             &[],
             "the-contract",
-            None,
+            Some(admin_addr.to_string()),
         )
         .unwrap();
 
     // Calling `execute` entrypoint should work.
     let _: AppResponse = app
-        .execute_contract(owner_addr, contract_addr.clone(), &Empty {}, &[])
+        .execute_contract(owner_addr.clone(), contract_addr.clone(), &Empty {}, &[])
         .unwrap();
 
     // Calling `query` entrypoint should work.
     let _: Empty = app
         .wrap()
-        .query_wasm_smart(contract_addr, &Empty {})
+        .query_wasm_smart(contract_addr.clone(), &Empty {})
         .unwrap();
 
     // Querying checksum should work.
-    let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
+    let code_info_response = app.wrap().query_wasm_code_info(code_id_1).unwrap();
     assert_eq!(
         checksum.unwrap().as_slice(),
         code_info_response.checksum.as_slice()
     );
+
+    // Calling `sudo` entrypoint should fail, because is not implemented in the contract.
+    let res = app.wasm_sudo(contract_addr.clone(), &Empty {});
+    let err = res.err().unwrap().root_cause().to_string();
+    assert_eq!("sudo is not implemented for contract", err);
+
+    // Calling `migrate` entrypoint should now fail because we point the non-existing new code id.
+    let res = app.migrate_contract(owner_addr.clone(), contract_addr.clone(), &Empty {}, 2);
+    let err = res.err().unwrap().root_cause().to_string();
+    assert_eq!("Cannot migrate contract to unregistered code id", err);
+
+    // Calling `migrate` entrypoint should now fail because the owner is not an admin.
+    let res = app.migrate_contract(owner_addr, contract_addr.clone(), &Empty {}, 1);
+    let err = res.err().unwrap().root_cause().to_string();
+    assert!(err.starts_with("Only admin can migrate contract: "));
+
+    // Calling `migrate` entrypoint should now fail, because it is not implemented in contract.
+    let res = app.migrate_contract(admin_addr, contract_addr, &Empty {}, 1);
+    let err = res.err().unwrap().root_cause().to_string();
+    assert_eq!("migrate is not implemented for contract", err);
 }
