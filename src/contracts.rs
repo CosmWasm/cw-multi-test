@@ -577,8 +577,7 @@ where
     /// Returns an error when the contract does not implement [reply].
     ///
     /// [reply]: Contract::reply
-    fn reply(&self, deps: DepsMut<Q>, env: Env, reply_data: Reply) -> AnyResult<Response<C>> {
-        let msg: Reply = reply_data;
+    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>> {
         match &self.reply_fn {
             Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
             None => bail!("reply is not implemented for contract"),
