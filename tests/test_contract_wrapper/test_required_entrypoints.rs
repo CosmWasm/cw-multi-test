@@ -55,9 +55,9 @@ fn required_entrypoints_should_work() {
     let mut app = App::default();
 
     // Store the contract code on chain.
-    let code_id_1 = app.store_code(contract);
+    let code_id = app.store_code(contract);
 
-    assert_eq!(1, code_id_1);
+    assert_eq!(1, code_id);
 
     // Prepare addresses.
     let owner_addr = "owner".into_addr();
@@ -66,7 +66,7 @@ fn required_entrypoints_should_work() {
     // Calling `instantiate` entrypoint should work.
     let contract_addr = app
         .instantiate_contract(
-            code_id_1,
+            code_id,
             owner_addr.clone(),
             &Empty {},
             &[],
@@ -87,7 +87,7 @@ fn required_entrypoints_should_work() {
         .unwrap();
 
     // Querying checksum should work.
-    let code_info_response = app.wrap().query_wasm_code_info(code_id_1).unwrap();
+    let code_info_response = app.wrap().query_wasm_code_info(code_id).unwrap();
     assert_eq!(
         checksum.unwrap().as_slice(),
         code_info_response.checksum.as_slice()
