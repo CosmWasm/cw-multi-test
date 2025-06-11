@@ -1,8 +1,7 @@
 #[test]
-fn migrate_entrypoint_should_work() {
+fn sudo_entrypoint_should_work() {
     use cosmwasm_std::{from_json, Empty};
     use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
-    use cw_utils::parse_execute_response_data;
 
     // Contract definition.
     mod the_contract {
@@ -12,7 +11,7 @@ fn migrate_entrypoint_should_work() {
         };
 
         #[cw_serde]
-        pub struct MigrateMsg {
+        pub struct SudoMsg {
             pub some_string: String,
         }
 
@@ -38,7 +37,7 @@ fn migrate_entrypoint_should_work() {
             to_json_binary(&Empty {})
         }
 
-        pub fn migrate(_deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response> {
+        pub fn sudo(_deps: DepsMut, _env: Env, msg: SudoMsg) -> StdResult<Response> {
             Ok(Response::default().set_data(to_json_binary(&msg)?))
         }
     }
@@ -47,7 +46,7 @@ fn migrate_entrypoint_should_work() {
 
     // Returns the wrapped contract.
     pub fn contract() -> Box<dyn Contract<Empty>> {
-        Box::new(ContractWrapper::new(execute, instantiate, query).with_migrate(migrate))
+        Box::new(ContractWrapper::new(execute, instantiate, query).with_sudo(sudo))
     }
 
     // Initialize the chain.
@@ -72,20 +71,17 @@ fn migrate_entrypoint_should_work() {
         )
         .unwrap();
 
-    // Calling `migrate` entrypoint should work.
-    let msg = MigrateMsg {
+    // Calling `sudo` entrypoint should work.
+    let msg = SudoMsg {
         some_string: "some string".to_string(),
     };
-    let app_response = app
-        .migrate_contract(admin_addr, contract_addr, &msg, 1)
-        .unwrap();
-    let migrate_response = parse_execute_response_data(&app_response.data.unwrap()).unwrap();
-    let response_msg: MigrateMsg = from_json(migrate_response.data.unwrap()).unwrap();
+    let app_response = app.wasm_sudo(contract_addr, &msg).unwrap();
+    let response_msg: SudoMsg = from_json(app_response.data.unwrap()).unwrap();
     assert_eq!("some string", response_msg.some_string);
 }
 
 #[test]
-fn migrate_empty_entrypoint_should_work() {
+fn sudo_empty_entrypoint_should_work() {
     use cosmwasm_std::Empty;
     use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
 
@@ -117,7 +113,7 @@ fn migrate_empty_entrypoint_should_work() {
             to_json_binary(&Empty {})
         }
 
-        pub fn migrate(_deps: DepsMut, _env: Env, _msg: Empty) -> StdResult<Response> {
+        pub fn sudo(_deps: DepsMut, _env: Env, _msg: Empty) -> StdResult<Response> {
             Ok(Response::default())
         }
     }
@@ -130,7 +126,7 @@ fn migrate_empty_entrypoint_should_work() {
                 the_contract::instantiate,
                 the_contract::query,
             )
-            .with_migrate_empty(the_contract::migrate),
+            .with_sudo_empty(the_contract::sudo),
         )
     }
 
@@ -156,9 +152,7 @@ fn migrate_empty_entrypoint_should_work() {
         )
         .unwrap();
 
-    // Calling `migrate` entrypoint should work.
-    let res = app
-        .migrate_contract(admin_addr, contract_addr, &Empty {}, 1)
-        .unwrap();
+    // Calling `sudo` entrypoint should work.
+    let res = app.wasm_sudo(contract_addr, &Empty {}).unwrap();
     assert_eq!(None, res.data);
 }
