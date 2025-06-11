@@ -47,7 +47,6 @@ mod closures {
     // function types
     pub type InstantiateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
     pub type ExecuteFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
-    pub type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
     pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
     pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
     pub type SudoFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
@@ -56,7 +55,6 @@ mod closures {
     // closure types
     pub type InstantiateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
     pub type ExecuteClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
-    pub type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
     pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
     pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
     pub type SudoClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
@@ -307,7 +305,7 @@ where
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
             sudo_fn: self.sudo_fn,
-            reply_fn: Some(customize_permissioned_fn(reply_fn)),
+            reply_fn: Some(customize_reply_fn(reply_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -416,17 +414,14 @@ where
     )
 }
 
-fn customize_permissioned_fn<T, C, E, Q>(
-    raw_fn: PermissionedFn<T, Empty, E, Empty>,
-) -> PermissionedClosure<T, C, E, Q>
+fn customize_reply_fn<C, E, Q>(raw_fn: ReplyFn<Empty, E, Empty>) -> ReplyClosure<C, E, Q>
 where
-    T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
     C: CustomMsg,
     Q: CustomQuery + DeserializeOwned,
 {
     Box::new(
-        move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
+        move |mut deps: DepsMut<Q>, env: Env, msg: Reply| -> Result<Response<C>, E> {
             let deps = decustomize_deps_mut(&mut deps);
             raw_fn(deps, env, msg).map(customize_response::<C>)
         },
