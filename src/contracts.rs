@@ -1,6 +1,8 @@
 //! # Implementation of the contract trait and contract wrapper
 
 use crate::error::{anyhow, bail, AnyError, AnyResult};
+#[cfg(feature = "cosmwasm_2_2")]
+use cosmwasm_std::MigrateInfo;
 use cosmwasm_std::{
     from_json, Binary, Checksum, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env,
     MessageInfo, QuerierWrapper, Reply, Response, SubMsg,
@@ -32,7 +34,12 @@ where
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
     
     /// Evaluates contract's `migrate` entry-point.
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
+    
+    /// Evaluates contract's `migrate` entry-point.
+    #[cfg(feature = "cosmwasm_2_2")]
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>, info: MigrateInfo) -> AnyResult<Response<C>>;
 
     /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
@@ -42,7 +49,7 @@ where
 
 #[rustfmt::skip]
 mod closures {
-    use super::*;
+use super::*;
 
     // function types
     pub type InstantiateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
@@ -50,7 +57,10 @@ mod closures {
     pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
     pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
     pub type SudoFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
+    #[cfg(not(feature = "cosmwasm_2_2"))]    
     pub type MigrateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
+    #[cfg(feature = "cosmwasm_2_2")]    
+    pub type MigrateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T, info: MigrateInfo) -> Result<Response<C>, E>;
 
     // closure types
     pub type InstantiateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
@@ -58,7 +68,10 @@ mod closures {
     pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
     pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
     pub type SudoClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
+    #[cfg(not(feature = "cosmwasm_2_2"))]    
     pub type MigrateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
+    #[cfg(feature = "cosmwasm_2_2")]    
+    pub type MigrateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T, MigrateInfo) -> Result<Response<C>, E>>;
 }
 
 use closures::*;
@@ -443,6 +456,7 @@ where
     )
 }
 
+#[cfg(not(feature = "cosmwasm_2_2"))]
 fn customize_migrate_fn<T, C, E, Q>(
     raw_fn: MigrateFn<T, Empty, E, Empty>,
 ) -> MigrateClosure<T, C, E, Q>
@@ -456,6 +470,28 @@ where
         move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
             let deps = decustomize_deps_mut(&mut deps);
             raw_fn(deps, env, msg).map(customize_response::<C>)
+        },
+    )
+}
+
+#[cfg(feature = "cosmwasm_2_2")]
+fn customize_migrate_fn<T, C, E, Q>(
+    raw_fn: MigrateFn<T, Empty, E, Empty>,
+) -> MigrateClosure<T, C, E, Q>
+where
+    T: DeserializeOwned + 'static,
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
+{
+    Box::new(
+        move |mut deps: DepsMut<Q>,
+              env: Env,
+              msg: T,
+              info: MigrateInfo|
+              -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, msg, info).map(customize_response::<C>)
         },
     )
 }
@@ -537,20 +573,6 @@ where
     C: CustomMsg, // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
-    /// Calls [execute] on wrapped [Contract] trait implementor.
-    ///
-    /// [execute]: Contract::execute
-    fn execute(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        info: MessageInfo,
-        msg: Vec<u8>,
-    ) -> AnyResult<Response<C>> {
-        let msg: T1 = from_json(msg)?;
-        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
-    }
-
     /// Calls [instantiate] on wrapped [Contract] trait implementor.
     ///
     /// [instantiate]: Contract::instantiate
@@ -563,6 +585,20 @@ where
     ) -> AnyResult<Response<C>> {
         let msg: T2 = from_json(msg)?;
         (self.instantiate_fn)(deps, env, info, msg).map_err(|err: E2| anyhow!(err))
+    }
+
+    /// Calls [execute] on wrapped [Contract] trait implementor.
+    ///
+    /// [execute]: Contract::execute
+    fn execute(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        info: MessageInfo,
+        msg: Vec<u8>,
+    ) -> AnyResult<Response<C>> {
+        let msg: T1 = from_json(msg)?;
+        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
     }
 
     /// Calls [query] on wrapped [Contract] trait implementor.
@@ -600,10 +636,30 @@ where
     /// Returns an error when the contract does not implement [migrate].
     ///
     /// [migrate]: Contract::migrate
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
             Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
+            None => bail!("migrate is not implemented for contract"),
+        }
+    }
+
+    /// Calls [migrate] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [migrate].
+    ///
+    /// [migrate]: Contract::migrate
+    #[cfg(feature = "cosmwasm_2_2")]
+    fn migrate(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        msg: Vec<u8>,
+        info: MigrateInfo,
+    ) -> AnyResult<Response<C>> {
+        let msg: T6 = from_json(msg)?;
+        match &self.migrate_fn {
+            Some(migrate) => migrate(deps, env, msg, info).map_err(|err: E6| anyhow!(err)),
             None => bail!("migrate is not implemented for contract"),
         }
     }

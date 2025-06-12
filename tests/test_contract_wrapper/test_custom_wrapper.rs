@@ -1,3 +1,5 @@
+#[cfg(feature = "cosmwasm_2_2")]
+use cosmwasm_std::MigrateInfo;
 use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response};
 use cw_multi_test::error::AnyResult;
 use cw_multi_test::Contract;
@@ -42,8 +44,21 @@ impl Contract<Empty> for CustomWrapper {
         unimplemented!()
     }
 
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     fn migrate(&self, deps: DepsMut<Empty>, env: Env, msg: Vec<u8>) -> AnyResult<Response<Empty>> {
         let _ = (deps, env, msg);
+        unimplemented!()
+    }
+
+    #[cfg(feature = "cosmwasm_2_2")]
+    fn migrate(
+        &self,
+        deps: DepsMut<Empty>,
+        env: Env,
+        msg: Vec<u8>,
+        info: MigrateInfo,
+    ) -> AnyResult<Response<Empty>> {
+        let _ = (deps, env, msg, info);
         unimplemented!()
     }
 }
