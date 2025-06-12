@@ -36,7 +36,7 @@ fn submessage_responses_from_wasm_execute_should_work() {
         .instantiate_contract(
             code_id,
             alice_addr.clone(),
-            &&ResponderInstantiateMessage::None,
+            &ResponderInstantiateMessage::None,
             &[],
             "responder-1",
             None,
@@ -48,7 +48,7 @@ fn submessage_responses_from_wasm_execute_should_work() {
         .instantiate_contract(
             code_id,
             alice_addr.clone(),
-            &&ResponderInstantiateMessage::None,
+            &ResponderInstantiateMessage::None,
             &[],
             "responder-2",
             None,
