@@ -1,10 +1,15 @@
 # Security Policy
 
-This repository is maintained by Confio as part of the CosmWasm stack.
+This repository is part of the CosmWasm stack.
+Please see the [Advisories] for its security policy.
 
-The code here is not intended to be used in production, i.e. **cw-multi-test** should only be used as a [Development dependency].
-Thus, it is not covered by the Cosmos bug bounty program and is not treated as strict as other components when it comes to bugs.
-However, if you still think you found a security critical issue please find the contact information at [Advisories].
+The code in this repository **is not intended for production use**.
+Specifically, **cw-multi-test** should be used only as a [DEVELOPMENT DEPENDENCY].
+As such, it is not covered by any bug bounty program and is not held
+to the same strict standards as other components regarding bugs.
 
-[Development dependency]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
-[Advisories]: https://github.com/CosmWasm/advisories/blob/main/SECURITY.md.
+However, if you believe you have found a security-critical issue,
+please refer to the contact information in the [Advisories].
+
+[DEVELOPMENT DEPENDENCY]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#development-dependencies
+[Advisories]: https://github.com/CosmWasm/advisories/blob/main/SECURITY.md
