@@ -20,23 +20,23 @@ where
 {
     /// Evaluates contract's `instantiate` entry-point.
     fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `execute` entry-point.
     fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
-    
+
     /// Evaluates contract's `reply` entry-point.
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `sudo` entry-point.
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `migrate` entry-point.
     #[cfg(not(feature = "cosmwasm_2_2"))]
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `migrate` entry-point.
     #[cfg(feature = "cosmwasm_2_2")]
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>, info: MigrateInfo) -> AnyResult<Response<C>>;
@@ -57,9 +57,9 @@ use super::*;
     pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
     pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
     pub type SudoFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
-    #[cfg(not(feature = "cosmwasm_2_2"))]    
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     pub type MigrateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
-    #[cfg(feature = "cosmwasm_2_2")]    
+    #[cfg(feature = "cosmwasm_2_2")]
     pub type MigrateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T, info: MigrateInfo) -> Result<Response<C>, E>;
 
     // closure types
@@ -68,9 +68,9 @@ use super::*;
     pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
     pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
     pub type SudoClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
-    #[cfg(not(feature = "cosmwasm_2_2"))]    
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     pub type MigrateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
-    #[cfg(feature = "cosmwasm_2_2")]    
+    #[cfg(feature = "cosmwasm_2_2")]
     pub type MigrateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T, MigrateInfo) -> Result<Response<C>, E>>;
 }
 
