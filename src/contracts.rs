@@ -49,7 +49,7 @@ where
 
 #[rustfmt::skip]
 mod closures {
-use super::*;
+    use super::*;
 
     // function types
     pub type InstantiateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
