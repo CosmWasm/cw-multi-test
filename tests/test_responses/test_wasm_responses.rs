@@ -12,7 +12,7 @@ pub fn responder_contract() -> Box<dyn Contract<Empty>> {
             test_contracts::responder::instantiate,
             test_contracts::responder::query,
         )
-        .with_reply(test_contracts::responder::reply),
+        .with_reply_empty(test_contracts::responder::reply),
     )
 }
 
