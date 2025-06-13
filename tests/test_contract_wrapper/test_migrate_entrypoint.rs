@@ -1,3 +1,5 @@
+#![cfg(not(feature = "cosmwasm_2_2"))]
+
 #[test]
 fn migrate_entrypoint_should_work() {
     use cosmwasm_std::{from_json, Empty};
