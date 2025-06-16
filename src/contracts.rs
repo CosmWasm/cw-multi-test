@@ -456,7 +456,6 @@ where
     )
 }
 
-#[cfg(not(feature = "cosmwasm_2_2"))]
 fn customize_migrate_fn<T, C, E, Q>(
     raw_fn: MigrateFn<T, Empty, E, Empty>,
 ) -> MigrateClosure<T, C, E, Q>
@@ -467,31 +466,15 @@ where
     Q: CustomQuery + DeserializeOwned,
 {
     Box::new(
+        #[cfg(not(feature = "cosmwasm_2_2"))]
         move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
             let deps = decustomize_deps_mut(&mut deps);
             raw_fn(deps, env, msg).map(customize_response::<C>)
         },
-    )
-}
-
-#[cfg(feature = "cosmwasm_2_2")]
-fn customize_migrate_fn<T, C, E, Q>(
-    raw_fn: MigrateFn<T, Empty, E, Empty>,
-) -> MigrateClosure<T, C, E, Q>
-where
-    T: DeserializeOwned + 'static,
-    E: Display + Debug + Send + Sync + 'static,
-    C: CustomMsg,
-    Q: CustomQuery + DeserializeOwned,
-{
-    Box::new(
-        move |mut deps: DepsMut<Q>,
-              env: Env,
-              msg: T,
-              info: MigrateInfo|
-              -> Result<Response<C>, E> {
+        #[cfg(feature = "cosmwasm_2_2")]
+        move |mut deps: DepsMut<Q>, env: Env, msg: T, inf: MigrateInfo| -> Result<Response<C>, E> {
             let deps = decustomize_deps_mut(&mut deps);
-            raw_fn(deps, env, msg, info).map(customize_response::<C>)
+            raw_fn(deps, env, msg, inf).map(customize_response::<C>)
         },
     )
 }
