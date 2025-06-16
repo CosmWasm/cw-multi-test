@@ -9,7 +9,7 @@ use cw_multi_test::{App, Contract, ContractWrapper, Executor, IntoAddr};
 use cw_storage_plus::Item;
 
 // The initial version of the contract.
-mod contract_one {
+mod contract_version_one {
     use super::*;
 
     const VERSION: Item<u32> = Item::new("version");
@@ -51,7 +51,7 @@ mod contract_one {
 }
 
 // Contract definition after changes that require migration.
-mod contract_two {
+mod contract_version_two {
     use super::*;
 
     const NEGATED_VERSION: Item<i64> = Item::new("negated-version");
@@ -105,9 +105,9 @@ mod contract_two {
 // Returns the wrapped contract before improvements.
 pub fn contract_one() -> Box<dyn Contract<Empty>> {
     Box::new(ContractWrapper::new(
-        contract_one::execute,
-        contract_one::instantiate,
-        contract_one::query,
+        contract_version_one::execute,
+        contract_version_one::instantiate,
+        contract_version_one::query,
     ))
 }
 
@@ -115,11 +115,11 @@ pub fn contract_one() -> Box<dyn Contract<Empty>> {
 pub fn contract_two() -> Box<dyn Contract<Empty>> {
     Box::new(
         ContractWrapper::new(
-            contract_two::execute,
-            contract_two::instantiate,
-            contract_two::query,
+            contract_version_two::execute,
+            contract_version_two::instantiate,
+            contract_version_two::query,
         )
-        .with_migrate(contract_two::migrate),
+        .with_migrate(contract_version_two::migrate),
     )
 }
 
@@ -140,7 +140,7 @@ fn migrate_info_should_work() {
         .instantiate_contract(
             code_id_one,
             owner_addr.clone(),
-            &contract_one::InstantiateMsg { value: 100 },
+            &contract_version_one::InstantiateMsg { value: 100 },
             &[],
             "contract-one",
             Some(admin_addr.to_string()),
@@ -148,7 +148,7 @@ fn migrate_info_should_work() {
         .unwrap();
 
     // Query the state of the contract in version one.
-    let response_one: contract_one::ContractResponseMsg = app
+    let response_one: contract_version_one::ContractResponseMsg = app
         .wrap()
         .query_wasm_smart(contract_addr_one.clone(), &Empty {})
         .unwrap();
@@ -168,7 +168,7 @@ fn migrate_info_should_work() {
     .unwrap();
 
     // Query the state of the contract in version two.
-    let response_two: contract_two::ContractResponseMsg = app
+    let response_two: contract_version_two::ContractResponseMsg = app
         .wrap()
         .query_wasm_smart(contract_addr_one.clone(), &Empty {})
         .unwrap();
@@ -183,7 +183,7 @@ fn migrate_info_should_work() {
         .instantiate_contract(
             code_id_three,
             owner_addr.clone(),
-            &contract_one::InstantiateMsg { value: 200 },
+            &contract_version_one::InstantiateMsg { value: 200 },
             &[],
             "contract-two",
             Some(admin_addr.to_string()),
@@ -191,7 +191,7 @@ fn migrate_info_should_work() {
         .unwrap();
 
     // Query the state of the second contract in version one.
-    let response_one: contract_one::ContractResponseMsg = app
+    let response_one: contract_version_one::ContractResponseMsg = app
         .wrap()
         .query_wasm_smart(contract_addr_two.clone(), &Empty {})
         .unwrap();
@@ -208,7 +208,7 @@ fn migrate_info_should_work() {
     .unwrap();
 
     // Query the state of the contract two in version two.
-    let response_two: contract_two::ContractResponseMsg = app
+    let response_two: contract_version_two::ContractResponseMsg = app
         .wrap()
         .query_wasm_smart(contract_addr_two.clone(), &Empty {})
         .unwrap();
