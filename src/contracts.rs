@@ -18,19 +18,19 @@ where
 {
     /// Evaluates contract's `instantiate` entry-point.
     fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `execute` entry-point.
     fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
-    
+
     /// Evaluates contract's `reply` entry-point.
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `sudo` entry-point.
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
-    
+
     /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
