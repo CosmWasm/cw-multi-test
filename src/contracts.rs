@@ -1,11 +1,11 @@
 //! # Implementation of the contract trait and contract wrapper
 
-use crate::error::{anyhow, bail, AnyError, AnyResult};
+use crate::error::bailey;
 #[cfg(feature = "cosmwasm_2_2")]
 use cosmwasm_std::MigrateInfo;
 use cosmwasm_std::{
     from_json, Binary, Checksum, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env,
-    MessageInfo, QuerierWrapper, Reply, Response, SubMsg,
+    MessageInfo, QuerierWrapper, Reply, Response, StdError, StdResult, SubMsg,
 };
 use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display};
@@ -19,27 +19,27 @@ where
     Q: CustomQuery,
 {
     /// Evaluates contract's `instantiate` entry-point.
-    fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
+    fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> StdResult<Response<C>>;
 
     /// Evaluates contract's `execute` entry-point.
-    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
+    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> StdResult<Response<C>>;
 
     /// Evaluates contract's `query` entry-point.
-    fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
+    fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> StdResult<Binary>;
 
     /// Evaluates contract's `reply` entry-point.
-    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>>;
+    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> StdResult<Response<C>>;
 
     /// Evaluates contract's `sudo` entry-point.
-    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
+    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> StdResult<Response<C>>;
 
     /// Evaluates contract's `migrate` entry-point.
     #[cfg(not(feature = "cosmwasm_2_2"))]
-    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> StdResult<Response<C>>;
 
     /// Evaluates contract's `migrate` entry-point.
     #[cfg(feature = "cosmwasm_2_2")]
-    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>, info: MigrateInfo) -> AnyResult<Response<C>>;
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>, info: MigrateInfo) -> StdResult<Response<C>>;
 
     /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
@@ -153,10 +153,10 @@ pub struct ContractWrapper<
     C = Empty,
     Q = Empty,
     T4 = Empty,
-    E4 = AnyError,
-    E5 = AnyError,
+    E4 = StdError,
+    E5 = StdError,
     T6 = Empty,
-    E6 = AnyError,
+    E6 = StdError,
 > where
     T1: DeserializeOwned, // Type of message passed to `execute` entry-point.
     T2: DeserializeOwned, // Type of message passed to `instantiate` entry-point.
@@ -565,9 +565,10 @@ where
         env: Env,
         info: MessageInfo,
         msg: Vec<u8>,
-    ) -> AnyResult<Response<C>> {
+    ) -> StdResult<Response<C>> {
         let msg: T2 = from_json(msg)?;
-        (self.instantiate_fn)(deps, env, info, msg).map_err(|err: E2| anyhow!(err))
+        (self.instantiate_fn)(deps, env, info, msg)
+            .map_err(|err: E2| StdError::msg(format!("{}", err)))
     }
 
     /// Calls [execute] on wrapped [Contract] trait implementor.
@@ -579,27 +580,29 @@ where
         env: Env,
         info: MessageInfo,
         msg: Vec<u8>,
-    ) -> AnyResult<Response<C>> {
+    ) -> StdResult<Response<C>> {
         let msg: T1 = from_json(msg)?;
-        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
+        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| StdError::msg(format!("{}", err)))
     }
 
     /// Calls [query] on wrapped [Contract] trait implementor.
     ///
     /// [query]: Contract::query
-    fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
+    fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> StdResult<Binary> {
         let msg: T3 = from_json(msg)?;
-        (self.query_fn)(deps, env, msg).map_err(|err: E3| anyhow!(err))
+        (self.query_fn)(deps, env, msg).map_err(|err: E3| StdError::msg(format!("{}", err)))
     }
 
     /// Calls [reply] on wrapped [Contract] trait implementor.
     /// Returns an error when the contract does not implement [reply].
     ///
     /// [reply]: Contract::reply
-    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>> {
+    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> StdResult<Response<C>> {
         match &self.reply_fn {
-            Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
-            None => bail!("reply is not implemented for contract"),
+            Some(reply) => {
+                reply(deps, env, msg).map_err(|err: E5| StdError::msg(format!("{}", err)))
+            }
+            None => bailey!("reply is not implemented for contract"),
         }
     }
 
@@ -607,11 +610,11 @@ where
     /// Returns an error when the contract does not implement [sudo].
     ///
     /// [sudo]: Contract::sudo
-    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
+    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> StdResult<Response<C>> {
         let msg: T4 = from_json(msg)?;
         match &self.sudo_fn {
-            Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| anyhow!(err)),
-            None => bail!("sudo is not implemented for contract"),
+            Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| StdError::msg(format!("{}", err))),
+            None => bailey!("sudo is not implemented for contract"),
         }
     }
 
@@ -620,11 +623,13 @@ where
     ///
     /// [migrate]: Contract::migrate
     #[cfg(not(feature = "cosmwasm_2_2"))]
-    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> StdResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
-            Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
-            None => bail!("migrate is not implemented for contract"),
+            Some(migrate) => {
+                migrate(deps, env, msg).map_err(|err: E6| StdError::msg(format!("{}", err)))
+            }
+            None => bailey!("migrate is not implemented for contract"),
         }
     }
 
@@ -639,11 +644,13 @@ where
         env: Env,
         msg: Vec<u8>,
         info: MigrateInfo,
-    ) -> AnyResult<Response<C>> {
+    ) -> StdResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
-            Some(migrate) => migrate(deps, env, msg, info).map_err(|err: E6| anyhow!(err)),
-            None => bail!("migrate is not implemented for contract"),
+            Some(migrate) => {
+                migrate(deps, env, msg, info).map_err(|err: E6| StdError::msg(format!("{}", err)))
+            }
+            None => bailey!("migrate is not implemented for contract"),
         }
     }
 

@@ -36,15 +36,15 @@ impl<T: bech32::Checksum + 'static> Api for MockApiBech<T> {
                 return Ok(s.byte_iter().collect::<Vec<u8>>().into());
             }
         }
-        Err(StdError::generic_err("Invalid input"))
+        Err(StdError::msg("Invalid input"))
     }
 
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        let hrp = Hrp::parse(self.prefix).map_err(|e| StdError::generic_err(e.to_string()))?;
+        let hrp = Hrp::parse(self.prefix).map_err(|e| StdError::msg(e.to_string()))?;
         if let Ok(encoded) = encode::<T>(hrp, canonical.as_slice()) {
             Ok(Addr::unchecked(encoded))
         } else {
-            Err(StdError::generic_err("Invalid canonical address"))
+            Err(StdError::msg("Invalid canonical address"))
         }
     }
 

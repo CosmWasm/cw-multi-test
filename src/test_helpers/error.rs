@@ -7,7 +7,7 @@ fn instantiate_err(
     _info: MessageInfo,
     _msg: Empty,
 ) -> Result<Response, StdError> {
-    Err(StdError::generic_err("Init failed"))
+    Err(StdError::msg("Init failed"))
 }
 
 fn instantiate_ok(
@@ -25,11 +25,11 @@ fn execute(
     _info: MessageInfo,
     _msg: Empty,
 ) -> Result<Response, StdError> {
-    Err(StdError::generic_err("Handle failed"))
+    Err(StdError::msg("Handle failed"))
 }
 
 fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
-    Err(StdError::generic_err("Query failed"))
+    Err(StdError::msg("Query failed"))
 }
 
 pub fn contract<C>(instantiable: bool) -> Box<dyn Contract<C>>

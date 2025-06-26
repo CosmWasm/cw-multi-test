@@ -1,9 +1,9 @@
 use crate::test_app_builder::MyKeeper;
 use crate::test_contracts;
 use cosmwasm_std::{
-    Addr, Api, Binary, BlockInfo, Empty, Querier, Record, Storage, WasmMsg, WasmQuery,
+    Addr, Api, Binary, BlockInfo, Empty, Querier, Record, StdError, StdResult, Storage, WasmMsg,
+    WasmQuery,
 };
-use cw_multi_test::error::{bail, AnyResult};
 use cw_multi_test::{
     no_init, AppBuilder, AppResponse, Contract, ContractData, CosmosRouter, Executor, Wasm,
     WasmKeeper, WasmSudo,
@@ -35,8 +35,8 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         _block: &BlockInfo,
         _sender: Addr,
         _msg: WasmMsg,
-    ) -> AnyResult<AppResponse> {
-        bail!(self.1);
+    ) -> StdResult<AppResponse> {
+        Err(StdError::msg(self.1))
     }
 
     fn query(
@@ -46,8 +46,8 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         _querier: &dyn Querier,
         _block: &BlockInfo,
         _request: WasmQuery,
-    ) -> AnyResult<Binary> {
-        bail!(self.2);
+    ) -> StdResult<Binary> {
+        Err(StdError::msg(self.2))
     }
 
     fn sudo(
@@ -57,8 +57,8 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         _router: &dyn CosmosRouter<ExecC = ExecT, QueryC = QueryT>,
         _block: &BlockInfo,
         _msg: WasmSudo,
-    ) -> AnyResult<AppResponse> {
-        bail!(self.3);
+    ) -> StdResult<AppResponse> {
+        Err(StdError::msg(self.3))
     }
 
     fn store_code(&mut self, _creator: Addr, _code: Box<dyn Contract<ExecT, QueryT>>) -> u64 {
@@ -70,16 +70,16 @@ impl<ExecT, QueryT> Wasm<ExecT, QueryT> for MyWasmKeeper {
         _creator: Addr,
         code_id: u64,
         _code: Box<dyn Contract<ExecT, QueryT>>,
-    ) -> AnyResult<u64> {
+    ) -> StdResult<u64> {
         Ok(code_id)
     }
 
-    fn duplicate_code(&mut self, _code_id: u64) -> AnyResult<u64> {
-        bail!(DUPLICATE_CODE_MSG);
+    fn duplicate_code(&mut self, _code_id: u64) -> StdResult<u64> {
+        Err(StdError::msg(DUPLICATE_CODE_MSG))
     }
 
-    fn contract_data(&self, _storage: &dyn Storage, _address: &Addr) -> AnyResult<ContractData> {
-        bail!(CONTRACT_DATA_MSG);
+    fn contract_data(&self, _storage: &dyn Storage, _address: &Addr) -> StdResult<ContractData> {
+        Err(StdError::msg(CONTRACT_DATA_MSG))
     }
 
     fn dump_wasm_raw(&self, _storage: &dyn Storage, _address: &Addr) -> Vec<Record> {
@@ -104,13 +104,13 @@ fn building_app_with_custom_wasm_should_work() {
 
     // calling duplicate_code should return error defined in custom keeper
     assert_eq!(
-        DUPLICATE_CODE_MSG,
+        "kind: Other, error: wasm duplicate code called",
         app.duplicate_code(CODE_ID).unwrap_err().to_string()
     );
 
     // calling contract_data should return error defined in custom keeper
     assert_eq!(
-        CONTRACT_DATA_MSG,
+        "kind: Other, error: wasm contract data called",
         app.contract_data(&contract_addr).unwrap_err().to_string()
     );
 
@@ -119,7 +119,7 @@ fn building_app_with_custom_wasm_should_work() {
 
     // executing wasm execute should return an error defined in custom keeper
     assert_eq!(
-        EXECUTE_MSG,
+        "kind: Other, error: wasm execute called",
         app.execute(
             sender_addr,
             WasmMsg::Instantiate {
@@ -137,7 +137,7 @@ fn building_app_with_custom_wasm_should_work() {
 
     // executing wasm sudo should return an error defined in custom keeper
     assert_eq!(
-        SUDO_MSG,
+        "kind: Other, error: wasm sudo called",
         app.sudo(
             WasmSudo {
                 contract_addr,
@@ -151,7 +151,7 @@ fn building_app_with_custom_wasm_should_work() {
 
     // executing wasm query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {QUERY_MSG}"),
+        format!("kind: Other, error: Querier contract error: kind: Other, error: {QUERY_MSG}"),
         app.wrap()
             .query_wasm_code_info(CODE_ID)
             .unwrap_err()

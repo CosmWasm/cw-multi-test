@@ -1,7 +1,6 @@
 #[cfg(feature = "cosmwasm_2_2")]
 use cosmwasm_std::MigrateInfo;
-use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response};
-use cw_multi_test::error::AnyResult;
+use cosmwasm_std::{Binary, Deps, DepsMut, Empty, Env, MessageInfo, Reply, Response, StdResult};
 use cw_multi_test::Contract;
 
 struct CustomWrapper {}
@@ -13,7 +12,7 @@ impl Contract<Empty> for CustomWrapper {
         env: Env,
         info: MessageInfo,
         msg: Vec<u8>,
-    ) -> AnyResult<Response<Empty>> {
+    ) -> StdResult<Response<Empty>> {
         let _ = (deps, env, info, msg);
         unimplemented!()
     }
@@ -24,28 +23,28 @@ impl Contract<Empty> for CustomWrapper {
         env: Env,
         info: MessageInfo,
         msg: Vec<u8>,
-    ) -> AnyResult<Response<Empty>> {
+    ) -> StdResult<Response<Empty>> {
         let _ = (deps, env, info, msg);
         unimplemented!()
     }
 
-    fn query(&self, deps: Deps<Empty>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
+    fn query(&self, deps: Deps<Empty>, env: Env, msg: Vec<u8>) -> StdResult<Binary> {
         let _ = (deps, env, msg);
         unimplemented!()
     }
 
-    fn reply(&self, deps: DepsMut<Empty>, env: Env, msg: Reply) -> AnyResult<Response<Empty>> {
+    fn reply(&self, deps: DepsMut<Empty>, env: Env, msg: Reply) -> StdResult<Response<Empty>> {
         let _ = (deps, env, msg);
         unimplemented!()
     }
 
-    fn sudo(&self, deps: DepsMut<Empty>, env: Env, msg: Vec<u8>) -> AnyResult<Response<Empty>> {
+    fn sudo(&self, deps: DepsMut<Empty>, env: Env, msg: Vec<u8>) -> StdResult<Response<Empty>> {
         let _ = (deps, env, msg);
         unimplemented!()
     }
 
     #[cfg(not(feature = "cosmwasm_2_2"))]
-    fn migrate(&self, deps: DepsMut<Empty>, env: Env, msg: Vec<u8>) -> AnyResult<Response<Empty>> {
+    fn migrate(&self, deps: DepsMut<Empty>, env: Env, msg: Vec<u8>) -> StdResult<Response<Empty>> {
         let _ = (deps, env, msg);
         unimplemented!()
     }
@@ -57,7 +56,7 @@ impl Contract<Empty> for CustomWrapper {
         env: Env,
         msg: Vec<u8>,
         info: MigrateInfo,
-    ) -> AnyResult<Response<Empty>> {
+    ) -> StdResult<Response<Empty>> {
         let _ = (deps, env, msg, info);
         unimplemented!()
     }
