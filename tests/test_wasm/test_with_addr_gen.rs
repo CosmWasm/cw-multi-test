@@ -1,6 +1,5 @@
 use cosmwasm_std::testing::MockApi;
-use cosmwasm_std::{Addr, Api, Empty, Storage};
-use cw_multi_test::error::AnyResult;
+use cosmwasm_std::{Addr, Api, Empty, StdResult, Storage};
 use cw_multi_test::{no_init, AddressGenerator, AppBuilder, Executor, WasmKeeper};
 
 use crate::test_contracts;
@@ -54,7 +53,7 @@ fn custom_address_generator_should_work() {
             _storage: &mut dyn Storage,
             _code_id: u64,
             _instance_id: u64,
-        ) -> AnyResult<Addr> {
+        ) -> StdResult<Addr> {
             Ok(MockApi::default()
                 .with_prefix("osmo")
                 .addr_make("test_addr"))

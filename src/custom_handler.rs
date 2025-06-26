@@ -1,9 +1,9 @@
 //! # Custom message and query handler
 
 use crate::app::CosmosRouter;
-use crate::error::{bail, AnyResult};
+use crate::error::bailey;
 use crate::{AppResponse, Module};
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, Storage};
+use cosmwasm_std::{Addr, Api, Binary, BlockInfo, Empty, Querier, StdError, StdResult, Storage};
 use std::cell::{Ref, RefCell};
 use std::ops::Deref;
 use std::rc::Rc;
@@ -94,7 +94,7 @@ where
         _block: &BlockInfo,
         _sender: Addr,
         msg: Self::ExecT,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         self.state.execs.borrow_mut().push(msg);
         Ok(AppResponse::default())
     }
@@ -106,7 +106,7 @@ where
         _querier: &dyn Querier,
         _block: &BlockInfo,
         request: Self::QueryT,
-    ) -> AnyResult<Binary> {
+    ) -> StdResult<Binary> {
         self.state.queries.borrow_mut().push(request);
         Ok(Binary::default())
     }
@@ -118,7 +118,7 @@ where
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
         msg: Self::SudoT,
-    ) -> AnyResult<AppResponse> {
-        bail!("Unexpected custom sudo message {:?}", msg)
+    ) -> StdResult<AppResponse> {
+        bailey!("Unexpected custom sudo message {:?}", msg)
     }
 }

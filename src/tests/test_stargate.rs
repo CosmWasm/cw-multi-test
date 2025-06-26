@@ -26,10 +26,8 @@ fn default_failing_stargate_handler_should_work() {
 
     // source error message comes from failing stargate keeper
     assert!(err
-        .source()
-        .unwrap()
         .to_string()
-        .starts_with("Unexpected stargate execute"));
+        .starts_with("kind: Other, error: Unexpected stargate execute:"))
 }
 
 #[test]

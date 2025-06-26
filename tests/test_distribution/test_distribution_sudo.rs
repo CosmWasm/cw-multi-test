@@ -8,7 +8,7 @@ fn distribution_sudo_should_fail() {
     let _ = AppBuilder::default().build(|router, api, storage| {
         // Calling sudo on distribution should fail.
         assert_eq!(
-            "Something went wrong - distribution doesn't have sudo messages",
+            "kind: Other, error: Something went wrong - distribution doesn't have sudo messages",
             router
                 .distribution
                 .sudo(api, storage, router, &block, Empty {})

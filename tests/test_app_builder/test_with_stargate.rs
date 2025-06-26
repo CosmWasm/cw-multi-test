@@ -1,9 +1,7 @@
-use anyhow::bail;
 use cosmwasm_std::{
     Addr, AnyMsg, Api, Binary, BlockInfo, CosmosMsg, CustomMsg, CustomQuery, Empty, Event,
-    GrpcQuery, Querier, QueryRequest, Storage,
+    GrpcQuery, Querier, QueryRequest, StdError, StdResult, Storage,
 };
-use cw_multi_test::error::AnyResult;
 use cw_multi_test::{
     no_init, AppBuilder, AppResponse, CosmosRouter, Executor, Stargate, StargateAccepting,
     StargateFailing,
@@ -27,12 +25,12 @@ impl Stargate for StargateKeeper {
         _sender: Addr,
         _type_url: String,
         _value: Binary,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        bail!(MSG_STARGATE_EXECUTE)
+        Err(StdError::msg(MSG_STARGATE_EXECUTE))
     }
 
     fn query_stargate(
@@ -43,8 +41,8 @@ impl Stargate for StargateKeeper {
         _block: &BlockInfo,
         _path: String,
         _data: Binary,
-    ) -> AnyResult<Binary> {
-        bail!(MSG_STARGATE_QUERY)
+    ) -> StdResult<Binary> {
+        Err(StdError::msg(MSG_STARGATE_QUERY))
     }
 
     fn execute_any<ExecC, QueryC>(
@@ -55,12 +53,12 @@ impl Stargate for StargateKeeper {
         _block: &BlockInfo,
         _sender: Addr,
         _msg: AnyMsg,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        bail!(MSG_ANY_EXECUTE)
+        Err(StdError::msg(MSG_ANY_EXECUTE))
     }
 
     fn query_grpc(
@@ -70,8 +68,8 @@ impl Stargate for StargateKeeper {
         _querier: &dyn Querier,
         _block: &BlockInfo,
         _request: GrpcQuery,
-    ) -> AnyResult<Binary> {
-        bail!(MSG_GRPC_QUERY)
+    ) -> StdResult<Binary> {
+        Err(StdError::msg(MSG_GRPC_QUERY))
     }
 }
 
@@ -91,8 +89,8 @@ fn building_app_with_custom_stargate_should_work() {
         value: Default::default(),
     };
     assert_eq!(
-        app.execute(sender_addr, msg).unwrap_err().to_string(),
-        MSG_STARGATE_EXECUTE,
+        format!("kind: Other, error: {MSG_STARGATE_EXECUTE}"),
+        app.execute(sender_addr, msg).unwrap_err().to_string()
     );
 
     // executing `stargate` query should return an error defined in custom stargate keeper
@@ -126,8 +124,8 @@ fn building_app_with_custom_any_grpc_should_work() {
         value: Default::default(),
     });
     assert_eq!(
+        format!("kind: Other, error: {MSG_ANY_EXECUTE}"),
         app.execute(sender_addr, msg).unwrap_err().to_string(),
-        MSG_ANY_EXECUTE,
     );
 
     // executing `grpc` query should return an error defined in custom stargate keeper
@@ -223,7 +221,7 @@ fn default_failing_stargate_should_work() {
         .execute(sender_addr, msg)
         .unwrap_err()
         .to_string()
-        .starts_with("Unexpected stargate execute"));
+        .starts_with("kind: Other, error: Unexpected stargate execute"));
 
     #[allow(deprecated)]
     let request: QueryRequest<Empty> = QueryRequest::Stargate {
@@ -258,7 +256,7 @@ fn default_failing_any_grpc_should_work() {
         .execute(sender_addr, msg)
         .unwrap_err()
         .to_string()
-        .starts_with("Unexpected any execute"));
+        .starts_with("kind: Other, error: Unexpected any execute"));
 
     let request: QueryRequest<Empty> = QueryRequest::Grpc(GrpcQuery {
         path: "test".to_string(),
@@ -269,5 +267,5 @@ fn default_failing_any_grpc_should_work() {
         .raw_query(to_json_vec(&request).unwrap().as_slice())
         .unwrap()
         .unwrap_err()
-        .starts_with("Unexpected grpc query"));
+        .starts_with("kind: Other, error: Unexpected grpc query"));
 }

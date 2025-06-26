@@ -26,7 +26,7 @@ fn building_app_with_custom_distribution_should_work() {
 
     // executing distribution message should return an error defined in custom keeper
     assert_eq!(
-        EXECUTE_MSG,
+        format!("kind: Other, error: {EXECUTE_MSG}"),
         app.execute(
             sender_addr,
             DistributionMsg::SetWithdrawAddress {

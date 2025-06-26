@@ -74,7 +74,7 @@ fn custom_handler_has_no_sudo() {
 
     // run sudo function
     assert_eq!(
-        "Unexpected custom sudo message Empty",
+        "kind: Other, error: Unexpected custom sudo message Empty",
         custom_handler
             .sudo(
                 app.api(),

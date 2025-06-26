@@ -21,7 +21,7 @@ fn building_app_with_custom_gov_should_work() {
 
     // executing governance message should return an error defined in custom keeper
     assert_eq!(
-        EXECUTE_MSG,
+        format!("kind: Other, error: {EXECUTE_MSG}"),
         app.execute(
             sender_addr,
             GovMsg::Vote {
@@ -56,7 +56,9 @@ fn building_app_with_default_gov_vote_should_work() {
     let response = app.execute(sender_addr, vote_msg.into()).unwrap_err();
 
     // Always an error is returned.
-    assert!(response.to_string().starts_with("Unexpected exec msg Vote"));
+    assert!(response
+        .to_string()
+        .starts_with("kind: Other, error: Unexpected exec msg Vote"));
 }
 
 #[cfg(feature = "cosmwasm_1_2")]
@@ -86,7 +88,7 @@ fn building_app_with_default_gov_vote_weighted_should_work() {
     // Always an error is returned.
     assert!(response
         .to_string()
-        .starts_with("Unexpected exec msg VoteWeighted"));
+        .starts_with("kind: Other, error: Unexpected exec msg VoteWeighted"));
 }
 
 #[test]
@@ -112,7 +114,9 @@ fn building_app_with_failing_gov_vote_should_work() {
     let response = app.execute(sender_addr, vote_msg.into()).unwrap_err();
 
     // Always an error is returned.
-    assert!(response.to_string().starts_with("Unexpected exec msg Vote"));
+    assert!(response
+        .to_string()
+        .starts_with("kind: Other, error: Unexpected exec msg Vote"));
 }
 
 #[cfg(feature = "cosmwasm_1_2")]
@@ -144,7 +148,7 @@ fn building_app_with_failing_gov_vote_weighted_should_work() {
     // Always an error is returned.
     assert!(response
         .to_string()
-        .starts_with("Unexpected exec msg VoteWeighted"));
+        .starts_with("kind: Other, error: Unexpected exec msg VoteWeighted"));
 }
 
 #[test]

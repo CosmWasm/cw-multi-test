@@ -80,7 +80,7 @@ fn address_canonicalize_humanize_should_work() {
 #[test]
 fn address_humanize_prefix_too_long() {
     assert_eq!(
-        "Generic error: hrp is too long, found 85 characters, must be <= 126",
+        "kind: Other, error: hrp is too long, found 85 characters, must be <= 126",
         MockApiBech32m::new(
             "juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_juno_",
         )
@@ -93,7 +93,7 @@ fn address_humanize_prefix_too_long() {
 #[test]
 fn address_humanize_canonical_too_long() {
     assert_eq!(
-        "Generic error: Invalid canonical address",
+        "kind: Other, error: Invalid canonical address",
         MockApiBech32m::new("juno")
             .addr_humanize(&CanonicalAddr::from([1; 1024]))
             .unwrap_err()

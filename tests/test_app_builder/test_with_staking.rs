@@ -26,7 +26,7 @@ fn building_app_with_custom_staking_should_work() {
 
     // executing staking message should return an error defined in custom keeper
     assert_eq!(
-        EXECUTE_MSG,
+        format!("kind: Other, error: {EXECUTE_MSG}"),
         app.execute(
             sender_addr,
             StakingMsg::Delegate {
@@ -41,7 +41,7 @@ fn building_app_with_custom_staking_should_work() {
 
     // executing staking sudo should return an error defined in custom keeper
     assert_eq!(
-        SUDO_MSG,
+        format!("kind: Other, error: {SUDO_MSG}"),
         app.sudo(
             StakingSudo::Slash {
                 validator: validator_addr.into(),
@@ -55,7 +55,7 @@ fn building_app_with_custom_staking_should_work() {
 
     // executing staking query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {QUERY_MSG}"),
+        format!("kind: Other, error: Querier contract error: kind: Other, error: {QUERY_MSG}"),
         app.wrap().query_all_validators().unwrap_err().to_string()
     );
 }

@@ -1,11 +1,10 @@
 //! # Handler for `CosmosMsg::Stargate`, `CosmosMsg::Any`, `QueryRequest::Stargate` and `QueryRequest::Grpc` messages
 
-use crate::error::AnyResult;
+use crate::error::bailey;
 use crate::{AppResponse, CosmosRouter};
-use anyhow::bail;
 use cosmwasm_std::{
     to_json_binary, Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, GrpcQuery,
-    Querier, Storage,
+    Querier, StdError, StdResult, Storage,
 };
 use serde::de::DeserializeOwned;
 
@@ -22,16 +21,16 @@ pub trait Stargate {
         sender: Addr,
         type_url: String,
         value: Binary,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        bail!(
+        bailey!(
             "Unexpected stargate execute: type_url={}, value={} from {}",
             type_url,
             value,
-            sender,
+            sender
         )
     }
 
@@ -44,8 +43,8 @@ pub trait Stargate {
         _block: &BlockInfo,
         path: String,
         data: Binary,
-    ) -> AnyResult<Binary> {
-        bail!("Unexpected stargate query: path={}, data={}", path, data)
+    ) -> StdResult<Binary> {
+        bailey!("Unexpected stargate query: path={}, data={}", path, data)
     }
 
     /// Processes `CosmosMsg::Any` message variant.
@@ -57,12 +56,12 @@ pub trait Stargate {
         _block: &BlockInfo,
         sender: Addr,
         msg: AnyMsg,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        bail!("Unexpected any execute: msg={:?} from {}", msg, sender)
+        bailey!("Unexpected any execute: msg={:?} from {}", msg, sender)
     }
 
     /// Processes `QueryRequest::Grpc` query.
@@ -73,8 +72,8 @@ pub trait Stargate {
         _querier: &dyn Querier,
         _block: &BlockInfo,
         request: GrpcQuery,
-    ) -> AnyResult<Binary> {
-        bail!("Unexpected grpc query: request={:?}", request)
+    ) -> StdResult<Binary> {
+        bailey!("Unexpected grpc query: request={:?}", request)
     }
 }
 
@@ -96,7 +95,7 @@ impl Stargate for StargateAccepting {
         _sender: Addr,
         _type_url: String,
         _value: Binary,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
@@ -112,8 +111,8 @@ impl Stargate for StargateAccepting {
         _block: &BlockInfo,
         _path: String,
         _data: Binary,
-    ) -> AnyResult<Binary> {
-        to_json_binary(&Empty {}).map_err(Into::into)
+    ) -> StdResult<Binary> {
+        to_json_binary(&Empty {})
     }
 
     fn execute_any<ExecC, QueryC>(
@@ -124,7 +123,7 @@ impl Stargate for StargateAccepting {
         _block: &BlockInfo,
         _sender: Addr,
         _msg: AnyMsg,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
@@ -139,7 +138,7 @@ impl Stargate for StargateAccepting {
         _querier: &dyn Querier,
         _block: &BlockInfo,
         _request: GrpcQuery,
-    ) -> AnyResult<Binary> {
+    ) -> StdResult<Binary> {
         Ok(Binary::default())
     }
 }

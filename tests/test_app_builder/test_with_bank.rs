@@ -27,7 +27,7 @@ fn building_app_with_custom_bank_should_work() {
 
     // executing bank message should return an error defined in custom keeper
     assert_eq!(
-        EXECUTE_MSG,
+        format!("kind: Other, error: {EXECUTE_MSG}"),
         app.execute(
             sender_addr,
             BankMsg::Send {
@@ -42,7 +42,7 @@ fn building_app_with_custom_bank_should_work() {
 
     // executing bank sudo should return an error defined in custom keeper
     assert_eq!(
-        SUDO_MSG,
+        format!("kind: Other, error: {SUDO_MSG}"),
         app.sudo(
             BankSudo::Mint {
                 to_address: recipient_addr.clone().into(),
@@ -56,7 +56,7 @@ fn building_app_with_custom_bank_should_work() {
 
     // executing bank query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {QUERY_MSG}"),
+        format!("kind: Other, error: Querier contract error: kind: Other, error: {QUERY_MSG}"),
         app.wrap()
             .query_balance(recipient_addr, denom)
             .unwrap_err()

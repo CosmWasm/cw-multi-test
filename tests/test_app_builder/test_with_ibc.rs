@@ -22,7 +22,7 @@ fn building_app_with_custom_ibc_should_work() {
 
     // executing ibc message should return an error defined in custom keeper
     assert_eq!(
-        EXECUTE_MSG,
+        format!("kind: Other, error: {EXECUTE_MSG}"),
         app.execute(
             sender_addr,
             IbcMsg::CloseChannel {
@@ -36,7 +36,7 @@ fn building_app_with_custom_ibc_should_work() {
 
     // executing ibc query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {QUERY_MSG}"),
+        format!("kind: Other, error: Querier contract error: kind: Other, error: {QUERY_MSG}"),
         app.wrap()
             .query::<IbcQuery>(&QueryRequest::Ibc(
                 #[allow(deprecated)]

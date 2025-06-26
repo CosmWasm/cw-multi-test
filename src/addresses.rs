@@ -1,9 +1,8 @@
 //! # Implementation of address conversions and generators
 
-use crate::error::AnyResult;
 use crate::{MockApiBech32, MockApiBech32m};
 use cosmwasm_std::testing::MockApi;
-use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, Storage};
+use cosmwasm_std::{instantiate2_address, Addr, Api, CanonicalAddr, StdResult, Storage};
 use sha2::digest::Update;
 use sha2::{Digest, Sha256};
 
@@ -111,9 +110,9 @@ pub trait AddressGenerator {
         _storage: &mut dyn Storage,
         code_id: u64,
         instance_id: u64,
-    ) -> AnyResult<Addr> {
+    ) -> StdResult<Addr> {
         let canonical_addr = instantiate_address(code_id, instance_id);
-        Ok(api.addr_humanize(&canonical_addr)?)
+        api.addr_humanize(&canonical_addr)
     }
 
     /// Generates a _predictable_ contract address, just like the real-life chain
@@ -165,9 +164,9 @@ pub trait AddressGenerator {
         checksum: &[u8],
         creator: &CanonicalAddr,
         salt: &[u8],
-    ) -> AnyResult<Addr> {
+    ) -> StdResult<Addr> {
         let canonical_addr = instantiate2_address(checksum, creator, salt)?;
-        Ok(api.addr_humanize(&canonical_addr)?)
+        api.addr_humanize(&canonical_addr)
     }
 }
 

@@ -1,8 +1,4 @@
-use crate::error::AnyResult;
-use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
-    SubMsgResponse, WasmMsg,
-};
+use cosmwasm_std::{to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event, StdResult, SubMsgResponse, WasmMsg};
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
 use std::fmt::Debug;
@@ -77,7 +73,7 @@ where
     /// This will create a cache before the execution,
     /// so no state changes are persisted if this returns an error,
     /// but all are persisted on success.
-    fn execute(&mut self, sender: Addr, msg: CosmosMsg<C>) -> AnyResult<AppResponse>;
+    fn execute(&mut self, sender: Addr, msg: CosmosMsg<C>) -> StdResult<AppResponse>;
 
     /// Create a contract and get the new address.
     /// This is just a helper around execute()
@@ -89,7 +85,7 @@ where
         send_funds: &[Coin],
         label: U,
         admin: Option<String>,
-    ) -> AnyResult<Addr> {
+    ) -> StdResult<Addr> {
         // instantiate contract
         let init_msg = to_json_binary(init_msg)?;
         let msg = WasmMsg::Instantiate {
@@ -117,7 +113,7 @@ where
         label: L,
         admin: A,
         salt: S,
-    ) -> AnyResult<Addr>
+    ) -> StdResult<Addr>
     where
         M: Serialize,
         L: Into<String>,
@@ -148,7 +144,7 @@ where
         contract_addr: Addr,
         msg: &T,
         send_funds: &[Coin],
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let binary_msg = to_json_binary(msg)?;
         let wrapped_msg = WasmMsg::Execute {
             contract_addr: contract_addr.into_string(),
@@ -172,7 +168,7 @@ where
         contract_addr: Addr,
         msg: &T,
         new_code_id: u64,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let msg = to_json_binary(msg)?;
         let msg = WasmMsg::Migrate {
             contract_addr: contract_addr.into(),
@@ -190,7 +186,7 @@ where
         sender: Addr,
         recipient: Addr,
         amount: &[Coin],
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let msg = BankMsg::Send {
             to_address: recipient.to_string(),
             amount: amount.to_vec(),

@@ -17,7 +17,7 @@ pub mod staking {
 pub mod staking {
     use crate::error::AnyResult;
     use crate::{AppResponse, CosmosRouter, FailingModule, Module};
-    use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, Storage};
+    use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, StdResult, Storage};
 
     /// Empty staking privileged action definition.
     pub enum StakingSudo {}
@@ -34,7 +34,7 @@ pub mod staking {
             _storage: &mut dyn Storage,
             _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
             _block: &BlockInfo,
-        ) -> AnyResult<AppResponse> {
+        ) -> StdResult<AppResponse> {
             Ok(AppResponse::default())
         }
     }
