@@ -1,9 +1,8 @@
 //! # Error definitions
 
-pub use anyhow::{bail, Context as AnyContext, Error as AnyError, Result as AnyResult};
 use cosmwasm_std::{WasmMsg, WasmQuery};
 
-macro_rules! bailey {
+macro_rules! std_error_bail {
     ($msg:literal $(,)?) => {
         return Err(StdError::msg($msg))
     };
@@ -15,7 +14,21 @@ macro_rules! bailey {
     };
 }
 
-pub(crate) use bailey;
+pub(crate) use std_error_bail;
+
+macro_rules! std_error {
+    ($msg:literal $(,)?) => {
+        StdError::msg($msg)
+    };
+    ($err:expr $(,)?) => {
+        StdError::msg($err)
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        StdError::msg(format!($fmt, $($arg)*))
+    };
+}
+
+pub(crate) use std_error;
 
 /// Creates an instance of the error for empty attribute key.
 pub fn empty_attribute_key(value: impl Into<String>) -> String {

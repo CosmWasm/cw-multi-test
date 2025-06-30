@@ -1,6 +1,6 @@
 use crate::bank::{Bank, BankKeeper, BankSudo};
 use crate::contracts::Contract;
-use crate::error::bailey;
+use crate::error::std_error_bail;
 use crate::executor::{AppResponse, Executor};
 use crate::featured::staking::{
     Distribution, DistributionKeeper, StakeKeeper, Staking, StakingSudo,
@@ -673,7 +673,7 @@ where
             CosmosMsg::Any(msg) => self
                 .stargate
                 .execute_any(api, storage, self, block, sender, msg),
-            _ => bailey!("Cannot execute {:?}", msg),
+            _ => std_error_bail!("Cannot execute {:?}", msg),
         }
     }
 

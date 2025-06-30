@@ -1,6 +1,6 @@
 //! # Implementation of the contract trait and contract wrapper
 
-use crate::error::bailey;
+use crate::error::{std_error, std_error_bail};
 #[cfg(feature = "cosmwasm_2_2")]
 use cosmwasm_std::MigrateInfo;
 use cosmwasm_std::{
@@ -582,7 +582,7 @@ where
         msg: Vec<u8>,
     ) -> StdResult<Response<C>> {
         let msg: T1 = from_json(msg)?;
-        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| StdError::msg(format!("{}", err)))
+        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| std_error!(err))
     }
 
     /// Calls [query] on wrapped [Contract] trait implementor.
@@ -590,7 +590,7 @@ where
     /// [query]: Contract::query
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> StdResult<Binary> {
         let msg: T3 = from_json(msg)?;
-        (self.query_fn)(deps, env, msg).map_err(|err: E3| StdError::msg(format!("{}", err)))
+        (self.query_fn)(deps, env, msg).map_err(|err: E3| std_error!(err))
     }
 
     /// Calls [reply] on wrapped [Contract] trait implementor.
@@ -599,10 +599,8 @@ where
     /// [reply]: Contract::reply
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> StdResult<Response<C>> {
         match &self.reply_fn {
-            Some(reply) => {
-                reply(deps, env, msg).map_err(|err: E5| StdError::msg(format!("{}", err)))
-            }
-            None => bailey!("reply is not implemented for contract"),
+            Some(reply) => reply(deps, env, msg).map_err(|err: E5| std_error!(err)),
+            None => std_error_bail!("reply is not implemented for contract"),
         }
     }
 
@@ -613,8 +611,8 @@ where
     fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> StdResult<Response<C>> {
         let msg: T4 = from_json(msg)?;
         match &self.sudo_fn {
-            Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| StdError::msg(format!("{}", err))),
-            None => bailey!("sudo is not implemented for contract"),
+            Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| std_error!(err)),
+            None => std_error_bail!("sudo is not implemented for contract"),
         }
     }
 
@@ -626,10 +624,8 @@ where
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> StdResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
-            Some(migrate) => {
-                migrate(deps, env, msg).map_err(|err: E6| StdError::msg(format!("{}", err)))
-            }
-            None => bailey!("migrate is not implemented for contract"),
+            Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| std_error!(err)),
+            None => std_error_bail!("migrate is not implemented for contract"),
         }
     }
 
@@ -647,10 +643,8 @@ where
     ) -> StdResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
-            Some(migrate) => {
-                migrate(deps, env, msg, info).map_err(|err: E6| StdError::msg(format!("{}", err)))
-            }
-            None => bailey!("migrate is not implemented for contract"),
+            Some(migrate) => migrate(deps, env, msg, info).map_err(|err: E6| std_error!(err)),
+            None => std_error_bail!("migrate is not implemented for contract"),
         }
     }
 

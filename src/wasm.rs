@@ -315,9 +315,9 @@ where
     ) -> StdResult<u64> {
         // validate provided contract code identifier
         if self.code_data.contains_key(&code_id) {
-            bailey!(duplicated_code_id(code_id));
+            std_error_bail!(duplicated_code_id(code_id));
         } else if code_id == 0 {
-            bailey!(invalid_code_id());
+            std_error_bail!(invalid_code_id());
         }
         Ok(self.save_code(code_id, creator, code))
     }
@@ -455,7 +455,7 @@ where
     /// Returns code data of the contract with specified code id.
     fn code_data(&self, code_id: u64) -> StdResult<&CodeData> {
         if code_id < 1 {
-            bailey!(invalid_code_id());
+            std_error_bail!(invalid_code_id());
         }
         self.code_data
             .get(&code_id)
@@ -472,10 +472,10 @@ where
             let key = attr.key.trim();
             let val = attr.value.trim();
             if key.is_empty() {
-                bailey!(empty_attribute_key(val));
+                std_error_bail!(empty_attribute_key(val));
             }
             if key.starts_with('_') {
-                bailey!(reserved_attribute_key(key));
+                std_error_bail!(reserved_attribute_key(key));
             }
         }
         Ok(())
@@ -491,7 +491,7 @@ where
             Self::verify_attributes(&event.attributes)?;
             let ty = event.ty.trim();
             if ty.len() < 2 {
-                bailey!(event_type_too_short(ty));
+                std_error_bail!(event_type_too_short(ty));
             }
         }
 
@@ -597,7 +597,7 @@ where
         // check admin status
         let mut contract_data = self.contract_data(storage, &contract_addr)?;
         if contract_data.admin != Some(sender) {
-            bailey!(
+            std_error_bail!(
                 "Only admin can update the contract admin: {:?}",
                 contract_data.admin
             );
@@ -706,11 +706,11 @@ where
                 let contract_addr = api.addr_validate(&contract_addr)?;
                 // Check admin status.
                 if new_code_id as usize > self.code_data.len() {
-                    bailey!("Cannot migrate contract to unregistered code id");
+                    std_error_bail!("Cannot migrate contract to unregistered code id");
                 }
                 let mut data = self.contract_data(storage, &contract_addr)?;
                 if data.admin != Some(sender.clone()) {
-                    bailey!("Only admin can migrate contract: {:?}", data.admin);
+                    std_error_bail!("Only admin can migrate contract: {:?}", data.admin);
                 }
                 // Save the current (old) code_id for later use.
                 #[cfg(feature = "cosmwasm_2_2")]
@@ -781,7 +781,7 @@ where
         salt: Option<Binary>,
     ) -> StdResult<AppResponse> {
         if label.is_empty() {
-            bailey!("Label is required on all contracts");
+            std_error_bail!("Label is required on all contracts");
         }
 
         let contract_addr = self.register_contract(
@@ -1042,7 +1042,7 @@ where
     ) -> StdResult<Addr> {
         // check if the contract's code with specified code_id exists
         if code_id as usize > self.code_data.len() {
-            bailey!("Cannot init contract with unregistered code id");
+            std_error_bail!("Cannot init contract with unregistered code id");
         }
 
         // generate a new contract address
@@ -1068,7 +1068,7 @@ where
 
         // contract with the same address must not already exist
         if self.contract_data(storage, &addr).is_ok() {
-            bailey!(duplicated_contract_address(addr));
+            std_error_bail!(duplicated_contract_address(addr));
         }
 
         // prepare contract data and save new contract instance

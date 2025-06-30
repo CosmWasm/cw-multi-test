@@ -15,7 +15,6 @@ pub mod staking {
 
 #[cfg(not(feature = "staking"))]
 pub mod staking {
-    use crate::error::AnyResult;
     use crate::{AppResponse, CosmosRouter, FailingModule, Module};
     use cosmwasm_std::{Api, BlockInfo, CustomMsg, CustomQuery, Empty, StdResult, Storage};
 

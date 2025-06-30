@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::error::bailey;
+use crate::error::std_error_bail;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::typed_prefixed_storage::{
     StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
@@ -201,7 +201,7 @@ impl StakeKeeper {
             .may_load(&storage, &validator.address)?
             .is_some()
         {
-            bailey!(
+            std_error_bail!(
                 "Cannot add validator {}, since a validator with that address already exists",
                 validator.address
             );
@@ -240,7 +240,7 @@ impl StakeKeeper {
         let staking_storage = StakingStorage::new(storage);
         let validator_obj = match Self::get_validator(&staking_storage, validator)? {
             Some(validator) => validator,
-            None => bailey!("validator {} not found", validator),
+            None => std_error_bail!("validator {} not found", validator),
         };
         // calculate rewards using fixed ratio
         let shares = match STAKES.load(&staking_storage, (delegator, validator)) {
@@ -460,7 +460,7 @@ impl StakeKeeper {
         if sub {
             // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1019-L1022
             if amount_dec > shares.stake {
-                bailey!("invalid shares amount");
+                std_error_bail!("invalid shares amount");
             }
             shares.stake -= amount_dec;
             validator_info.stake = validator_info.stake.checked_sub(amount)?;
@@ -662,7 +662,7 @@ impl Module for StakeKeeper {
             StakingMsg::Delegate { validator, amount } => {
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L202-L207
                 if amount.amount.is_zero() {
-                    bailey!("invalid delegation amount");
+                    std_error_bail!("invalid delegation amount");
                 }
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L251-L256
@@ -700,7 +700,7 @@ impl Module for StakeKeeper {
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
                 if amount.amount.is_zero() {
-                    bailey!("invalid shares amount");
+                    std_error_bail!("invalid shares amount");
                 }
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L378-L383
@@ -766,7 +766,7 @@ impl Module for StakeKeeper {
                     ..Default::default()
                 })
             }
-            m => bailey!("Unsupported staking message: {:?}", m),
+            m => std_error_bail!("Unsupported staking message: {:?}", m),
         }
     }
 
@@ -810,7 +810,7 @@ impl Module for StakeKeeper {
             } => {
                 let validator_obj = match Self::get_validator(&staking_storage, &validator)? {
                     Some(validator) => validator,
-                    None => bailey!("non-existent validator {}", validator),
+                    None => std_error_bail!("non-existent validator {}", validator),
                 };
                 let delegator = api.addr_validate(&delegator)?;
 
@@ -862,7 +862,7 @@ impl Module for StakeKeeper {
             StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(
                 Self::get_validator(&staking_storage, &address)?,
             ))?),
-            q => bailey!("Unsupported staking sudo message: {:?}", q),
+            q => std_error_bail!("Unsupported staking sudo message: {:?}", q),
         }
     }
 
@@ -1059,7 +1059,7 @@ impl Module for DistributionKeeper {
                     ..Default::default()
                 })
             }
-            other => bailey!("Unsupported distribution message: {:?}", other),
+            other => std_error_bail!("Unsupported distribution message: {:?}", other),
         }
     }
 
@@ -1134,7 +1134,7 @@ impl Module for DistributionKeeper {
             }
             other => {
                 let _ = block; // Just to avoid clippy warnings, will be discarded by compiler anyway.
-                bailey!("Unsupported distribution query: {:?}", other)
+                std_error_bail!("Unsupported distribution query: {:?}", other)
             }
         }
     }
@@ -1147,7 +1147,7 @@ impl Module for DistributionKeeper {
         _block: &BlockInfo,
         _msg: Empty,
     ) -> StdResult<AppResponse> {
-        bailey!("Something went wrong - distribution doesn't have sudo messages")
+        std_error_bail!("Something went wrong - distribution doesn't have sudo messages")
     }
 }
 

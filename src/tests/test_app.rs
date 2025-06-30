@@ -873,7 +873,7 @@ fn sent_funds_properly_visible_on_execution() {
 /// via a custom module, as an example of ability to do privileged actions.
 mod custom_handler {
     use super::*;
-    use crate::error::bailey;
+    use crate::error::std_error_bail;
     use crate::{BankSudo, BasicAppBuilder};
     use cosmwasm_std::StdError;
 
@@ -939,7 +939,7 @@ mod custom_handler {
             _block: &BlockInfo,
             _request: Self::QueryT,
         ) -> StdResult<Binary> {
-            bailey!("query not implemented for CustomHandler")
+            std_error_bail!("query not implemented for CustomHandler")
         }
 
         fn sudo<ExecC, QueryC>(
@@ -954,7 +954,7 @@ mod custom_handler {
             ExecC: CustomMsg + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            bailey!("sudo not implemented for CustomHandler")
+            std_error_bail!("sudo not implemented for CustomHandler")
         }
     }
 

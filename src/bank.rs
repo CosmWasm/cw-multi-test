@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::error::bailey;
+use crate::error::std_error_bail;
 use crate::executor::AppResponse;
 use crate::module::Module;
 use crate::prefixed_storage::typed_prefixed_storage::{
@@ -7,12 +7,12 @@ use crate::prefixed_storage::typed_prefixed_storage::{
 };
 use cosmwasm_std::{
     coin, to_json_binary, Addr, Api, BalanceResponse, BankMsg, BankQuery, Binary, BlockInfo, Coin,
-    DenomMetadata, Event, Querier, StdError, Storage,
+    DenomMetadata, Event, Querier, StdError, StdResult, Storage,
 };
 #[cfg(feature = "cosmwasm_1_3")]
 use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
 #[cfg(feature = "cosmwasm_1_1")]
-use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint256};
+use cosmwasm_std::{Order, SupplyResponse, Uint256};
 
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
@@ -161,7 +161,7 @@ impl BankKeeper {
     fn normalize_amount(&self, amount: Vec<Coin>) -> StdResult<Vec<Coin>> {
         let res: Vec<_> = amount.into_iter().filter(|x| !x.amount.is_zero()).collect();
         if res.is_empty() {
-            bailey!("Cannot transfer empty coins amount")
+            std_error_bail!("Cannot transfer empty coins amount")
         } else {
             Ok(res)
         }

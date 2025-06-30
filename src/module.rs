@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::error::bailey;
+use crate::error::std_error_bail;
 use crate::AppResponse;
 use cosmwasm_std::{
     Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, StdError, StdResult, Storage,
@@ -105,7 +105,7 @@ where
         sender: Addr,
         msg: Self::ExecT,
     ) -> StdResult<AppResponse> {
-        bailey!("Unexpected exec msg {:?} from {:?}", msg, sender)
+        std_error_bail!("Unexpected exec msg {:?} from {:?}", msg, sender)
     }
 
     /// Runs any [QueryT](Self::QueryT) message, always returns an error.
@@ -117,7 +117,7 @@ where
         _block: &BlockInfo,
         request: Self::QueryT,
     ) -> StdResult<Binary> {
-        bailey!("Unexpected custom query {:?}", request)
+        std_error_bail!("Unexpected custom query {:?}", request)
     }
 
     /// Runs any [SudoT](Self::SudoT) privileged action, always returns an error.
@@ -129,7 +129,7 @@ where
         _block: &BlockInfo,
         msg: Self::SudoT,
     ) -> StdResult<AppResponse> {
-        bailey!("Unexpected sudo msg {:?}", msg)
+        std_error_bail!("Unexpected sudo msg {:?}", msg)
     }
 }
 /// # Always accepting module

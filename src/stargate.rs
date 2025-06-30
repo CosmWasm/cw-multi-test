@@ -1,6 +1,6 @@
 //! # Handler for `CosmosMsg::Stargate`, `CosmosMsg::Any`, `QueryRequest::Stargate` and `QueryRequest::Grpc` messages
 
-use crate::error::bailey;
+use crate::error::std_error_bail;
 use crate::{AppResponse, CosmosRouter};
 use cosmwasm_std::{
     to_json_binary, Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, GrpcQuery,
@@ -26,7 +26,7 @@ pub trait Stargate {
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        bailey!(
+        std_error_bail!(
             "Unexpected stargate execute: type_url={}, value={} from {}",
             type_url,
             value,
@@ -44,7 +44,7 @@ pub trait Stargate {
         path: String,
         data: Binary,
     ) -> StdResult<Binary> {
-        bailey!("Unexpected stargate query: path={}, data={}", path, data)
+        std_error_bail!("Unexpected stargate query: path={}, data={}", path, data)
     }
 
     /// Processes `CosmosMsg::Any` message variant.
@@ -61,7 +61,7 @@ pub trait Stargate {
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static,
     {
-        bailey!("Unexpected any execute: msg={:?} from {}", msg, sender)
+        std_error_bail!("Unexpected any execute: msg={:?} from {}", msg, sender)
     }
 
     /// Processes `QueryRequest::Grpc` query.
@@ -73,7 +73,7 @@ pub trait Stargate {
         _block: &BlockInfo,
         request: GrpcQuery,
     ) -> StdResult<Binary> {
-        bailey!("Unexpected grpc query: request={:?}", request)
+        std_error_bail!("Unexpected grpc query: request={:?}", request)
     }
 }
 
