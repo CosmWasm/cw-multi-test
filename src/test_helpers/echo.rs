@@ -102,12 +102,12 @@ where
         let parsed_data = if id < EXECUTE_REPLY_BASE_ID {
             // parse out the WasmMsg::Execute wrapper for instantiate reply
             parse_instantiate_response_data(data.as_slice())
-                .map_err(|e| StdError::generic_err(e.to_string()))?
+                .map_err(|e| StdError::msg(e.to_string()))?
                 .data
         } else {
             // parse out the WasmMsg::Execute wrapper for execute reply
             parse_execute_response_data(data.as_slice())
-                .map_err(|e| StdError::generic_err(e.to_string()))?
+                .map_err(|e| StdError::msg(e.to_string()))?
                 .data
         };
         if let Some(data) = parsed_data {

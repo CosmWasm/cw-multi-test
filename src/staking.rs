@@ -1,5 +1,5 @@
 use crate::app::CosmosRouter;
-use crate::error::{anyhow, bail, AnyResult};
+use crate::error::std_error_bail;
 use crate::executor::AppResponse;
 use crate::prefixed_storage::typed_prefixed_storage::{
     StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
@@ -10,7 +10,7 @@ use cosmwasm_std::{
     BankMsg, Binary, BlockInfo, BondedDenomResponse, Coin, CustomMsg, CustomQuery, Decimal256,
     Delegation, DelegationResponse, DelegatorWithdrawAddressResponse, DistributionMsg,
     DistributionQuery, Empty, Event, FullDelegation, Order, Querier, StakingMsg, StakingQuery,
-    StdError, Storage, Timestamp, Uint256, Validator, ValidatorResponse,
+    StdError, StdResult, Storage, Timestamp, Uint256, Validator, ValidatorResponse,
 };
 #[cfg(feature = "cosmwasm_1_4")]
 use cosmwasm_std::{
@@ -149,7 +149,7 @@ pub trait Staking: Module<ExecT = StakingMsg, QueryT = StakingQuery, SudoT = Sta
         _storage: &mut dyn Storage,
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         Ok(AppResponse::default())
     }
 }
@@ -183,7 +183,7 @@ impl StakeKeeper {
     }
 
     /// Provides some general parameters to the stake keeper
-    pub fn setup(&self, storage: &mut dyn Storage, staking_info: StakingInfo) -> AnyResult<()> {
+    pub fn setup(&self, storage: &mut dyn Storage, staking_info: StakingInfo) -> StdResult<()> {
         STAKING_INFO.save(&mut StakingStorageMut::new(storage), &staking_info)?;
         Ok(())
     }
@@ -195,13 +195,13 @@ impl StakeKeeper {
         storage: &mut dyn Storage,
         block: &BlockInfo,
         validator: Validator,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let mut storage = StakingStorageMut::new(storage);
         if VALIDATOR_MAP
             .may_load(&storage, &validator.address)?
             .is_some()
         {
-            bail!(
+            std_error_bail!(
                 "Cannot add validator {}, since a validator with that address already exists",
                 validator.address
             );
@@ -216,7 +216,7 @@ impl StakeKeeper {
         Ok(())
     }
 
-    fn get_staking_info(storage: &StakingStorage) -> AnyResult<StakingInfo> {
+    fn get_staking_info(storage: &StakingStorage) -> StdResult<StakingInfo> {
         Ok(STAKING_INFO.may_load(storage)?.unwrap_or_default())
     }
 
@@ -227,7 +227,7 @@ impl StakeKeeper {
         block: &BlockInfo,
         delegator: &Addr,
         validator: &str,
-    ) -> AnyResult<Option<Coin>> {
+    ) -> StdResult<Option<Coin>> {
         Self::get_rewards_internal(storage, block, delegator, validator)
     }
 
@@ -236,11 +236,11 @@ impl StakeKeeper {
         block: &BlockInfo,
         delegator: &Addr,
         validator: &str,
-    ) -> AnyResult<Option<Coin>> {
+    ) -> StdResult<Option<Coin>> {
         let staking_storage = StakingStorage::new(storage);
         let validator_obj = match Self::get_validator(&staking_storage, validator)? {
             Some(validator) => validator,
-            None => bail!("validator {} not found", validator),
+            None => std_error_bail!("validator {} not found", validator),
         };
         // calculate rewards using fixed ratio
         let shares = match STAKES.load(&staking_storage, (delegator, validator)) {
@@ -264,7 +264,7 @@ impl StakeKeeper {
         shares: &Shares,
         validator: &Validator,
         validator_info: &ValidatorInfo,
-    ) -> AnyResult<Coin> {
+    ) -> StdResult<Coin> {
         let staking_info = Self::get_staking_info(storage)?;
 
         // calculate missing rewards without updating the validator to reduce rounding errors
@@ -315,13 +315,13 @@ impl StakeKeeper {
         storage: &mut StakingStorageMut,
         block: &BlockInfo,
         validator: &str,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let staking_info = Self::get_staking_info(&storage.borrow())?;
 
         let mut validator_info = VALIDATOR_INFO
             .may_load(storage, validator)?
             // https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L15
-            .ok_or_else(|| anyhow!("validator does not exist"))?;
+            .ok_or_else(|| StdError::msg("validator does not exist"))?;
 
         let validator_obj = VALIDATOR_MAP.load(storage, validator)?;
 
@@ -348,7 +348,7 @@ impl StakeKeeper {
                 STAKES.update(
                     storage,
                     (staker, &validator_obj.address),
-                    |shares| -> AnyResult<_> {
+                    |shares| -> StdResult<_> {
                         let mut shares =
                             shares.expect("all stakers in validator_info should exist");
                         shares.rewards += shares.share_of_rewards(&validator_info, new_rewards);
@@ -361,14 +361,13 @@ impl StakeKeeper {
     }
 
     /// Returns the single validator with the given address (or `None` if there is no such validator).
-    fn get_validator(storage: &StakingStorage, address: &str) -> AnyResult<Option<Validator>> {
-        Ok(VALIDATOR_MAP.may_load(storage, address)?)
+    fn get_validator(storage: &StakingStorage, address: &str) -> StdResult<Option<Validator>> {
+        VALIDATOR_MAP.may_load(storage, address)
     }
 
     /// Returns all available validators
-    fn get_validators(&self, storage: &StakingStorage) -> AnyResult<Vec<Validator>> {
-        let res: Result<_, _> = VALIDATORS.iter(storage)?.collect();
-        Ok(res?)
+    fn get_validators(&self, storage: &StakingStorage) -> StdResult<Vec<Validator>> {
+        VALIDATORS.iter(storage)?.collect()
     }
 
     fn get_stake(
@@ -376,7 +375,7 @@ impl StakeKeeper {
         storage: &StakingStorage,
         account: &Addr,
         validator: &str,
-    ) -> AnyResult<Option<Coin>> {
+    ) -> StdResult<Option<Coin>> {
         let shares = STAKES.may_load(storage, (account, validator))?;
         let staking_info = Self::get_staking_info(storage)?;
         Ok(shares.map(|shares| {
@@ -395,7 +394,7 @@ impl StakeKeeper {
         to_address: &Addr,
         validator: &str,
         amount: Coin,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         self.validate_denom(&storage.borrow(), &amount)?;
         self.update_stake(
             api,
@@ -416,7 +415,7 @@ impl StakeKeeper {
         from_address: &Addr,
         validator: &str,
         amount: Coin,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         self.validate_denom(&storage.borrow(), &amount)?;
         self.update_stake(
             api,
@@ -438,7 +437,7 @@ impl StakeKeeper {
         validator: &str,
         amount: impl Into<Uint256>,
         sub: bool,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let amount = amount.into();
 
         // update rewards for this validator
@@ -452,7 +451,7 @@ impl StakeKeeper {
         let mut shares = if sub {
             // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1005-L1007
             // and https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/errors.go#L31
-            shares.ok_or_else(|| anyhow!("no delegation for (address, validator) tuple"))?
+            shares.ok_or_else(|| StdError::msg("no delegation for (address, validator) tuple"))?
         } else {
             shares.unwrap_or_default()
         };
@@ -461,7 +460,7 @@ impl StakeKeeper {
         if sub {
             // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/keeper/delegation.go#L1019-L1022
             if amount_dec > shares.stake {
-                bail!("invalid shares amount");
+                std_error_bail!("invalid shares amount");
             }
             shares.stake -= amount_dec;
             validator_info.stake = validator_info.stake.checked_sub(amount)?;
@@ -492,7 +491,7 @@ impl StakeKeeper {
         block: &BlockInfo,
         validator: &str,
         percentage: Decimal256,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         // calculate rewards before slashing
         Self::update_rewards(api, storage, block, validator)?;
 
@@ -512,7 +511,7 @@ impl StakeKeeper {
         } else {
             // otherwise we update all stakers
             for delegator in validator_info.stakers.iter() {
-                STAKES.update(storage, (delegator, validator), |stake| -> AnyResult<_> {
+                STAKES.update(storage, (delegator, validator), |stake| -> StdResult<_> {
                     let mut stake = stake.expect("all stakers in validator_info should exist");
                     stake.stake *= remaining_percentage;
 
@@ -535,25 +534,24 @@ impl StakeKeeper {
     }
 
     // Asserts that the given coin has the proper denominator
-    fn validate_denom(&self, storage: &StakingStorage, amount: &Coin) -> AnyResult<()> {
+    fn validate_denom(&self, storage: &StakingStorage, amount: &Coin) -> StdResult<()> {
         let staking_info = Self::get_staking_info(storage)?;
         ensure_eq!(
             amount.denom,
             staking_info.bonded_denom,
-            anyhow!(
+            StdError::msg(format!(
                 "cannot delegate coins of denominator {}, only of {}",
-                amount.denom,
-                staking_info.bonded_denom
-            )
+                amount.denom, staking_info.bonded_denom
+            ))
         );
         Ok(())
     }
 
     // Asserts that the given coin has the proper denominator
-    fn validate_percentage(&self, percentage: Decimal256) -> AnyResult<()> {
+    fn validate_percentage(&self, percentage: Decimal256) -> StdResult<()> {
         ensure!(
             percentage <= Decimal256::one(),
-            anyhow!("expected percentage")
+            StdError::msg("expected percentage")
         );
         Ok(())
     }
@@ -564,7 +562,7 @@ impl StakeKeeper {
         storage: &mut dyn Storage,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let mut unbonding_queue = UNBONDING_QUEUE
             .may_load(&StakingStorage::new(storage))?
             .unwrap_or_default();
@@ -634,7 +632,7 @@ impl Staking for StakeKeeper {
         storage: &mut dyn Storage,
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         self.process_queue(api, storage, router, block)
     }
 }
@@ -658,13 +656,13 @@ impl Module for StakeKeeper {
         block: &BlockInfo,
         sender: Addr,
         msg: StakingMsg,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let mut staking_storage_mut = StakingStorageMut::new(storage);
         match msg {
             StakingMsg::Delegate { validator, amount } => {
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L202-L207
                 if amount.amount.is_zero() {
-                    bail!("invalid delegation amount");
+                    std_error_bail!("invalid delegation amount");
                 }
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L251-L256
@@ -702,7 +700,7 @@ impl Module for StakeKeeper {
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/3c5387048f75d7e78b40c5b8d2421fdb8f5d973a/x/staking/types/msg.go#L292-L297
                 if amount.amount.is_zero() {
-                    bail!("invalid shares amount");
+                    std_error_bail!("invalid shares amount");
                 }
 
                 // see https://github.com/cosmos/cosmos-sdk/blob/v0.46.1/x/staking/keeper/msg_server.go#L378-L383
@@ -768,7 +766,7 @@ impl Module for StakeKeeper {
                     ..Default::default()
                 })
             }
-            m => bail!("Unsupported staking message: {:?}", m),
+            m => std_error_bail!("Unsupported staking message: {:?}", m),
         }
     }
 
@@ -779,7 +777,7 @@ impl Module for StakeKeeper {
         _querier: &dyn Querier,
         block: &BlockInfo,
         request: StakingQuery,
-    ) -> AnyResult<Binary> {
+    ) -> StdResult<Binary> {
         let staking_storage = StakingStorage::new(storage);
         match request {
             StakingQuery::BondedDenom {} => Ok(to_json_binary(&BondedDenomResponse::new(
@@ -789,7 +787,7 @@ impl Module for StakeKeeper {
                 let delegator = api.addr_validate(&delegator)?;
                 let validators = self.get_validators(&staking_storage)?;
 
-                let res: AnyResult<Vec<Delegation>> =
+                let res: StdResult<Vec<Delegation>> =
                     validators
                         .into_iter()
                         .filter_map(|validator| {
@@ -812,7 +810,7 @@ impl Module for StakeKeeper {
             } => {
                 let validator_obj = match Self::get_validator(&staking_storage, &validator)? {
                     Some(validator) => validator,
-                    None => bail!("non-existent validator {}", validator),
+                    None => std_error_bail!("non-existent validator {}", validator),
                 };
                 let delegator = api.addr_validate(&delegator)?;
 
@@ -855,13 +853,16 @@ impl Module for StakeKeeper {
                 let res = to_json_binary(&full_delegation_response)?;
                 Ok(res)
             }
-            StakingQuery::AllValidators {} => Ok(to_json_binary(&AllValidatorsResponse::new(
-                self.get_validators(&staking_storage)?,
-            ))?),
+            StakingQuery::AllValidators {} => {
+                let validators: Vec<Validator> = self.get_validators(&staking_storage)?;
+                Ok(to_json_binary(&AllValidatorsResponse::new(
+                    validators.into_iter().map(Into::into).collect(),
+                ))?)
+            }
             StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(
                 Self::get_validator(&staking_storage, &address)?,
             ))?),
-            q => bail!("Unsupported staking sudo message: {:?}", q),
+            q => std_error_bail!("Unsupported staking sudo message: {:?}", q),
         }
     }
 
@@ -872,7 +873,7 @@ impl Module for StakeKeeper {
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
         msg: StakingSudo,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         match msg {
             StakingSudo::Slash {
                 validator,
@@ -909,7 +910,7 @@ impl DistributionKeeper {
         block: &BlockInfo,
         delegator: &Addr,
         validator: &str,
-    ) -> AnyResult<Uint256> {
+    ) -> StdResult<Uint256> {
         let mut staking_storage_mut = StakingStorageMut::new(storage);
         // update the validator and staker rewards
         StakeKeeper::update_rewards(api, &mut staking_storage_mut, block, validator)?;
@@ -926,7 +927,7 @@ impl DistributionKeeper {
     }
 
     /// Returns the withdrawal address for specified delegator.
-    pub fn get_withdraw_address(storage: &dyn Storage, delegator_addr: &Addr) -> AnyResult<Addr> {
+    pub fn get_withdraw_address(storage: &dyn Storage, delegator_addr: &Addr) -> StdResult<Addr> {
         let storage = DistributionStorage::new(storage);
         Ok(match WITHDRAW_ADDRESS.may_load(&storage, delegator_addr)? {
             Some(withdraw_addr) => withdraw_addr,
@@ -941,16 +942,14 @@ impl DistributionKeeper {
         storage: &mut dyn Storage,
         delegator_addr: &Addr,
         withdraw_addr: &Addr,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let mut storage = DistributionStorageMut::new(storage);
         if delegator_addr == withdraw_addr {
             WITHDRAW_ADDRESS.remove(&mut storage, delegator_addr);
             Ok(())
         } else {
             // TODO: Technically we should require that this address is not the address of a module. How?
-            WITHDRAW_ADDRESS
-                .save(&mut storage, delegator_addr, withdraw_addr)
-                .map_err(|e| e.into())
+            WITHDRAW_ADDRESS.save(&mut storage, delegator_addr, withdraw_addr)
         }
     }
 
@@ -959,12 +958,12 @@ impl DistributionKeeper {
         &self,
         storage: &dyn Storage,
         delegator_addr: &Addr,
-    ) -> AnyResult<Vec<String>> {
+    ) -> StdResult<Vec<String>> {
         let storage = StakingStorage::new(storage);
-        Ok(STAKES
+        STAKES
             .prefix(delegator_addr)
             .keys(&storage, None, None, Order::Ascending)
-            .collect::<Result<Vec<String>, StdError>>()?)
+            .collect::<Result<Vec<String>, StdError>>()
     }
 
     /// Returns the rewards of the given delegator at the given validator.
@@ -975,7 +974,7 @@ impl DistributionKeeper {
         block: &BlockInfo,
         delegator_address: &Addr,
         validator_address: &str,
-    ) -> AnyResult<Option<DecCoin>> {
+    ) -> StdResult<Option<DecCoin>> {
         Ok(
             if let Some(coin) = StakeKeeper::get_rewards_internal(
                 storage,
@@ -1015,7 +1014,7 @@ impl Module for DistributionKeeper {
         block: &BlockInfo,
         sender: Addr,
         msg: DistributionMsg,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         match msg {
             DistributionMsg::WithdrawDelegatorReward { validator } => {
                 let rewards = self.remove_rewards(api, storage, block, &sender, &validator)?;
@@ -1060,7 +1059,7 @@ impl Module for DistributionKeeper {
                     ..Default::default()
                 })
             }
-            other => bail!("Unsupported distribution message: {:?}", other),
+            other => std_error_bail!("Unsupported distribution message: {:?}", other),
         }
     }
 
@@ -1071,7 +1070,7 @@ impl Module for DistributionKeeper {
         _querier: &dyn Querier,
         block: &BlockInfo,
         request: DistributionQuery,
-    ) -> AnyResult<Binary> {
+    ) -> StdResult<Binary> {
         match request {
             #[cfg(feature = "cosmwasm_1_4")]
             DistributionQuery::DelegatorValidators { delegator_address } => {
@@ -1135,7 +1134,7 @@ impl Module for DistributionKeeper {
             }
             other => {
                 let _ = block; // Just to avoid clippy warnings, will be discarded by compiler anyway.
-                bail!("Unsupported distribution query: {:?}", other)
+                std_error_bail!("Unsupported distribution query: {:?}", other)
             }
         }
     }
@@ -1147,8 +1146,8 @@ impl Module for DistributionKeeper {
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
         _msg: Empty,
-    ) -> AnyResult<AppResponse> {
-        bail!("Something went wrong - distribution doesn't have sudo messages")
+    ) -> StdResult<AppResponse> {
+        std_error_bail!("Something went wrong - distribution doesn't have sudo messages")
     }
 }
 
@@ -1328,7 +1327,7 @@ mod test {
     }
 
     /// Executes staking message.
-    fn execute_stake(env: &mut TestEnv, sender: Addr, msg: StakingMsg) -> AnyResult<AppResponse> {
+    fn execute_stake(env: &mut TestEnv, sender: Addr, msg: StakingMsg) -> StdResult<AppResponse> {
         env.router.staking.execute(
             &env.api,
             &mut env.storage,
@@ -1340,14 +1339,14 @@ mod test {
     }
 
     /// Executes staking query.
-    fn query_stake<T: DeserializeOwned>(env: &TestEnv, msg: StakingQuery) -> AnyResult<T> {
-        Ok(from_json(env.router.staking.query(
+    fn query_stake<T: DeserializeOwned>(env: &TestEnv, msg: StakingQuery) -> StdResult<T> {
+        from_json(env.router.staking.query(
             &env.api,
             &env.storage,
             &env.router.querier(&env.api, &env.storage, &env.block),
             &env.block,
             msg,
-        )?)?)
+        )?)
     }
 
     /// Executes distribution message.
@@ -1355,7 +1354,7 @@ mod test {
         env: &mut TestEnv,
         sender: Addr,
         msg: DistributionMsg,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         env.router.distribution.execute(
             &env.api,
             &mut env.storage,
@@ -1367,14 +1366,14 @@ mod test {
     }
 
     /// Executes bank query.
-    fn query_bank<T: DeserializeOwned>(env: &TestEnv, msg: BankQuery) -> AnyResult<T> {
-        Ok(from_json(env.router.bank.query(
+    fn query_bank<T: DeserializeOwned>(env: &TestEnv, msg: BankQuery) -> StdResult<T> {
+        from_json(env.router.bank.query(
             &env.api,
             &env.storage,
             &env.router.querier(&env.api, &env.storage, &env.block),
             &env.block,
             msg,
-        )?)?)
+        )?)
     }
 
     /// Initializes balance for specified address in staking denominator.
@@ -2030,7 +2029,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(error_result.to_string(), "invalid shares amount");
+        assert_eq!(
+            "kind: Other, error: invalid shares amount",
+            error_result.to_string()
+        );
 
         // redelegate more tokens than we have from validator 1 to validator 2
         let error_result = execute_stake(
@@ -2043,7 +2045,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(error_result.to_string(), "invalid shares amount");
+        assert_eq!(
+            "kind: Other, error: invalid shares amount",
+            error_result.to_string()
+        );
 
         // undelegate from non-existing delegation
         let error_result = execute_stake(
@@ -2056,8 +2061,8 @@ mod test {
         )
         .unwrap_err();
         assert_eq!(
-            error_result.to_string(),
-            "no delegation for (address, validator) tuple"
+            "kind: Other, error: no delegation for (address, validator) tuple",
+            error_result.to_string()
         );
     }
 
@@ -2082,8 +2087,8 @@ mod test {
         )
         .unwrap_err();
         assert_eq!(
-            error_result.to_string(),
-            "cannot delegate coins of denominator FAKE, only of TOKEN",
+            "kind: Other, error: cannot delegate coins of denominator FAKE, only of TOKEN",
+            error_result.to_string()
         );
     }
 
@@ -2112,7 +2117,10 @@ mod test {
                 },
             )
             .unwrap_err();
-        assert_eq!(error_result.to_string(), "validator does not exist");
+        assert_eq!(
+            error_result.to_string(),
+            "kind: Other, error: validator does not exist"
+        );
     }
 
     #[test]
@@ -2135,7 +2143,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(error_result.to_string(), "validator does not exist");
+        assert_eq!(
+            "kind: Other, error: validator does not exist",
+            error_result.to_string()
+        );
 
         // try to undelegate
         let error_result = execute_stake(
@@ -2147,7 +2158,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(error_result.to_string(), "validator does not exist");
+        assert_eq!(
+            "kind: Other, error: validator does not exist",
+            error_result.to_string()
+        );
     }
 
     #[test]
@@ -2167,7 +2181,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(error_result.to_string(), "invalid delegation amount");
+        assert_eq!(
+            "kind: Other, error: invalid delegation amount",
+            error_result.to_string()
+        );
 
         // undelegate 0
         let error_result = execute_stake(
@@ -2179,7 +2196,10 @@ mod test {
             },
         )
         .unwrap_err();
-        assert_eq!(error_result.to_string(), "invalid shares amount");
+        assert_eq!(
+            "kind: Other, error: invalid shares amount",
+            error_result.to_string()
+        );
     }
 
     #[test]
@@ -2216,7 +2236,10 @@ mod test {
             query_stake(&env, StakingQuery::AllValidators {}).unwrap();
         assert_eq!(
             validators.validators,
-            [valoper1.validator.unwrap(), valoper2.validator.unwrap()]
+            [
+                valoper1.validator.unwrap().into(),
+                valoper2.validator.unwrap().into()
+            ]
         );
 
         // query non-existent validator

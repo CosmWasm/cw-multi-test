@@ -1,19 +1,18 @@
 use crate::app::CosmosRouter;
-use crate::error::{bail, AnyResult};
+use crate::error::std_error_bail;
 use crate::executor::AppResponse;
 use crate::module::Module;
 use crate::prefixed_storage::typed_prefixed_storage::{
     StoragePrefix, TypedPrefixedStorage, TypedPrefixedStorageMut,
 };
-
 use cosmwasm_std::{
     coin, to_json_binary, Addr, Api, BalanceResponse, BankMsg, BankQuery, Binary, BlockInfo, Coin,
-    DenomMetadata, Event, Querier, Storage,
+    DenomMetadata, Event, Querier, StdError, StdResult, Storage,
 };
 #[cfg(feature = "cosmwasm_1_3")]
 use cosmwasm_std::{AllDenomMetadataResponse, DenomMetadataResponse};
 #[cfg(feature = "cosmwasm_1_1")]
-use cosmwasm_std::{Order, StdResult, SupplyResponse, Uint256};
+use cosmwasm_std::{Order, SupplyResponse, Uint256};
 
 use cw_storage_plus::Map;
 use cw_utils::NativeBalance;
@@ -71,7 +70,7 @@ impl BankKeeper {
         storage: &mut dyn Storage,
         account: &Addr,
         amount: Vec<Coin>,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let mut bank_storage = BankStorageMut::new(storage);
         self.set_balance(&mut bank_storage, account, amount)
     }
@@ -82,12 +81,10 @@ impl BankKeeper {
         storage: &mut BankStorageMut,
         account: &Addr,
         amount: Vec<Coin>,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let mut balance = NativeBalance(amount);
         balance.normalize();
-        BALANCES
-            .save(storage, account, &balance)
-            .map_err(Into::into)
+        BALANCES.save(storage, account, &balance)
     }
 
     /// Administration function for adjusting denomination metadata.
@@ -96,20 +93,18 @@ impl BankKeeper {
         storage: &mut dyn Storage,
         denom: String,
         metadata: DenomMetadata,
-    ) -> AnyResult<()> {
-        DENOM_METADATA
-            .save(storage, denom, &metadata)
-            .map_err(Into::into)
+    ) -> StdResult<()> {
+        DENOM_METADATA.save(storage, denom, &metadata)
     }
 
     /// Returns balance for specified address.
-    fn get_balance(&self, storage: &BankStorage, addr: &Addr) -> AnyResult<Vec<Coin>> {
+    fn get_balance(&self, storage: &BankStorage, addr: &Addr) -> StdResult<Vec<Coin>> {
         let val = BALANCES.may_load(storage, addr)?;
         Ok(val.unwrap_or_default().into_vec())
     }
 
     #[cfg(feature = "cosmwasm_1_1")]
-    fn get_supply(&self, storage: &BankStorage, denom: String) -> AnyResult<Coin> {
+    fn get_supply(&self, storage: &BankStorage, denom: String) -> StdResult<Coin> {
         let supply: Uint256 = BALANCES
             .range(storage, None, None, Order::Ascending)
             .collect::<StdResult<Vec<_>>>()?
@@ -133,7 +128,7 @@ impl BankKeeper {
         from_address: Addr,
         to_address: Addr,
         amount: Vec<Coin>,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         self.burn(storage, from_address, amount.clone())?;
         self.mint(storage, to_address, amount)
     }
@@ -143,7 +138,7 @@ impl BankKeeper {
         storage: &mut BankStorageMut,
         to_address: Addr,
         amount: Vec<Coin>,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let amount = self.normalize_amount(amount)?;
         let b = self.get_balance(&storage.borrow(), &to_address)?;
         let b = NativeBalance(b) + NativeBalance(amount);
@@ -155,7 +150,7 @@ impl BankKeeper {
         storage: &mut BankStorageMut,
         from_address: Addr,
         amount: Vec<Coin>,
-    ) -> AnyResult<()> {
+    ) -> StdResult<()> {
         let amount = self.normalize_amount(amount)?;
         let a = self.get_balance(&storage.borrow(), &from_address)?;
         let a = (NativeBalance(a) - amount)?;
@@ -163,10 +158,10 @@ impl BankKeeper {
     }
 
     /// Filters out all `0` value coins and returns an error if the resulting vector is empty.
-    fn normalize_amount(&self, amount: Vec<Coin>) -> AnyResult<Vec<Coin>> {
+    fn normalize_amount(&self, amount: Vec<Coin>) -> StdResult<Vec<Coin>> {
         let res: Vec<_> = amount.into_iter().filter(|x| !x.amount.is_zero()).collect();
         if res.is_empty() {
-            bail!("Cannot transfer empty coins amount")
+            std_error_bail!("Cannot transfer empty coins amount")
         } else {
             Ok(res)
         }
@@ -195,7 +190,7 @@ impl Module for BankKeeper {
         _block: &BlockInfo,
         sender: Addr,
         msg: BankMsg,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let mut bank_storage_mut = BankStorageMut::new(storage);
         match msg {
             BankMsg::Send { to_address, amount } => {
@@ -231,7 +226,7 @@ impl Module for BankKeeper {
         _querier: &dyn Querier,
         _block: &BlockInfo,
         request: BankQuery,
-    ) -> AnyResult<Binary> {
+    ) -> StdResult<Binary> {
         let bank_storage = BankStorage::new(storage);
         match request {
             #[allow(deprecated)]
@@ -243,19 +238,19 @@ impl Module for BankKeeper {
                     .find(|c| c.denom == denom)
                     .unwrap_or_else(|| coin(0, denom));
                 let res = BalanceResponse::new(amount);
-                to_json_binary(&res).map_err(Into::into)
+                to_json_binary(&res)
             }
             #[cfg(feature = "cosmwasm_1_1")]
             BankQuery::Supply { denom } => {
                 let amount = self.get_supply(&bank_storage, denom)?;
                 let res = SupplyResponse::new(amount);
-                to_json_binary(&res).map_err(Into::into)
+                to_json_binary(&res)
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::DenomMetadata { denom } => {
                 let meta = DENOM_METADATA.may_load(storage, denom)?.unwrap_or_default();
                 let res = DenomMetadataResponse::new(meta);
-                to_json_binary(&res).map_err(Into::into)
+                to_json_binary(&res)
             }
             #[cfg(feature = "cosmwasm_1_3")]
             BankQuery::AllDenomMetadata { pagination: _ } => {
@@ -264,7 +259,7 @@ impl Module for BankKeeper {
                     metadata.push(DENOM_METADATA.may_load(storage, key?)?.unwrap_or_default());
                 }
                 let res = AllDenomMetadataResponse::new(metadata, None);
-                to_json_binary(&res).map_err(Into::into)
+                to_json_binary(&res)
             }
             other => unimplemented!("bank query: {:?}", other),
         }
@@ -277,7 +272,7 @@ impl Module for BankKeeper {
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
         msg: BankSudo,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         let mut bank_storage_mut = BankStorageMut::new(storage);
         match msg {
             BankSudo::Mint { to_address, amount } => {
@@ -295,7 +290,7 @@ mod test {
 
     use crate::app::MockRouter;
     use cosmwasm_std::testing::{mock_env, MockApi, MockQuerier, MockStorage};
-    use cosmwasm_std::{coins, from_json, Empty, StdError};
+    use cosmwasm_std::{coins, from_json, Empty};
 
     fn query_balance(
         bank: &BankKeeper,
@@ -524,7 +519,10 @@ mod test {
         let err = bank
             .execute(&api, &mut store, &router, &block, owner.clone(), msg)
             .unwrap_err();
-        assert!(matches!(err.downcast().unwrap(), StdError::Overflow { .. }));
+        assert_eq!(
+            "kind: Overflow, error: Cannot Sub with given operands",
+            err.to_string()
+        );
 
         assert_eq!(
             coin(15, "btc"),
@@ -542,7 +540,10 @@ mod test {
         let err = bank
             .execute(&api, &mut store, &router, &block, rcpt, msg)
             .unwrap_err();
-        assert!(matches!(err.downcast().unwrap(), StdError::Overflow { .. }));
+        assert_eq!(
+            "kind: Overflow, error: Cannot Sub with given operands",
+            err.to_string()
+        );
     }
 
     #[test]

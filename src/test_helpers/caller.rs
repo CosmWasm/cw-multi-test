@@ -24,7 +24,7 @@ fn execute(
 }
 
 fn query(_deps: Deps, _env: Env, _msg: Empty) -> Result<Binary, StdError> {
-    Err(StdError::generic_err(
+    Err(StdError::msg(
         "query not implemented for the `caller` contract",
     ))
 }

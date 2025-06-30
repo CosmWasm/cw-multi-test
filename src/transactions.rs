@@ -1,6 +1,4 @@
-use crate::error::AnyResult;
-use cosmwasm_std::Storage;
-use cosmwasm_std::{Order, Record};
+use cosmwasm_std::{Order, Record, StdResult, Storage};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::iter;
@@ -11,9 +9,9 @@ use std::ops::{Bound, RangeBounds};
 /// This is internal as it can change any time if the map implementation is swapped out.
 type BTreeMapPairRef<'a, T = Vec<u8>> = (&'a Vec<u8>, &'a T);
 
-pub fn transactional<F, T>(base: &mut dyn Storage, action: F) -> AnyResult<T>
+pub fn transactional<F, T>(base: &mut dyn Storage, action: F) -> StdResult<T>
 where
-    F: FnOnce(&mut dyn Storage, &dyn Storage) -> AnyResult<T>,
+    F: FnOnce(&mut dyn Storage, &dyn Storage) -> StdResult<T>,
 {
     let mut cache = StorageTransaction::new(base);
     let res = action(&mut cache, base)?;

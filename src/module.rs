@@ -1,7 +1,9 @@
 use crate::app::CosmosRouter;
-use crate::error::{bail, AnyResult};
+use crate::error::std_error_bail;
 use crate::AppResponse;
-use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, Storage};
+use cosmwasm_std::{
+    Addr, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Querier, StdError, StdResult, Storage,
+};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -30,7 +32,7 @@ pub trait Module {
         block: &BlockInfo,
         sender: Addr,
         msg: Self::ExecT,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
@@ -44,7 +46,7 @@ pub trait Module {
         querier: &dyn Querier,
         block: &BlockInfo,
         request: Self::QueryT,
-    ) -> AnyResult<Binary>;
+    ) -> StdResult<Binary>;
 
     /// Runs privileged actions, like minting tokens, or governance proposals.
     /// This allows modules to have full access to these privileged actions,
@@ -58,7 +60,7 @@ pub trait Module {
         router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         block: &BlockInfo,
         msg: Self::SudoT,
-    ) -> AnyResult<AppResponse>
+    ) -> StdResult<AppResponse>
     where
         ExecC: CustomMsg + DeserializeOwned + 'static,
         QueryC: CustomQuery + DeserializeOwned + 'static;
@@ -102,8 +104,8 @@ where
         _block: &BlockInfo,
         sender: Addr,
         msg: Self::ExecT,
-    ) -> AnyResult<AppResponse> {
-        bail!("Unexpected exec msg {:?} from {:?}", msg, sender)
+    ) -> StdResult<AppResponse> {
+        std_error_bail!("Unexpected exec msg {:?} from {:?}", msg, sender)
     }
 
     /// Runs any [QueryT](Self::QueryT) message, always returns an error.
@@ -114,8 +116,8 @@ where
         _querier: &dyn Querier,
         _block: &BlockInfo,
         request: Self::QueryT,
-    ) -> AnyResult<Binary> {
-        bail!("Unexpected custom query {:?}", request)
+    ) -> StdResult<Binary> {
+        std_error_bail!("Unexpected custom query {:?}", request)
     }
 
     /// Runs any [SudoT](Self::SudoT) privileged action, always returns an error.
@@ -126,8 +128,8 @@ where
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
         msg: Self::SudoT,
-    ) -> AnyResult<AppResponse> {
-        bail!("Unexpected sudo msg {:?}", msg)
+    ) -> StdResult<AppResponse> {
+        std_error_bail!("Unexpected sudo msg {:?}", msg)
     }
 }
 /// # Always accepting module
@@ -169,7 +171,7 @@ where
         _block: &BlockInfo,
         _sender: Addr,
         _msg: Self::ExecT,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         Ok(AppResponse::default())
     }
 
@@ -181,7 +183,7 @@ where
         _querier: &dyn Querier,
         _block: &BlockInfo,
         _request: Self::QueryT,
-    ) -> AnyResult<Binary> {
+    ) -> StdResult<Binary> {
         Ok(Binary::default())
     }
 
@@ -193,7 +195,7 @@ where
         _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
         _block: &BlockInfo,
         _msg: Self::SudoT,
-    ) -> AnyResult<AppResponse> {
+    ) -> StdResult<AppResponse> {
         Ok(AppResponse::default())
     }
 }

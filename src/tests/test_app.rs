@@ -1,5 +1,4 @@
 use crate::custom_handler::CachingCustomHandler;
-use crate::error::{bail, AnyResult};
 use crate::featured::staking::{Distribution, Staking};
 use crate::test_helpers::echo::EXECUTE_REPLY_BASE_ID;
 use crate::test_helpers::{caller, echo, error, hackatom, payout, reflect, CustomHelperMsg};
@@ -13,9 +12,8 @@ use crate::{AppBuilder, IntoAddr};
 use cosmwasm_std::testing::{mock_env, MockQuerier};
 use cosmwasm_std::{
     coin, coins, from_json, to_json_binary, Addr, Api, Attribute, BalanceResponse, BankMsg,
-    BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomMsg, CustomQuery, Empty, Event,
-    OverflowError, OverflowOperation, Querier, Reply, StdError, StdResult, Storage, SubMsg,
-    WasmMsg,
+    BankQuery, Binary, BlockInfo, Coin, CosmosMsg, CustomMsg, CustomQuery, Empty, Event, Querier,
+    Reply, StdResult, Storage, SubMsg, WasmMsg,
 };
 use cw_storage_plus::Item;
 use cw_utils::parse_instantiate_response_data;
@@ -514,9 +512,11 @@ fn reflect_error() {
     let err = app
         .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap_err();
-    assert_eq!(
-        StdError::overflow(OverflowError::new(OverflowOperation::Sub)),
-        err.downcast().unwrap()
+
+    let err_str = err.to_string();
+    assert!(
+        err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+            && err_str.contains("Cannot Sub with given operands")
     );
 
     // first one should have been rolled-back on error (no second payment)
@@ -875,7 +875,9 @@ fn sent_funds_properly_visible_on_execution() {
 /// via a custom module, as an example of ability to do privileged actions.
 mod custom_handler {
     use super::*;
+    use crate::error::std_error_bail;
     use crate::{BankSudo, BasicAppBuilder};
+    use cosmwasm_std::StdError;
 
     const LOTTERY: Item<Coin> = Item::new("lottery");
     const PITY: Item<Coin> = Item::new("pity");
@@ -905,7 +907,7 @@ mod custom_handler {
             block: &BlockInfo,
             _sender: Addr,
             msg: Self::ExecT,
-        ) -> AnyResult<AppResponse>
+        ) -> StdResult<AppResponse>
         where
             ExecC: CustomMsg + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
@@ -938,8 +940,8 @@ mod custom_handler {
             _querier: &dyn Querier,
             _block: &BlockInfo,
             _request: Self::QueryT,
-        ) -> AnyResult<Binary> {
-            bail!("query not implemented for CustomHandler")
+        ) -> StdResult<Binary> {
+            std_error_bail!("query not implemented for CustomHandler")
         }
 
         fn sudo<ExecC, QueryC>(
@@ -949,12 +951,12 @@ mod custom_handler {
             _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
             _block: &BlockInfo,
             _msg: Self::SudoT,
-        ) -> AnyResult<AppResponse>
+        ) -> StdResult<AppResponse>
         where
             ExecC: CustomMsg + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            bail!("sudo not implemented for CustomHandler")
+            std_error_bail!("sudo not implemented for CustomHandler")
         }
     }
 
@@ -965,7 +967,7 @@ mod custom_handler {
             storage: &mut dyn Storage,
             lottery: Coin,
             pity: Coin,
-        ) -> AnyResult<()> {
+        ) -> StdResult<()> {
             LOTTERY.save(storage, &lottery)?;
             PITY.save(storage, &pity)?;
             Ok(())
@@ -1472,7 +1474,6 @@ mod reply_data_overwrite {
 
 mod response_validation {
     use super::*;
-    use crate::error::Error;
 
     #[test]
     fn empty_attribute_key() {
@@ -1502,7 +1503,11 @@ mod response_validation {
             )
             .unwrap_err();
 
-        assert_eq!(Error::empty_attribute_key("value"), err.downcast().unwrap(),);
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Empty attribute key. Value: value")
+        );
     }
 
     #[test]
@@ -1560,7 +1565,11 @@ mod response_validation {
             )
             .unwrap_err();
 
-        assert_eq!(Error::empty_attribute_key("value"), err.downcast().unwrap());
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Empty attribute key. Value: value")
+        );
     }
 
     #[test]
@@ -1615,7 +1624,11 @@ mod response_validation {
             )
             .unwrap_err();
 
-        assert_eq!(Error::event_type_too_short("e"), err.downcast().unwrap());
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Event type too short: e")
+        );
     }
 }
 
@@ -1681,11 +1694,11 @@ mod wasm_queries {
         use super::*;
         let app = App::default();
         assert_eq!(
-            "Generic error: Querier contract error: code id: invalid",
+            "kind: Other, error: Querier contract error: kind: Other, error: code id: invalid",
             app.wrap().query_wasm_code_info(0).unwrap_err().to_string()
         );
         assert_eq!(
-            "Generic error: Querier contract error: code id 1: no such code",
+            "kind: Other, error: Querier contract error: kind: Other, error: code id 1: no such code",
             app.wrap().query_wasm_code_info(1).unwrap_err().to_string()
         );
     }
@@ -1901,17 +1914,11 @@ mod errors {
             .instantiate_contract(code_id, owner, &msg, &[], "error", None)
             .unwrap_err();
 
-        // we should be able to retrieve the original error by downcasting
-        let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg, .. } = source {
-            assert_eq!(msg, "Init failed");
-        } else {
-            panic!("wrong StdError variant");
-        }
-
-        // We're expecting exactly 2 nested error types
-        // (the original error, WasmMsg context)
-        assert_eq!(err.chain().count(), 2);
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Init failed")
+        );
     }
 
     #[test]
@@ -1934,17 +1941,11 @@ mod errors {
             .execute_contract(random_addr, contract_addr, &msg, &[])
             .unwrap_err();
 
-        // we should be able to retrieve the original error by downcasting
-        let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg, .. } = source {
-            assert_eq!(msg, "Handle failed");
-        } else {
-            panic!("wrong StdError variant");
-        }
-
-        // We're expecting exactly 2 nested error types
-        // (the original error, WasmMsg context)
-        assert_eq!(err.chain().count(), 2);
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Handle failed")
+        );
     }
 
     #[test]
@@ -1976,17 +1977,11 @@ mod errors {
             .execute_contract(random_addr, caller_addr, &msg, &[])
             .unwrap_err();
 
-        // we can get the original error by downcasting
-        let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg, .. } = source {
-            assert_eq!(msg, "Handle failed");
-        } else {
-            panic!("wrong StdError variant");
-        }
-
-        // We're expecting exactly 3 nested error types
-        // (the original error, 2 WasmMsg contexts)
-        assert_eq!(err.chain().count(), 3);
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Handle failed")
+        );
     }
 
     #[test]
@@ -2040,19 +2035,10 @@ mod errors {
             .execute_contract(random_addr, caller_addr1, &msg, &[])
             .unwrap_err();
 
-        // uncomment to have the test fail and see how the error stringifies
-        // panic!("{:?}", err);
-
-        // we can get the original error by downcasting
-        let source: &StdError = err.downcast_ref().unwrap();
-        if let StdError::GenericErr { msg, .. } = source {
-            assert_eq!(msg, "Handle failed");
-        } else {
-            panic!("wrong StdError variant");
-        }
-
-        // We're expecting exactly 4 nested error types
-        // (the original error, 3 WasmMsg contexts)
-        assert_eq!(err.chain().count(), 4);
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Handle failed")
+        );
     }
 }
