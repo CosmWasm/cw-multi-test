@@ -1,4 +1,7 @@
-use cosmwasm_std::{to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event, StdResult, SubMsgResponse, WasmMsg};
+use cosmwasm_std::{
+    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event, StdResult,
+    SubMsgResponse, WasmMsg,
+};
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
 use std::fmt::Debug;
