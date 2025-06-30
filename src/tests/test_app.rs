@@ -512,9 +512,11 @@ fn reflect_error() {
     let err = app
         .execute_contract(random_addr.clone(), reflect_addr.clone(), &msgs, &[])
         .unwrap_err();
-    assert_eq!(
-        "kind: Overflow, error: Cannot Sub with given operands",
-        err.to_string()
+
+    let err_str = err.to_string();
+    assert!(
+        err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+            && err_str.contains("Cannot Sub with given operands")
     );
 
     // first one should have been rolled-back on error (no second payment)
@@ -1501,9 +1503,10 @@ mod response_validation {
             )
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: Empty attribute key. Value: value",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Empty attribute key. Value: value")
         );
     }
 
@@ -1562,9 +1565,10 @@ mod response_validation {
             )
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: Empty attribute key. Value: value",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Empty attribute key. Value: value")
         );
     }
 
@@ -1620,9 +1624,10 @@ mod response_validation {
             )
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: Event type too short: e",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Event type too short: e")
         );
     }
 }
@@ -1909,9 +1914,10 @@ mod errors {
             .instantiate_contract(code_id, owner, &msg, &[], "error", None)
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: kind: Other, error: Init failed",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Init failed")
         );
     }
 
@@ -1935,9 +1941,10 @@ mod errors {
             .execute_contract(random_addr, contract_addr, &msg, &[])
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: kind: Other, error: Handle failed",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Handle failed")
         );
     }
 
@@ -1970,9 +1977,10 @@ mod errors {
             .execute_contract(random_addr, caller_addr, &msg, &[])
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: kind: Other, error: Handle failed",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Handle failed")
         );
     }
 
@@ -2027,9 +2035,10 @@ mod errors {
             .execute_contract(random_addr, caller_addr1, &msg, &[])
             .unwrap_err();
 
-        assert_eq!(
-            "kind: Other, error: kind: Other, error: Handle failed",
-            err.to_string()
+        let err_str = err.to_string();
+        assert!(
+            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
+                && err_str.contains("Handle failed")
         );
     }
 }

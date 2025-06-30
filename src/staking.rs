@@ -854,9 +854,9 @@ impl Module for StakeKeeper {
                 Ok(res)
             }
             StakingQuery::AllValidators {} => {
-                let mut validators: Vec<Validator> = self.get_validators(&staking_storage)?;
+                let validators: Vec<Validator> = self.get_validators(&staking_storage)?;
                 Ok(to_json_binary(&AllValidatorsResponse::new(
-                    validators.drain(..).map(Into::into).collect(),
+                    validators.into_iter().map(Into::into).collect(),
                 ))?)
             }
             StakingQuery::Validator { address } => Ok(to_json_binary(&ValidatorResponse::new(

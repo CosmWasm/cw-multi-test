@@ -40,7 +40,7 @@ impl<T: bech32::Checksum + 'static> Api for MockApiBech<T> {
     }
 
     fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        let hrp = Hrp::parse(self.prefix).map_err(|e| StdError::msg(e.to_string()))?;
+        let hrp = Hrp::parse(self.prefix)?;
         if let Ok(encoded) = encode::<T>(hrp, canonical.as_slice()) {
             Ok(Addr::unchecked(encoded))
         } else {
