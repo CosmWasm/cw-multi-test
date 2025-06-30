@@ -1,5 +1,15 @@
 # Changelog
 
+## [v3.0.0](https://github.com/CosmWasm/cw-multi-test/tree/v3.0.0) (2025-06-30)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.4.0...v3.0.0)
+
+**Merged pull requests:**
+
+- Granulated closures [\#260](https://github.com/CosmWasm/cw-multi-test/pull/260) ([DariuszDepta](https://github.com/DariuszDepta))
+- Added migrate info [\#261](https://github.com/CosmWasm/cw-multi-test/pull/261) ([DariuszDepta](https://github.com/DariuszDepta))
+- Upgrade to `cosmwasm-std` 3.0.x [\#262](https://github.com/CosmWasm/cw-multi-test/pull/262) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.4.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.4.0) (2025-04-28)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.3...v2.4.0)
