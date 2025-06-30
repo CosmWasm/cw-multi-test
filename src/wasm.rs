@@ -383,7 +383,6 @@ where
     /// ```
     /// use cosmwasm_std::{Addr, Api, StdResult, Storage};
     /// use cw_multi_test::{no_init, AddressGenerator, AppBuilder, WasmKeeper};
-    /// use cw_multi_test::error::AnyResult;
     /// # use cosmwasm_std::testing::MockApi;
     ///
     /// struct CustomAddressGenerator;
