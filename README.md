@@ -38,7 +38,7 @@ for various blockchain interaction tests.
 
 ```toml
 [dev-dependencies]
-cw-multi-test = { version = "2", features = ["staking", "stargate", "cosmwasm_2_2"] }
+cw-multi-test = { version = "3", features = ["staking", "stargate", "cosmwasm_3_0"] }
 ```
 
 Since version 2.1.0, **CosmWasm MultiTest** has no default features enabled.
@@ -56,6 +56,7 @@ The table below summarizes all available features:
 | **cosmwasm_2_0** | Enables `cosmwasm_1_4` in **MultiTest** and `cosmwasm_2_0` feature in **cosmwasm-std** dependency. |
 | **cosmwasm_2_1** | Enables `cosmwasm_2_0` in **MultiTest** and `cosmwasm_2_1` feature in **cosmwasm-std** dependency. |
 | **cosmwasm_2_2** | Enables `cosmwasm_2_1` in **MultiTest** and `cosmwasm_2_2` feature in **cosmwasm-std** dependency. |
+| **cosmwasm_3_0** | Enables `cosmwasm_2_2` in **MultiTest** and `cosmwasm_3_0` feature in **cosmwasm-std** dependency. |
 
 ## Conclusion
 
