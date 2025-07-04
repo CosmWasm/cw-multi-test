@@ -1,6 +1,6 @@
 [package]
 name = "cw-multi-test"
-version = "3.0.0"
+version = "3.0.1"
 authors = [
     "Ethan Frey <ethanfrey@users.noreply.github.com>",
     "Dariusz Depta <depta@engos.de>"
@@ -16,7 +16,6 @@ all-features = true
 
 [features]
 default = []
-backtrace = []
 staking = ["cosmwasm-std/staking"]
 stargate = ["cosmwasm-std/stargate"]
 cosmwasm_1_1 = ["cosmwasm-std/cosmwasm_1_1"]
