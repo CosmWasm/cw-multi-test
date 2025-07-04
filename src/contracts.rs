@@ -568,7 +568,7 @@ where
     ) -> StdResult<Response<C>> {
         let msg: T2 = from_json(msg)?;
         (self.instantiate_fn)(deps, env, info, msg)
-            .map_err(|err: E2| StdError::msg(format!("{}", err)))
+            .map_err(|err: E2| StdError::msg(format!("{err}")))
     }
 
     /// Calls [execute] on wrapped [Contract] trait implementor.
