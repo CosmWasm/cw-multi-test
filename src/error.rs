@@ -50,12 +50,12 @@ pub fn event_type_too_short(ty: impl Into<String>) -> String {
 
 /// Creates an instance of the error for unsupported wasm queries.
 pub fn unsupported_wasm_query(query: WasmQuery) -> String {
-    format!("Unsupported wasm query: {0:?}", query)
+    format!("Unsupported wasm query: {query:?}")
 }
 
 /// Creates an instance of the error for unsupported wasm messages.
 pub fn unsupported_wasm_message(msg: WasmMsg) -> String {
-    format!("Unsupported wasm message: {0:?}", msg)
+    format!("Unsupported wasm message: {msg:?}")
 }
 
 /// Creates an instance of the error for invalid contract code identifier.
@@ -65,12 +65,12 @@ pub fn invalid_code_id() -> String {
 
 /// Creates an instance of the error for unregistered contract code identifier.
 pub fn unregistered_code_id(code_id: u64) -> String {
-    format!("code id {0}: no such code", code_id)
+    format!("code id {code_id}: no such code")
 }
 
 /// Creates an instance of the error for duplicated contract code identifier.
 pub fn duplicated_code_id(code_id: u64) -> String {
-    format!("duplicated code id {0}", code_id)
+    format!("duplicated code id {code_id}")
 }
 
 /// Creates an instance of the error for exhausted contract code identifiers.
