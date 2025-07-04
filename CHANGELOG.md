@@ -1,5 +1,13 @@
 # Changelog
 
+## [v3.0.1](https://github.com/CosmWasm/cw-multi-test/tree/v3.0.0) (2025-07-04)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v3.0.0...v3.0.1)
+
+**Merged pull requests:**
+
+- Removed unused feature `backtrace` [\#264](https://github.com/CosmWasm/cw-multi-test/pull/264) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v3.0.0](https://github.com/CosmWasm/cw-multi-test/tree/v3.0.0) (2025-06-30)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.4.0...v3.0.0)
