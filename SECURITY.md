@@ -1,6 +1,6 @@
 # Security Policy
 
-This repository is part of the CosmWasm stack.
+This repository is part of the **CosmWasm** stack.
 Please see the [Advisories] for its security policy.
 
 ---
