@@ -9,27 +9,27 @@ use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
-/// This trait serves as a primary interface for interacting with contracts.
+/// This trait serves as a primary interface for interacting with smart contracts.
 #[rustfmt::skip]
 pub trait Contract<C, Q = Empty>
 where
     C: CustomMsg,
     Q: CustomQuery,
 {
-    /// Evaluates contract's `execute` entry-point.
-    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
-
     /// Evaluates contract's `instantiate` entry-point.
     fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
+
+    /// Evaluates contract's `execute` entry-point.
+    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
 
-    /// Evaluates contract's `sudo` entry-point.
-    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
-
     /// Evaluates contract's `reply` entry-point.
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>>;
+
+    /// Evaluates contract's `sudo` entry-point.
+    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `migrate` entry-point.
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
@@ -162,8 +162,8 @@ pub struct ContractWrapper<
     execute_fn: ExecuteClosure<T1, C, E1, Q>,
     instantiate_fn: InstantiateClosure<T2, C, E2, Q>,
     query_fn: QueryClosure<T3, E3, Q>,
-    sudo_fn: Option<SudoClosure<T4, C, E4, Q>>,
     reply_fn: Option<ReplyClosure<C, E5, Q>>,
+    sudo_fn: Option<SudoClosure<T4, C, E4, Q>>,
     migrate_fn: Option<MigrateClosure<T6, C, E6, Q>>,
     checksum: Option<Checksum>,
 }
@@ -189,8 +189,8 @@ where
             execute_fn: Box::new(execute_fn),
             instantiate_fn: Box::new(instantiate_fn),
             query_fn: Box::new(query_fn),
-            sudo_fn: None,
             reply_fn: None,
+            sudo_fn: None,
             migrate_fn: None,
             checksum: None,
         }
@@ -207,8 +207,8 @@ where
             execute_fn: customize_execute_fn(execute_fn),
             instantiate_fn: customize_instantiate_fn(instantiate_fn),
             query_fn: customize_query_fn(query_fn),
-            sudo_fn: None,
             reply_fn: None,
+            sudo_fn: None,
             migrate_fn: None,
             checksum: None,
         }
@@ -246,8 +246,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: Some(Box::new(sudo_fn)),
             reply_fn: self.reply_fn,
+            sudo_fn: Some(Box::new(sudo_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -266,8 +266,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: Some(customize_sudo_fn(sudo_fn)),
             reply_fn: self.reply_fn,
+            sudo_fn: Some(customize_sudo_fn(sudo_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -285,8 +285,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: self.sudo_fn,
             reply_fn: Some(Box::new(reply_fn)),
+            sudo_fn: self.sudo_fn,
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -304,8 +304,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
+            reply_fn: Some(customize_reply_fn(reply_fn)),
             sudo_fn: self.sudo_fn,
-            reply_fn: Some(customize_sudo_fn(reply_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -324,8 +324,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
+            sudo_fn: self.sudo_fn,
             migrate_fn: Some(Box::new(migrate_fn)),
             checksum: None,
         }
@@ -344,8 +344,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
+            sudo_fn: self.sudo_fn,
             migrate_fn: Some(customize_migrate_fn(migrate_fn)),
             checksum: None,
         }
@@ -410,6 +410,20 @@ where
         move |deps: Deps<Q>, env: Env, msg: T| -> Result<Binary, E> {
             let deps = decustomize_deps(&deps);
             raw_fn(deps, env, msg)
+        },
+    )
+}
+
+fn customize_reply_fn<C, E, Q>(raw_fn: ReplyFn<Empty, E, Empty>) -> ReplyClosure<C, E, Q>
+where
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
+{
+    Box::new(
+        move |mut deps: DepsMut<Q>, env: Env, msg: Reply| -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, msg).map(customize_response::<C>)
         },
     )
 }
@@ -523,20 +537,6 @@ where
     C: CustomMsg, // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
-    /// Calls [execute] on wrapped [Contract] trait implementor.
-    ///
-    /// [execute]: Contract::execute
-    fn execute(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        info: MessageInfo,
-        msg: Vec<u8>,
-    ) -> AnyResult<Response<C>> {
-        let msg: T1 = from_json(msg)?;
-        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
-    }
-
     /// Calls [instantiate] on wrapped [Contract] trait implementor.
     ///
     /// [instantiate]: Contract::instantiate
@@ -551,12 +551,37 @@ where
         (self.instantiate_fn)(deps, env, info, msg).map_err(|err: E2| anyhow!(err))
     }
 
+    /// Calls [execute] on wrapped [Contract] trait implementor.
+    ///
+    /// [execute]: Contract::execute
+    fn execute(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        info: MessageInfo,
+        msg: Vec<u8>,
+    ) -> AnyResult<Response<C>> {
+        let msg: T1 = from_json(msg)?;
+        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
+    }
+
     /// Calls [query] on wrapped [Contract] trait implementor.
     ///
     /// [query]: Contract::query
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
         let msg: T3 = from_json(msg)?;
         (self.query_fn)(deps, env, msg).map_err(|err: E3| anyhow!(err))
+    }
+
+    /// Calls [reply] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [reply].
+    ///
+    /// [reply]: Contract::reply
+    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>> {
+        match &self.reply_fn {
+            Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
+            None => bail!("reply is not implemented for contract"),
+        }
     }
 
     /// Calls [sudo] on wrapped [Contract] trait implementor.
@@ -568,18 +593,6 @@ where
         match &self.sudo_fn {
             Some(sudo) => sudo(deps, env, msg).map_err(|err: E4| anyhow!(err)),
             None => bail!("sudo is not implemented for contract"),
-        }
-    }
-
-    /// Calls [reply] on wrapped [Contract] trait implementor.
-    /// Returns an error when the contract does not implement [reply].
-    ///
-    /// [reply]: Contract::reply
-    fn reply(&self, deps: DepsMut<Q>, env: Env, reply_data: Reply) -> AnyResult<Response<C>> {
-        let msg: Reply = reply_data;
-        match &self.reply_fn {
-            Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
-            None => bail!("reply is not implemented for contract"),
         }
     }
 
