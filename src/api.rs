@@ -158,7 +158,7 @@ impl<T: bech32::Checksum> MockApiBech<T> {
     pub fn addr_make(&self, input: &str) -> Addr {
         match Hrp::parse(self.prefix) {
             Ok(hrp) => Addr::unchecked(encode::<T>(hrp, Sha256::digest(input).as_slice()).unwrap()),
-            Err(reason) => panic!("Generating address failed with reason: {}", reason),
+            Err(reason) => panic!("Generating address failed with reason: {reason}"),
         }
     }
 }

@@ -36,7 +36,7 @@ fn building_app_with_custom_ibc_should_work() {
 
     // executing ibc query should return an error defined in custom keeper
     assert_eq!(
-        format!("Generic error: Querier contract error: {}", QUERY_MSG),
+        format!("Generic error: Querier contract error: {QUERY_MSG}"),
         app.wrap()
             .query::<IbcQuery>(&QueryRequest::Ibc(
                 #[allow(deprecated)]

@@ -9,7 +9,7 @@ fn assert_results(failing_module: FailingModule<Empty, Empty, Empty>) {
     let empty_msg = Empty {};
     let mut storage = MockStorage::default();
     assert_eq!(
-        format!(r#"Unexpected exec msg Empty from Addr("{}")"#, sender_addr),
+        format!(r#"Unexpected exec msg Empty from Addr("{sender_addr}")"#),
         failing_module
             .execute(
                 app.api(),

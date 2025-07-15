@@ -224,8 +224,7 @@ where
     ) -> AnyResult<AppResponse> {
         self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
             .context(format!(
-                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
-                sender, msg
+                "Error executing WasmMsg:\n  sender: {sender}\n  {msg:?}"
             ))
     }
 
@@ -884,7 +883,7 @@ where
                     id,
                     payload,
                     gas_used: 0,
-                    result: SubMsgResult::Err(format!("{:?}", e)),
+                    result: SubMsgResult::Err(format!("{e:?}")),
                 };
                 self.reply(api, router, storage, block, contract, reply)
             } else {
@@ -1738,7 +1737,7 @@ mod test {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
                 assert_eq!(amount.as_slice(), &[payout.clone()]);
             }
-            m => panic!("Unexpected message {:?}", m),
+            m => panic!("Unexpected message {m:?}"),
         }
 
         // and flush before query
@@ -1780,13 +1779,13 @@ mod test {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
                 assert_eq!(amount.as_slice(), &[payout.clone()]);
             }
-            m => panic!("Unexpected message {:?}", m),
+            m => panic!("Unexpected message {m:?}"),
         }
     }
 
     fn assert_no_contract(storage: &dyn Storage, contract_addr: &Addr) {
         let contract = CONTRACTS.may_load(storage, contract_addr).unwrap();
-        assert!(contract.is_none(), "{:?}", contract_addr);
+        assert!(contract.is_none(), "{contract_addr:?}");
     }
 
     #[test]
