@@ -1,6 +1,8 @@
 //! # Implementation of the contract trait and contract wrapper
 
 use crate::error::{anyhow, bail, AnyError, AnyResult};
+#[cfg(feature = "cosmwasm_2_2")]
+use cosmwasm_std::MigrateInfo;
 use cosmwasm_std::{
     from_json, Binary, Checksum, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Empty, Env,
     MessageInfo, QuerierWrapper, Reply, Response, SubMsg,
@@ -9,30 +11,35 @@ use serde::de::DeserializeOwned;
 use std::fmt::{Debug, Display};
 use std::ops::Deref;
 
-/// This trait serves as a primary interface for interacting with contracts.
+/// This trait serves as a primary interface for interacting with smart contracts.
 #[rustfmt::skip]
 pub trait Contract<C, Q = Empty>
 where
     C: CustomMsg,
     Q: CustomQuery,
 {
-    /// Evaluates contract's `execute` entry-point.
-    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
-
     /// Evaluates contract's `instantiate` entry-point.
     fn instantiate(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
+
+    /// Evaluates contract's `execute` entry-point.
+    fn execute(&self, deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: Vec<u8>) -> AnyResult<Response<C>>;
 
     /// Evaluates contract's `query` entry-point.
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary>;
 
-    /// Evaluates contract's `sudo` entry-point.
-    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
-
     /// Evaluates contract's `reply` entry-point.
     fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>>;
 
+    /// Evaluates contract's `sudo` entry-point.
+    fn sudo(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
+
     /// Evaluates contract's `migrate` entry-point.
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>>;
+
+    /// Evaluates contract's `migrate` entry-point.
+    #[cfg(feature = "cosmwasm_2_2")]
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>, info: MigrateInfo) -> AnyResult<Response<C>>;
 
     /// Returns the provided checksum of the contract's Wasm blob.
     fn checksum(&self) -> Option<Checksum> {
@@ -45,16 +52,26 @@ mod closures {
     use super::*;
 
     // function types
-    pub type ContractFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
-    pub type PermissionedFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
-    pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
+    pub type InstantiateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
+    pub type ExecuteFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, info: MessageInfo, msg: T) -> Result<Response<C>, E>;
     pub type QueryFn<T, E, Q> = fn(deps: Deps<Q>, env: Env, msg: T) -> Result<Binary, E>;
+    pub type ReplyFn<C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: Reply) -> Result<Response<C>, E>;
+    pub type SudoFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
+    #[cfg(not(feature = "cosmwasm_2_2"))]
+    pub type MigrateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T) -> Result<Response<C>, E>;
+    #[cfg(feature = "cosmwasm_2_2")]
+    pub type MigrateFn<T, C, E, Q> = fn(deps: DepsMut<Q>, env: Env, msg: T, info: MigrateInfo) -> Result<Response<C>, E>;
 
     // closure types
-    pub type ContractClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
-    pub type PermissionedClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
-    pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
+    pub type InstantiateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
+    pub type ExecuteClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, MessageInfo, T) -> Result<Response<C>, E>>;
     pub type QueryClosure<T, E, Q> = Box<dyn Fn(Deps<Q>, Env, T) -> Result<Binary, E>>;
+    pub type ReplyClosure<C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, Reply) -> Result<Response<C>, E>>;
+    pub type SudoClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
+    #[cfg(not(feature = "cosmwasm_2_2"))]
+    pub type MigrateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T) -> Result<Response<C>, E>>;
+    #[cfg(feature = "cosmwasm_2_2")]
+    pub type MigrateClosure<T, C, E, Q> = Box<dyn Fn(DepsMut<Q>, Env, T, MigrateInfo) -> Result<Response<C>, E>>;
 }
 
 use closures::*;
@@ -87,17 +104,17 @@ use closures::*;
 /// ╞═════════════╪════════════════╪═════════════════════╪═════════╪═════════╪═══════╪═══════╡
 /// │     (1)     │                │                     │         │         │       │       │
 /// ╞═════════════╪════════════════╪═════════════════════╪═════════╪═════════╪═══════╪═══════╡
-/// │ execute     │ execute_fn     │ ContractClosure     │   T1    │    C    │  E1   │   Q   │
+/// │ execute     │ execute_fn     │ ExecuteClosure      │   T1    │    C    │  E1   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ instantiate │ instantiate_fn │ ContractClosure     │   T2    │    C    │  E2   │   Q   │
+/// │ instantiate │ instantiate_fn │ InstantiateClosure  │   T2    │    C    │  E2   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
 /// │ query       │ query_fn       │ QueryClosure        │   T3    │ Binary  │  E3   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ sudo        │ sudo_fn        │ PermissionedClosure │   T4    │    C    │  E4   │   Q   │
+/// │ sudo        │ sudo_fn        │ SudoClosure         │   T4    │    C    │  E4   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
 /// │ reply       │ reply_fn       │ ReplyClosure        │  Reply  │    C    │  E5   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ migrate     │ migrate_fn     │ PermissionedClosure │   T6    │    C    │  E6   │   Q   │
+/// │ migrate     │ migrate_fn     │ MigrateClosure      │   T6    │    C    │  E6   │   Q   │
 /// └─────────────┴────────────────┴─────────────────────┴─────────┴─────────┴───────┴───────┘
 /// ```
 /// The general schema depicting which generic type is used in entry points is shown below.
@@ -155,12 +172,12 @@ pub struct ContractWrapper<
     C: CustomMsg,         // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
-    execute_fn: ContractClosure<T1, C, E1, Q>,
-    instantiate_fn: ContractClosure<T2, C, E2, Q>,
+    execute_fn: ExecuteClosure<T1, C, E1, Q>,
+    instantiate_fn: InstantiateClosure<T2, C, E2, Q>,
     query_fn: QueryClosure<T3, E3, Q>,
-    sudo_fn: Option<PermissionedClosure<T4, C, E4, Q>>,
     reply_fn: Option<ReplyClosure<C, E5, Q>>,
-    migrate_fn: Option<PermissionedClosure<T6, C, E6, Q>>,
+    sudo_fn: Option<SudoClosure<T4, C, E4, Q>>,
+    migrate_fn: Option<MigrateClosure<T6, C, E6, Q>>,
     checksum: Option<Checksum>,
 }
 
@@ -177,16 +194,16 @@ where
 {
     /// Creates a new contract wrapper with default settings.
     pub fn new(
-        execute_fn: ContractFn<T1, C, E1, Q>,
-        instantiate_fn: ContractFn<T2, C, E2, Q>,
+        execute_fn: ExecuteFn<T1, C, E1, Q>,
+        instantiate_fn: InstantiateFn<T2, C, E2, Q>,
         query_fn: QueryFn<T3, E3, Q>,
     ) -> Self {
         Self {
             execute_fn: Box::new(execute_fn),
             instantiate_fn: Box::new(instantiate_fn),
             query_fn: Box::new(query_fn),
-            sudo_fn: None,
             reply_fn: None,
+            sudo_fn: None,
             migrate_fn: None,
             checksum: None,
         }
@@ -195,16 +212,16 @@ where
     /// This will take a contract that returns `Response<Empty>` and will _upgrade_ it
     /// to `Response<C>` if needed, to be compatible with a chain-specific extension.
     pub fn new_with_empty(
-        execute_fn: ContractFn<T1, Empty, E1, Empty>,
-        instantiate_fn: ContractFn<T2, Empty, E2, Empty>,
+        execute_fn: ExecuteFn<T1, Empty, E1, Empty>,
+        instantiate_fn: InstantiateFn<T2, Empty, E2, Empty>,
         query_fn: QueryFn<T3, E3, Empty>,
     ) -> Self {
         Self {
-            execute_fn: customize_contract_fn(execute_fn),
-            instantiate_fn: customize_contract_fn(instantiate_fn),
+            execute_fn: customize_execute_fn(execute_fn),
+            instantiate_fn: customize_instantiate_fn(instantiate_fn),
             query_fn: customize_query_fn(query_fn),
-            sudo_fn: None,
             reply_fn: None,
+            sudo_fn: None,
             migrate_fn: None,
             checksum: None,
         }
@@ -232,7 +249,7 @@ where
     /// Populates [ContractWrapper] with contract's `sudo` entry-point and custom message type.
     pub fn with_sudo<T4A, E4A>(
         self,
-        sudo_fn: PermissionedFn<T4A, C, E4A, Q>,
+        sudo_fn: SudoFn<T4A, C, E4A, Q>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4A, E4A, E5, T6, E6>
     where
         T4A: DeserializeOwned + 'static,
@@ -242,8 +259,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: Some(Box::new(sudo_fn)),
             reply_fn: self.reply_fn,
+            sudo_fn: Some(Box::new(sudo_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -252,7 +269,7 @@ where
     /// Populates [ContractWrapper] with contract's `sudo` entry-point and `Empty` as a custom message.
     pub fn with_sudo_empty<T4A, E4A>(
         self,
-        sudo_fn: PermissionedFn<T4A, Empty, E4A, Empty>,
+        sudo_fn: SudoFn<T4A, Empty, E4A, Empty>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4A, E4A, E5, T6, E6>
     where
         T4A: DeserializeOwned + 'static,
@@ -262,8 +279,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: Some(customize_permissioned_fn(sudo_fn)),
             reply_fn: self.reply_fn,
+            sudo_fn: Some(customize_sudo_fn(sudo_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -281,8 +298,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: self.sudo_fn,
             reply_fn: Some(Box::new(reply_fn)),
+            sudo_fn: self.sudo_fn,
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -300,8 +317,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
+            reply_fn: Some(customize_reply_fn(reply_fn)),
             sudo_fn: self.sudo_fn,
-            reply_fn: Some(customize_permissioned_fn(reply_fn)),
             migrate_fn: self.migrate_fn,
             checksum: None,
         }
@@ -310,7 +327,7 @@ where
     /// Populates [ContractWrapper] with contract's `migrate` entry-point and custom message type.
     pub fn with_migrate<T6A, E6A>(
         self,
-        migrate_fn: PermissionedFn<T6A, C, E6A, Q>,
+        migrate_fn: MigrateFn<T6A, C, E6A, Q>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6A, E6A>
     where
         T6A: DeserializeOwned + 'static,
@@ -320,8 +337,8 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
+            sudo_fn: self.sudo_fn,
             migrate_fn: Some(Box::new(migrate_fn)),
             checksum: None,
         }
@@ -330,7 +347,7 @@ where
     /// Populates [ContractWrapper] with contract's `migrate` entry-point and `Empty` as a custom message.
     pub fn with_migrate_empty<T6A, E6A>(
         self,
-        migrate_fn: PermissionedFn<T6A, Empty, E6A, Empty>,
+        migrate_fn: MigrateFn<T6A, Empty, E6A, Empty>,
     ) -> ContractWrapper<T1, T2, T3, E1, E2, E3, C, Q, T4, E4, E5, T6A, E6A>
     where
         T6A: DeserializeOwned + 'static,
@@ -340,9 +357,9 @@ where
             execute_fn: self.execute_fn,
             instantiate_fn: self.instantiate_fn,
             query_fn: self.query_fn,
-            sudo_fn: self.sudo_fn,
             reply_fn: self.reply_fn,
-            migrate_fn: Some(customize_permissioned_fn(migrate_fn)),
+            sudo_fn: self.sudo_fn,
+            migrate_fn: Some(customize_migrate_fn(migrate_fn)),
             checksum: None,
         }
     }
@@ -354,9 +371,30 @@ where
     }
 }
 
-fn customize_contract_fn<T, C, E, Q>(
-    raw_fn: ContractFn<T, Empty, E, Empty>,
-) -> ContractClosure<T, C, E, Q>
+fn customize_instantiate_fn<T, C, E, Q>(
+    raw_fn: InstantiateFn<T, Empty, E, Empty>,
+) -> InstantiateClosure<T, C, E, Q>
+where
+    T: DeserializeOwned + 'static,
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
+{
+    Box::new(
+        move |mut deps: DepsMut<Q>,
+              env: Env,
+              info: MessageInfo,
+              msg: T|
+              -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, info, msg).map(customize_response::<C>)
+        },
+    )
+}
+
+fn customize_execute_fn<T, C, E, Q>(
+    raw_fn: ExecuteFn<T, Empty, E, Empty>,
+) -> ExecuteClosure<T, C, E, Q>
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
@@ -389,9 +427,21 @@ where
     )
 }
 
-fn customize_permissioned_fn<T, C, E, Q>(
-    raw_fn: PermissionedFn<T, Empty, E, Empty>,
-) -> PermissionedClosure<T, C, E, Q>
+fn customize_reply_fn<C, E, Q>(raw_fn: ReplyFn<Empty, E, Empty>) -> ReplyClosure<C, E, Q>
+where
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
+{
+    Box::new(
+        move |mut deps: DepsMut<Q>, env: Env, msg: Reply| -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, msg).map(customize_response::<C>)
+        },
+    )
+}
+
+fn customize_sudo_fn<T, C, E, Q>(raw_fn: SudoFn<T, Empty, E, Empty>) -> SudoClosure<T, C, E, Q>
 where
     T: DeserializeOwned + 'static,
     E: Display + Debug + Send + Sync + 'static,
@@ -402,6 +452,29 @@ where
         move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
             let deps = decustomize_deps_mut(&mut deps);
             raw_fn(deps, env, msg).map(customize_response::<C>)
+        },
+    )
+}
+
+fn customize_migrate_fn<T, C, E, Q>(
+    raw_fn: MigrateFn<T, Empty, E, Empty>,
+) -> MigrateClosure<T, C, E, Q>
+where
+    T: DeserializeOwned + 'static,
+    E: Display + Debug + Send + Sync + 'static,
+    C: CustomMsg,
+    Q: CustomQuery + DeserializeOwned,
+{
+    Box::new(
+        #[cfg(not(feature = "cosmwasm_2_2"))]
+        move |mut deps: DepsMut<Q>, env: Env, msg: T| -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, msg).map(customize_response::<C>)
+        },
+        #[cfg(feature = "cosmwasm_2_2")]
+        move |mut deps: DepsMut<Q>, env: Env, msg: T, inf: MigrateInfo| -> Result<Response<C>, E> {
+            let deps = decustomize_deps_mut(&mut deps);
+            raw_fn(deps, env, msg, inf).map(customize_response::<C>)
         },
     )
 }
@@ -459,7 +532,7 @@ where
             CosmosMsg::Ibc(ibc) => CosmosMsg::Ibc(ibc),
             #[cfg(feature = "cosmwasm_2_0")]
             CosmosMsg::Any(any) => CosmosMsg::Any(any),
-            other => panic!("unknown message variant {:?}", other),
+            other => panic!("unknown message variant {other:?}"),
         },
         gas_limit: msg.gas_limit,
         reply_on: msg.reply_on,
@@ -483,20 +556,6 @@ where
     C: CustomMsg, // Type of custom message returned from all entry-points except `query`.
     Q: CustomQuery + DeserializeOwned, // Type of custom query in querier passed as deps/deps_mut to all entry-points.
 {
-    /// Calls [execute] on wrapped [Contract] trait implementor.
-    ///
-    /// [execute]: Contract::execute
-    fn execute(
-        &self,
-        deps: DepsMut<Q>,
-        env: Env,
-        info: MessageInfo,
-        msg: Vec<u8>,
-    ) -> AnyResult<Response<C>> {
-        let msg: T1 = from_json(msg)?;
-        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
-    }
-
     /// Calls [instantiate] on wrapped [Contract] trait implementor.
     ///
     /// [instantiate]: Contract::instantiate
@@ -511,12 +570,37 @@ where
         (self.instantiate_fn)(deps, env, info, msg).map_err(|err: E2| anyhow!(err))
     }
 
+    /// Calls [execute] on wrapped [Contract] trait implementor.
+    ///
+    /// [execute]: Contract::execute
+    fn execute(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        info: MessageInfo,
+        msg: Vec<u8>,
+    ) -> AnyResult<Response<C>> {
+        let msg: T1 = from_json(msg)?;
+        (self.execute_fn)(deps, env, info, msg).map_err(|err: E1| anyhow!(err))
+    }
+
     /// Calls [query] on wrapped [Contract] trait implementor.
     ///
     /// [query]: Contract::query
     fn query(&self, deps: Deps<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Binary> {
         let msg: T3 = from_json(msg)?;
         (self.query_fn)(deps, env, msg).map_err(|err: E3| anyhow!(err))
+    }
+
+    /// Calls [reply] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [reply].
+    ///
+    /// [reply]: Contract::reply
+    fn reply(&self, deps: DepsMut<Q>, env: Env, msg: Reply) -> AnyResult<Response<C>> {
+        match &self.reply_fn {
+            Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
+            None => bail!("reply is not implemented for contract"),
+        }
     }
 
     /// Calls [sudo] on wrapped [Contract] trait implementor.
@@ -531,15 +615,16 @@ where
         }
     }
 
-    /// Calls [reply] on wrapped [Contract] trait implementor.
-    /// Returns an error when the contract does not implement [reply].
+    /// Calls [migrate] on wrapped [Contract] trait implementor.
+    /// Returns an error when the contract does not implement [migrate].
     ///
-    /// [reply]: Contract::reply
-    fn reply(&self, deps: DepsMut<Q>, env: Env, reply_data: Reply) -> AnyResult<Response<C>> {
-        let msg: Reply = reply_data;
-        match &self.reply_fn {
-            Some(reply) => reply(deps, env, msg).map_err(|err: E5| anyhow!(err)),
-            None => bail!("reply is not implemented for contract"),
+    /// [migrate]: Contract::migrate
+    #[cfg(not(feature = "cosmwasm_2_2"))]
+    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
+        let msg: T6 = from_json(msg)?;
+        match &self.migrate_fn {
+            Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
+            None => bail!("migrate is not implemented for contract"),
         }
     }
 
@@ -547,10 +632,17 @@ where
     /// Returns an error when the contract does not implement [migrate].
     ///
     /// [migrate]: Contract::migrate
-    fn migrate(&self, deps: DepsMut<Q>, env: Env, msg: Vec<u8>) -> AnyResult<Response<C>> {
+    #[cfg(feature = "cosmwasm_2_2")]
+    fn migrate(
+        &self,
+        deps: DepsMut<Q>,
+        env: Env,
+        msg: Vec<u8>,
+        info: MigrateInfo,
+    ) -> AnyResult<Response<C>> {
         let msg: T6 = from_json(msg)?;
         match &self.migrate_fn {
-            Some(migrate) => migrate(deps, env, msg).map_err(|err: E6| anyhow!(err)),
+            Some(migrate) => migrate(deps, env, msg, info).map_err(|err: E6| anyhow!(err)),
             None => bail!("migrate is not implemented for contract"),
         }
     }

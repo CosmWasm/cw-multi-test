@@ -12,6 +12,8 @@ use crate::transactions::transactional;
 use cosmwasm_std::testing::mock_wasmd_attr;
 #[cfg(feature = "stargate")]
 use cosmwasm_std::GovMsg;
+#[cfg(feature = "cosmwasm_2_2")]
+use cosmwasm_std::MigrateInfo;
 use cosmwasm_std::{
     to_json_binary, Addr, Api, Attribute, BankMsg, Binary, BlockInfo, Checksum, Coin, ContractInfo,
     ContractInfoResponse, CosmosMsg, CustomMsg, CustomQuery, Deps, DepsMut, Env, Event,
@@ -224,8 +226,7 @@ where
     ) -> AnyResult<AppResponse> {
         self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
             .context(format!(
-                "Error executing WasmMsg:\n  sender: {}\n  {:?}",
-                sender, msg
+                "Error executing WasmMsg:\n  sender: {sender}\n  {msg:?}"
             ))
     }
 
@@ -708,13 +709,18 @@ where
                     bail!("Cannot migrate contract to unregistered code id");
                 }
                 let mut data = self.contract_data(storage, &contract_addr)?;
-                if data.admin != Some(sender) {
+                if data.admin != Some(sender.clone()) {
                     bail!("Only admin can migrate contract: {:?}", data.admin);
                 }
+                // Save the current (old) code_id for later use.
+                #[cfg(feature = "cosmwasm_2_2")]
+                let old_migrate_version = Some(data.code_id);
+                //  Update the stored code_id.
                 data.code_id = new_code_id;
                 self.save_contract(storage, &contract_addr, &data)?;
 
-                // then call migrate
+                // Then call migrate (the classic version without MigrateInfo).
+                #[cfg(not(feature = "cosmwasm_2_2"))]
                 let res = self.call_migrate(
                     contract_addr.clone(),
                     api,
@@ -722,6 +728,21 @@ where
                     router,
                     block,
                     msg.to_vec(),
+                )?;
+
+                // Then call migrate with MigrateInfo.
+                #[cfg(feature = "cosmwasm_2_2")]
+                let res = self.call_migrate(
+                    contract_addr.clone(),
+                    api,
+                    storage,
+                    router,
+                    block,
+                    msg.to_vec(),
+                    MigrateInfo {
+                        sender,
+                        old_migrate_version,
+                    },
                 )?;
 
                 let custom_event = Event::new("migrate")
@@ -884,7 +905,7 @@ where
                     id,
                     payload,
                     gas_used: 0,
-                    result: SubMsgResult::Err(format!("{:?}", e)),
+                    result: SubMsgResult::Err(format!("{e:?}")),
                 };
                 self.reply(api, router, storage, block, contract, reply)
             } else {
@@ -1145,6 +1166,7 @@ where
     }
 
     /// Executes contract's `migrate` entry-point.
+    #[cfg(not(feature = "cosmwasm_2_2"))]
     pub fn call_migrate(
         &self,
         address: Addr,
@@ -1161,6 +1183,28 @@ where
             block,
             address,
             |contract, deps, env| contract.migrate(deps, env, msg),
+        )?)
+    }
+
+    /// Executes contract's `migrate` entry-point.
+    #[cfg(feature = "cosmwasm_2_2")]
+    pub fn call_migrate(
+        &self,
+        address: Addr,
+        api: &dyn Api,
+        storage: &mut dyn Storage,
+        router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
+        block: &BlockInfo,
+        msg: Vec<u8>,
+        info: MigrateInfo,
+    ) -> AnyResult<Response<ExecC>> {
+        Self::verify_response(self.with_storage(
+            api,
+            storage,
+            router,
+            block,
+            address,
+            |contract, deps, env| contract.migrate(deps, env, msg, info),
         )?)
     }
 
@@ -1738,7 +1782,7 @@ mod test {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
                 assert_eq!(amount.as_slice(), &[payout.clone()]);
             }
-            m => panic!("Unexpected message {:?}", m),
+            m => panic!("Unexpected message {m:?}"),
         }
 
         // and flush before query
@@ -1780,13 +1824,13 @@ mod test {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
                 assert_eq!(amount.as_slice(), &[payout.clone()]);
             }
-            m => panic!("Unexpected message {:?}", m),
+            m => panic!("Unexpected message {m:?}"),
         }
     }
 
     fn assert_no_contract(storage: &dyn Storage, contract_addr: &Addr) {
         let contract = CONTRACTS.may_load(storage, contract_addr).unwrap();
-        assert!(contract.is_none(), "{:?}", contract_addr);
+        assert!(contract.is_none(), "{contract_addr:?}");
     }
 
     #[test]

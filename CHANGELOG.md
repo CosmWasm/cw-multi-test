@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.5.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.5.0) (2025-07-16)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.4.0...v2.5.0)
+
+**Closed issues:**
+
+- Missing `MigrateInfo` [\#258](https://github.com/CosmWasm/cw-multi-test/issues/258) (reported by [gluax](https://github.com/gluax))
+
+**Merged pull requests:**
+
+- `MigrateInfo` backport [\#266](https://github.com/CosmWasm/cw-multi-test/pull/266) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.4.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.4.0) (2025-04-28)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.3.3...v2.4.0)
