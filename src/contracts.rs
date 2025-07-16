@@ -104,17 +104,17 @@ use closures::*;
 /// ╞═════════════╪════════════════╪═════════════════════╪═════════╪═════════╪═══════╪═══════╡
 /// │     (1)     │                │                     │         │         │       │       │
 /// ╞═════════════╪════════════════╪═════════════════════╪═════════╪═════════╪═══════╪═══════╡
-/// │ execute     │ execute_fn     │ ContractClosure     │   T1    │    C    │  E1   │   Q   │
+/// │ execute     │ execute_fn     │ ExecuteClosure      │   T1    │    C    │  E1   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ instantiate │ instantiate_fn │ ContractClosure     │   T2    │    C    │  E2   │   Q   │
+/// │ instantiate │ instantiate_fn │ InstantiateClosure  │   T2    │    C    │  E2   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
 /// │ query       │ query_fn       │ QueryClosure        │   T3    │ Binary  │  E3   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ sudo        │ sudo_fn        │ PermissionedClosure │   T4    │    C    │  E4   │   Q   │
+/// │ sudo        │ sudo_fn        │ SudoClosure         │   T4    │    C    │  E4   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
 /// │ reply       │ reply_fn       │ ReplyClosure        │  Reply  │    C    │  E5   │   Q   │
 /// ├─────────────┼────────────────┼─────────────────────┼─────────┼─────────┼───────┼───────┤
-/// │ migrate     │ migrate_fn     │ PermissionedClosure │   T6    │    C    │  E6   │   Q   │
+/// │ migrate     │ migrate_fn     │ MigrateClosure      │   T6    │    C    │  E6   │   Q   │
 /// └─────────────┴────────────────┴─────────────────────┴─────────┴─────────┴───────┴───────┘
 /// ```
 /// The general schema depicting which generic type is used in entry points is shown below.
