@@ -41,7 +41,6 @@ fn instantiate(
 
 fn execute(deps: DepsMut, env: Env, _info: MessageInfo, _msg: Empty) -> Result<Response, StdError> {
     let init = HACKATOM.load(deps.storage)?;
-    #[allow(deprecated)]
     let balance = deps.querier.query_balance(env.contract.address, "btc")?;
 
     let resp = Response::new().add_message(BankMsg::Send {
