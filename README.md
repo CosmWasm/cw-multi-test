@@ -9,7 +9,7 @@
 [crates-url]: https://crates.io/crates/cw-multi-test
 [docs-badge]: https://docs.rs/cw-multi-test/badge.svg
 [docs-url]: https://docs.rs/cw-multi-test
-[codecov-badge]: https://codecov.io/gh/CosmWasm/cw-multi-test/branch/main/graph/badge.svg?token=IYY72ZVS3X
+[codecov-badge]: https://codecov.io/gh/CosmWasm/cw-multi-test/branch/main/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/CosmWasm/cw-multi-test
 [apache-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
 [apache-url]: LICENSE
