@@ -1,9 +1,6 @@
-name: Coverage
+name: coverage
 
 on: [ push, pull_request ]
-
-env:
-  CARGO_TERM_COLOR: always
 
 jobs:
   coverage:
