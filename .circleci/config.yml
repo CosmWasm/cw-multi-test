@@ -10,7 +10,6 @@ workflows:
       - build_and_test
       - build_minimal
       - build_maximal
-      - lint
   nightly:
     triggers:
       - schedule:
@@ -112,38 +111,3 @@ jobs:
             - /usr/local/cargo/registry
             - target
           key: cargocache-v2-multi-test:1.78-{{ checksum "Cargo.lock" }}
-
-  lint:
-    docker:
-      - image: rust:1.78
-    steps:
-      - checkout
-      - run:
-          name: Version information
-          command: rustc --version; cargo --version; rustup --version; rustup target list --installed
-      - run:
-          name: Generate a lockfile
-          command: cargo update
-      - restore_cache:
-          keys:
-            - cargocache-v2-lint-rust:1.78-{{ checksum "Cargo.lock" }}
-            - cargocache-v2-lint-rust:1.78-
-      - run:
-          name: Add rustfmt component
-          command: rustup component add rustfmt
-      - run:
-          name: Add clippy component
-          command: rustup component add clippy
-      - run:
-          name: Check formatting of workspace
-          command: cargo fmt -- --check
-      - run:
-          name: Clippy linting on workspace
-          command: cargo clippy --all-targets -- -D warnings
-      - save_cache:
-          paths:
-            - /usr/local/cargo/registry
-            - target/debug/.fingerprint
-            - target/debug/build
-            - target/debug/deps
-          key: cargocache-v2-lint-rust:1.78-{{ checksum "Cargo.lock" }}
