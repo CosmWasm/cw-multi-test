@@ -1,6 +1,6 @@
 # MultiTest
 
-[![cw-multi-test on crates.io][crates-badge]][crates-url]
+[![cw-multi-test][crates-badge]][crates-url]
 [![docs][docs-badge]][docs-url]
 [![codecov][codecov-badge]][codecov-url]
 [![license][apache-badge]][apache-url]
