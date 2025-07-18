@@ -6,11 +6,16 @@ tasks:
 
   all:
     desc: Runs all checks
+    summary: |
+      Runs all viable checks for MultiTest.
+      Execute this task before pushing any changes.
+      This task takes a significant amount of time to complete.
     cmds:
       - task: clean
       - task: build
       - task: clippy
       - task: test
+      - task: hack
 
   build:
     desc: Runs all building variants
@@ -227,8 +232,7 @@ tasks:
     desc: Generates the code coverage report in HTML format
     cmds:
       - cmd: cargo +stable llvm-cov clean
-      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features
-      - cmd: cargo +stable llvm-cov report --html
+      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --html --open
 
   cob:
     desc: Generates the code coverage report in "cobertura" format
