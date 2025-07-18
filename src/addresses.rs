@@ -155,6 +155,7 @@ pub trait AddressGenerator {
     /// assert_ne!(addr12, addr22);
     /// assert_ne!(addr21, addr22);
     /// ```
+    #[allow(clippy::too_many_arguments)]
     fn predictable_contract_address(
         &self,
         api: &dyn Api,
