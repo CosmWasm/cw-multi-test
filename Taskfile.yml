@@ -1,0 +1,390 @@
+version: '3'
+
+silent: true
+
+tasks:
+
+  all:
+    desc: Runs all checks
+    cmds:
+      - task: clean
+      - task: build
+      - task: clippy
+      - task: test
+
+  build:
+    desc: Runs all building variants
+    cmds:
+      - task: build-all-features
+      - task: build-default-features
+      - task: build-no-default-features
+      - task: build-1-1
+      - task: build-1-2
+      - task: build-1-3
+      - task: build-1-4
+      - task: build-2-0
+      - task: build-2-1
+      - task: build-2-2
+      - task: build-3-0
+      - task: build-stargate
+      - task: build-staking
+      - task: build-locked
+      - task: build-1-81-all-features
+      - task: build-1-81-default-features
+      - task: build-1-81-no-default-features
+
+  build-all-features:
+    desc: Builds in debug mode with all features enabled
+    cmds:
+      - cmd: cargo +stable build --all-features
+
+  build-default-features:
+    desc: Builds in debug mode with default features enabled
+    cmds:
+      - cmd: cargo +stable build
+
+  build-no-default-features:
+    desc: Builds in debug mode without default features
+    cmds:
+      - cmd: cargo +stable build --no-default-features
+
+  build-1-1:
+    desc: Builds the library in debug mode with "cosmwasm_1_1" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_1_1
+
+  build-1-2:
+    desc: Builds the library in debug mode with "cosmwasm_1_2" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_1_2
+
+  build-1-3:
+    desc: Builds the library in debug mode with "cosmwasm_1_3" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_1_3
+
+  build-1-4:
+    desc: Builds the library in debug mode with "cosmwasm_1_4" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_1_4
+
+  build-2-0:
+    desc: Builds the library in debug mode with "cosmwasm_2_0" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_2_0
+
+  build-2-1:
+    desc: Builds the library in debug mode with "cosmwasm_2_1" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_2_1
+
+  build-2-2:
+    desc: Builds the library in debug mode with "cosmwasm_2_2" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_2_2
+
+  build-3-0:
+    desc: Builds the library in debug mode with "cosmwasm_3_0" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features cosmwasm_3_0
+
+  build-stargate:
+    desc: Builds the library in debug mode with "stargate" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features stargate
+
+  build-staking:
+    desc: Builds the library in debug mode with "staking" feature enabled
+    cmds:
+      - cmd: cargo +stable build --features staking
+
+  build-locked:
+    desc: Builds in debug mode with all features enabled and locked dependencies
+    cmds:
+      - cmd: cargo build --locked --all-features
+
+  build-1-81-all-features:
+    desc: Builds in debug mode with all features enabled and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu build --all-features
+
+  build-1-81-default-features:
+    desc: Builds in debug mode with default features and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu build
+
+  build-1-81-no-default-features:
+    desc: Builds in debug mode without default features and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu build --no-default-features
+
+  clean:
+    desc: Removes all compiled artifacts
+    cmds:
+      - cmd: cargo clean
+
+  clippy:
+    desc: Runs all clippy variants
+    cmds:
+      - task: clippy-all-features
+      - task: clippy-default-features
+      - task: clippy-no-default-features
+      - task: clippy-1-1
+      - task: clippy-1-2
+      - task: clippy-1-3
+      - task: clippy-1-4
+      - task: clippy-2-0
+      - task: clippy-2-1
+      - task: clippy-2-2
+      - task: clippy-3-0
+      - task: clippy-stargate
+      - task: clippy-staking
+      - task: clippy-1-81-all-features
+      - task: clippy-1-81-default-features
+      - task: clippy-1-81-no-default-features
+
+  clippy-all-features:
+    desc: Runs clippy with all features enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --all-features
+
+  clippy-default-features:
+    desc: Runs clippy with default features
+    cmds:
+      - cmd: cargo +stable clippy --all-targets
+
+  clippy-no-default-features:
+    desc: Runs clippy without default features
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --no-default-features
+
+  clippy-1-1:
+    desc: Runs clippy with "cosmwasm_1_1" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_1_1
+
+  clippy-1-2:
+    desc: Runs clippy with "cosmwasm_1_2" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_1_2
+
+  clippy-1-3:
+    desc: Runs clippy with "cosmwasm_1_3" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_1_3
+
+  clippy-1-4:
+    desc: Runs clippy with "cosmwasm_1_4" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_1_4
+
+  clippy-2-0:
+    desc: Runs clippy with "cosmwasm_2_0" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_2_0
+
+  clippy-2-1:
+    desc: Runs clippy with "cosmwasm_2_1" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_2_1
+
+  clippy-2-2:
+    desc: Runs clippy with "cosmwasm_2_2" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_2_2
+
+  clippy-3-0:
+    desc: Runs clippy with "cosmwasm_3_0" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features cosmwasm_3_0
+
+  clippy-stargate:
+    desc: Runs clippy with "stargate" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features stargate
+
+  clippy-staking:
+    desc: Runs clippy with "staking" feature enabled
+    cmds:
+      - cmd: cargo +stable clippy --all-targets --features staking
+
+  clippy-1-81-all-features:
+    desc: Runs clippy with all features enabled and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu clippy --all-targets --all-features -- -D warnings
+
+  clippy-1-81-default-features:
+    desc: Runs clippy with default features and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu clippy --all-targets -- -D warnings
+
+  clippy-1-81-no-default-features:
+    desc: Runs clippy without default features and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu clippy --all-targets --no-default-features -- -D warnings
+
+  cov:
+    desc: Generates the code coverage report in HTML format
+    cmds:
+      - cmd: cargo +stable llvm-cov clean
+      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features
+      - cmd: cargo +stable llvm-cov report --html
+
+  cob:
+    desc: Generates the code coverage report in "cobertura" format
+    cmds:
+      - cmd: cargo +stable llvm-cov clean
+      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --cobertura --output-path ./target/coverage.xml
+
+  doc:
+    desc: Generates documentation with all features enabled
+    cmds:
+      - cmd: cargo +stable doc --no-deps --all-features
+
+  doc-open:
+    desc: Generates documentation with all features enabled and opens it in a browser
+    cmds:
+      - cmd: cargo +stable doc --no-deps --open --all-features
+
+  doc-priv:
+    desc: Generates documentation with private items and all features enabled
+    cmds:
+      - cmd: cargo +stable doc --no-deps --document-private-items --all-features
+
+  doc-priv-open:
+    desc: Generates documentation with private items and all features enabled and opens it in a browser
+    cmds:
+      - cmd: cargo +stable doc --no-deps --document-private-items --open --all-features
+
+  fmt:
+    desc: Runs the code formatter
+    cmds:
+      - cmd: cargo fmt
+
+  test:
+    desc: Runs all test variants
+    cmds:
+      - task: test-all-features
+      - task: test-default-features
+      - task: test-no-default-features
+      - task: test-1-1
+      - task: test-1-2
+      - task: test-1-3
+      - task: test-1-4
+      - task: test-2-0
+      - task: test-2-1
+      - task: test-2-2
+      - task: test-3-0
+      - task: test-stargate
+      - task: test-staking
+      - task: test-max
+      - task: test-1-81-all-features
+      - task: test-1-81-default-features
+      - task: test-1-81-no-default-features
+
+  test-all-features:
+    desc: Runs all tests in debug mode with all features enabled
+    cmds:
+      - cmd: cargo +stable test --all-features
+
+  test-default-features:
+    desc: Runs all tests in debug mode with default features
+    cmds:
+      - cmd: cargo +stable test
+
+  test-no-default-features:
+    desc: Runs all tests in debug mode without default features
+    cmds:
+      - cmd: cargo +stable test --no-default-features
+
+  test-1-1:
+    desc: Runs all tests in debug mode with "cosmwasm_1_1" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_1_1
+
+  test-1-2:
+    desc: Runs all tests in debug mode with "cosmwasm_1_2" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_1_2
+
+  test-1-3:
+    desc: Runs all tests in debug mode with "cosmwasm_1_3" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_1_3
+
+  test-1-4:
+    desc: Runs all tests in debug mode with "cosmwasm_1_4" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_1_4
+
+  test-2-0:
+    desc: Runs all tests in debug mode with "cosmwasm_2_0" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_2_0
+
+  test-2-1:
+    desc: Runs all tests in debug mode with "cosmwasm_2_1" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_2_1
+
+  test-2-2:
+    desc: Runs all tests in debug mode with "cosmwasm_2_2" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_2_2
+
+  test-3-0:
+    desc: Runs all tests in debug mode with "cosmwasm_3_0" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features cosmwasm_3_0
+
+  test-stargate:
+    desc: Runs all tests in debug mode with "stargate" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features stargate
+
+  test-staking:
+    desc: Runs all tests in debug mode with "staking" feature enabled
+    cmds:
+      - cmd: cargo +stable test --features staking
+
+  test-max:
+    desc: Runs tests with maximal versions like in Circle CI
+    cmds:
+      - cmd: cargo test --locked --all-features
+
+  test-1-81-all-features:
+    desc: Runs tests in debug mode with all features enabled and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu test --all-features
+
+  test-1-81-default-features:
+    desc: Runs tests in debug mode with all features enabled and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu test
+
+  test-1-81-no-default-features:
+    desc: Runs tests in debug mode without default features and Rust version 1.81
+    cmds:
+      - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu test --no-default-features
+
+  hack:
+    desc: Runs all checks based on all feature combinations
+    cmds:
+      - task: hack-build
+      - task: hack-clippy
+      - task: hack-test
+
+  hack-build:
+    desc: Builds in debug mode using all feature combinations
+    cmds:
+      - cmd: cargo +stable hack build --feature-powerset
+
+  hack-clippy:
+    desc: Runs clippy using all feature combinations
+    cmds:
+      - cmd: cargo +stable hack clippy --feature-powerset
+
+  hack-test:
+    desc: Runs tests using all feature combinations
+    cmds:
+      - cmd: cargo +stable hack test --feature-powerset
