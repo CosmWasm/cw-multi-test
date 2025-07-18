@@ -560,6 +560,7 @@ where
         data.into()
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn send<T>(
         &self,
         api: &dyn Api,
@@ -770,6 +771,7 @@ where
     }
 
     /// Processes WasmMsg::Instantiate and WasmMsg::Instantiate2 messages.
+    #[allow(clippy::too_many_arguments)]
     fn process_wasm_msg_instantiate(
         &self,
         api: &dyn Api,
@@ -990,6 +992,7 @@ where
         (app_response, messages)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn process_response(
         &self,
         api: &dyn Api,
@@ -1033,6 +1036,7 @@ where
     ///
     /// You have to call init after this to set up the contract properly.
     /// These two steps are separated to have cleaner return values.
+    #[allow(clippy::too_many_arguments)]
     pub fn register_contract(
         &self,
         api: &dyn Api,
@@ -1088,6 +1092,7 @@ where
     }
 
     /// Executes contract's `execute` entry-point.
+    #[allow(clippy::too_many_arguments)]
     pub fn call_execute(
         &self,
         api: &dyn Api,
@@ -1109,6 +1114,7 @@ where
     }
 
     /// Executes contract's `instantiate` entry-point.
+    #[allow(clippy::too_many_arguments)]
     pub fn call_instantiate(
         &self,
         address: Addr,
@@ -1192,6 +1198,7 @@ where
 
     /// Executes contract's `migrate` entry-point.
     #[cfg(feature = "cosmwasm_2_2")]
+    #[allow(clippy::too_many_arguments)]
     pub fn call_migrate(
         &self,
         address: Addr,

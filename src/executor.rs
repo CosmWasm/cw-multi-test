@@ -107,6 +107,7 @@ where
     /// This is a helper function around [execute][Self::execute] function
     /// with `WasmMsg::Instantiate2` message.
     #[cfg(feature = "cosmwasm_1_2")]
+    #[allow(clippy::too_many_arguments)]
     fn instantiate2_contract<M, L, A, S>(
         &mut self,
         code_id: u64,

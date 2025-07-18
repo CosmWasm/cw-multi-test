@@ -428,6 +428,7 @@ impl StakeKeeper {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_stake(
         &self,
         api: &dyn Api,

@@ -12,6 +12,7 @@ use serde::de::DeserializeOwned;
 /// and `Stargate`/`Grpc` queries.
 pub trait Stargate {
     /// Processes `CosmosMsg::Stargate` message variant.
+    #[allow(clippy::too_many_arguments)]
     fn execute_stargate<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
