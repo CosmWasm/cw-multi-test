@@ -3,6 +3,7 @@
 [![cw-multi-test][crates-badge]][crates-url]
 [![docs][docs-badge]][docs-url]
 [![codecov][codecov-badge]][codecov-url]
+![coverage][coverage-badge]
 [![license][apache-badge]][apache-url]
 
 [crates-badge]: https://img.shields.io/crates/v/cw-multi-test.svg
@@ -11,6 +12,7 @@
 [docs-url]: https://docs.rs/cw-multi-test
 [codecov-badge]: https://codecov.io/gh/CosmWasm/cw-multi-test/branch/main/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/CosmWasm/cw-multi-test
+[coverage-badge]: https://img.shields.io/badge/coverage-F%2093.64%20-blue.svg
 [apache-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
 [apache-url]: LICENSE
 [notice-url]: NOTICE
@@ -71,3 +73,8 @@ Licensed under [Apache License, Version 2.0](https://www.apache.org/licenses/LIC
 
 Any contribution intentionally submitted for inclusion in this crate by you,
 shall be licensed as above, without any additional terms or conditions.
+
+
+F: 96.55
+L: 96.33
+R: 95.11
