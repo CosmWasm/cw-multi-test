@@ -12,7 +12,7 @@
 [docs-url]: https://docs.rs/cw-multi-test
 [codecov-badge]: https://codecov.io/gh/CosmWasm/cw-multi-test/branch/main/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/CosmWasm/cw-multi-test
-[coverage-badge]: https://img.shields.io/badge/coverage-F93%25%20L96%25%20R95%25-blue.svg
+[coverage-badge]: https://img.shields.io/badge/coverage-F%2093%25%20L%2096%25%20R%2095%25-blue.svg
 [apache-badge]: https://img.shields.io/badge/License-Apache%202.0-blue.svg
 [apache-url]: LICENSE
 [notice-url]: NOTICE
