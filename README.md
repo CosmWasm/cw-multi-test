@@ -3,7 +3,7 @@
 ![component][component-badge]
 [![license][apache-badge]][apache-url]
 
-[component-badge]: https://img.shields.io/badge/Component-CosmWasm-6343ae.svg
+[component-badge]: https://img.shields.io/badge/CosmWasm-6343ae.svg
 [crates-badge]: https://img.shields.io/crates/v/cw-multi-test.svg
 [crates-url]: https://crates.io/crates/cw-multi-test
 [docs-badge]: https://docs.rs/cw-multi-test/badge.svg
