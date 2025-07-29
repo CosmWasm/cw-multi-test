@@ -1,10 +1,9 @@
 # MultiTest
 
-[![cw-multi-test][crates-badge]][crates-url]
-[![docs][docs-badge]][docs-url]
-![coverage][coverage-badge]
+![component][component-badge]
 [![license][apache-badge]][apache-url]
 
+[component-badge]: https://img.shields.io/badge/CosmWasm_component-6343ae.svg
 [crates-badge]: https://img.shields.io/crates/v/cw-multi-test.svg
 [crates-url]: https://crates.io/crates/cw-multi-test
 [docs-badge]: https://docs.rs/cw-multi-test/badge.svg
@@ -16,6 +15,14 @@
 [CosmWasm]: https://github.com/CosmWasm
 
 **Testing tools for multi-contract interactions**
+
+## Rust crates
+
+The following Rust crates are maintained in this repository:
+
+| Crate         | Usage            | Download                                     | Docs                            | Coverage                    |
+|---------------|------------------|----------------------------------------------|---------------------------------|-----------------------------|
+| cw-multi-test | Contract testing | [![cw-multi-test][crates-badge]][crates-url] | [![docs][docs-badge]][docs-url] | ![coverage][coverage-badge] |
 
 ## Introduction
 
