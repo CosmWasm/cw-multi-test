@@ -20,9 +20,9 @@
 
 The following Rust crates are maintained in this repository:
 
-| Crate             | Usage            | Download                                     | Docs                            | Coverage                    |
-|-------------------|------------------|----------------------------------------------|---------------------------------|-----------------------------|
-| **cw-multi-test** | Contract testing | [![cw-multi-test][crates-badge]][crates-url] | [![docs][docs-badge]][docs-url] | ![coverage][coverage-badge] |
+| Crate             | Usage             | Download                                     | Docs                            | Coverage                    |
+|-------------------|-------------------|----------------------------------------------|---------------------------------|-----------------------------|
+| **cw-multi-test** | Testing contracts | [![cw-multi-test][crates-badge]][crates-url] | [![docs][docs-badge]][docs-url] | ![coverage][coverage-badge] |
 
 ## Introduction
 
