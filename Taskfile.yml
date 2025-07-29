@@ -229,7 +229,7 @@ tasks:
       - cmd: cargo +1.81.0-x86_64-unknown-linux-gnu clippy --all-targets --no-default-features -- -D warnings
 
   cov:
-    desc: Generates the code coverage report in text format
+    desc: Generates the code coverage report in text format printed to stdout
     cmds:
       - cmd: cargo +stable llvm-cov clean
       - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features
@@ -241,7 +241,7 @@ tasks:
       - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --html --open
 
   cov-badge:
-    desc: Generates the code coverage badge
+    desc: Generates the detailed code coverage badge
     cmds:
       - cmd: cargo +stable llvm-cov clean
       - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --json --summary-only --output-path ./target/coverage.json
