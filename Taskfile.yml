@@ -240,12 +240,6 @@ tasks:
       - cmd: cargo +stable llvm-cov clean
       - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --html --open
 
-  cov-cobertura:
-    desc: Generates the code coverage report in "cobertura" format
-    cmds:
-      - cmd: cargo +stable llvm-cov clean
-      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --cobertura --output-path ./target/coverage.xml
-
   cov-badge:
     desc: Generates the code coverage badge
     cmds:
