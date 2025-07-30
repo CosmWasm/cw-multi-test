@@ -244,8 +244,7 @@ tasks:
     desc: Generates the detailed code coverage badge
     cmds:
       - cmd: cargo +stable llvm-cov clean
-      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --json --summary-only --output-path ./target/coverage.json
-      - cmd: coverio ./target/coverage.json
+      - cmd: cargo +stable llvm-cov --no-cfg-coverage --all-features --json --summary-only | coverio
 
   doc:
     desc: Generates documentation with all features enabled
