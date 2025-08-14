@@ -429,7 +429,7 @@ where
 
     /// Simple helper so we get access to all the QuerierWrapper helpers,
     /// e.g. wrap().query_wasm_smart, query_all_balances, ...
-    pub fn wrap(&self) -> QuerierWrapper<CustomT::QueryT> {
+    pub fn wrap(&self) -> QuerierWrapper<'_, CustomT::QueryT> {
         QuerierWrapper::new(self)
     }
 
@@ -728,6 +728,7 @@ where
     }
 }
 
+/// Router for mocking purposes.
 pub struct MockRouter<ExecC, QueryC>(PhantomData<(ExecC, QueryC)>);
 
 impl Default for MockRouter<Empty, Empty> {
@@ -737,6 +738,7 @@ impl Default for MockRouter<Empty, Empty> {
 }
 
 impl<ExecC, QueryC> MockRouter<ExecC, QueryC> {
+    /// Creates a new [MockRouter].
     pub fn new() -> Self
     where
         QueryC: CustomQuery,
