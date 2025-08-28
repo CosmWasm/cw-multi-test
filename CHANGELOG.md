@@ -1,5 +1,17 @@
 # Changelog
 
+## [v2.5.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.5.0) (2025-08-28)
+
+[Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.5.0...v2.5.1)
+
+**Closed issues:**
+
+- Improperly handled `msg_responses` for submessages [\#282](https://github.com/CosmWasm/cw-multi-test/issues/282) (reported by [joemonem](https://github.com/joemonem))
+
+**Merged pull requests:**
+
+- Handle `msg_responses` for submessages [\#283](https://github.com/CosmWasm/cw-multi-test/pull/283) ([DariuszDepta](https://github.com/DariuszDepta))
+
 ## [v2.5.0](https://github.com/CosmWasm/cw-multi-test/tree/v2.5.0) (2025-07-16)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.4.0...v2.5.0)
