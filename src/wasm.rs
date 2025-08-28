@@ -861,8 +861,8 @@ where
             payload,
             ..
         } = msg;
-        // Prepare the message type URL, will be needed when calling `reply` entrypoint.
-        let type_url = Self::response_type_url(&msg);
+        // Get the response message type URL, will be needed when calling `reply` entrypoint.
+        let opt_type_url = Self::response_type_url(&msg);
 
         // Execute the submessage in cache
         let sub_message_result = transactional(storage, |write_cache, _| {
@@ -872,6 +872,15 @@ where
         // call reply if meaningful
         if let Ok(mut r) = sub_message_result {
             if matches!(reply_on, ReplyOn::Always | ReplyOn::Success) {
+                let mut msg_responses = r.msg_responses.clone();
+                if let Some(type_url_ref) = opt_type_url {
+                    if msg_responses.is_empty() {
+                        msg_responses.push(MsgResponse {
+                            type_url: type_url_ref.to_string(),
+                            value: r.data.clone().unwrap_or_default()
+                        })
+                    }
+                }
                 let reply = Reply {
                     id,
                     payload,
@@ -881,7 +890,7 @@ where
                         SubMsgResponse {
                             events: r.events.clone(),
                             data: r.data.clone(),
-                            msg_responses: r.msg_responses.clone(),
+                            msg_responses,
                         },
                     ),
                 };
@@ -1299,64 +1308,56 @@ where
     }
 
     /// Returns the response type for specified message.
-    fn response_type_url(msg: &CosmosMsg<ExecC>) -> String {
-        const UNKNOWN: &str = "/unknown";
+    #[rustfmt::skip]
+    fn response_type_url(msg: &CosmosMsg<ExecC>) -> Option<&'static str> {
+        #[allow(clippy::collapsible_match)]
         match &msg {
             CosmosMsg::Bank(bank_msg) => match bank_msg {
-                BankMsg::Send { .. } => "/cosmos.bank.v1beta1.MsgSendResponse",
-                BankMsg::Burn { .. } => "/cosmos.bank.v1beta1.MsgBurnResponse",
-                _ => UNKNOWN,
+                BankMsg::Send { .. } => Some("/cosmos.bank.v1beta1.MsgSendResponse"),
+                BankMsg::Burn { .. } => Some("/cosmos.bank.v1beta1.MsgBurnResponse"),
+                _ => None,
             },
-            CosmosMsg::Custom(..) => UNKNOWN,
+            CosmosMsg::Custom(..) => None,
             #[cfg(feature = "staking")]
             CosmosMsg::Staking(staking_msg) => match staking_msg {
-                StakingMsg::Delegate { .. } => "/cosmos.staking.v1beta1.MsgDelegateResponse",
-                StakingMsg::Undelegate { .. } => "/cosmos.staking.v1beta1.MsgUndelegateResponse",
-                StakingMsg::Redelegate { .. } => {
-                    "/cosmos.staking.v1beta1.MsgBeginRedelegateResponse"
-                }
-                _ => UNKNOWN,
+                StakingMsg::Delegate { .. } => Some("/cosmos.staking.v1beta1.MsgDelegateResponse"),
+                StakingMsg::Undelegate { .. } => Some("/cosmos.staking.v1beta1.MsgUndelegateResponse"),
+                StakingMsg::Redelegate { .. } => Some("/cosmos.staking.v1beta1.MsgBeginRedelegateResponse"),
+                _ => None,
             },
             #[cfg(feature = "staking")]
             CosmosMsg::Distribution(distribution_msg) => match distribution_msg {
                 #[cfg(feature = "cosmwasm_1_3")]
-                DistributionMsg::FundCommunityPool { .. } => {
-                    "/cosmos.distribution.v1beta1.MsgFundCommunityPoolResponse"
-                }
-                DistributionMsg::SetWithdrawAddress { .. } => {
-                    "/cosmos.distribution.v1beta1.MsgSetWithdrawAddressResponse"
-                }
-                DistributionMsg::WithdrawDelegatorReward { .. } => {
-                    "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorRewardResponse"
-                }
-                _ => UNKNOWN,
+                DistributionMsg::FundCommunityPool { .. } => Some("/cosmos.distribution.v1beta1.MsgFundCommunityPoolResponse"),
+                DistributionMsg::SetWithdrawAddress { .. } => Some("/cosmos.distribution.v1beta1.MsgSetWithdrawAddressResponse"),
+                DistributionMsg::WithdrawDelegatorReward { .. } => Some("/cosmos.distribution.v1beta1.MsgWithdrawDelegatorRewardResponse"),
+                _ => None,
             },
             #[cfg(feature = "stargate")]
             #[allow(deprecated)]
-            CosmosMsg::Stargate { .. } => UNKNOWN,
+            CosmosMsg::Stargate { .. } => None,
             #[cfg(feature = "cosmwasm_2_0")]
-            CosmosMsg::Any(..) => UNKNOWN,
+            CosmosMsg::Any(..) => None,
             #[cfg(feature = "stargate")]
-            CosmosMsg::Ibc(..) => UNKNOWN,
+            CosmosMsg::Ibc(..) => None,
             CosmosMsg::Wasm(wasm_msg) => match wasm_msg {
-                WasmMsg::Instantiate { .. } => "/cosmwasm.wasm.v1.MsgInstantiateContractResponse",
+                WasmMsg::Instantiate { .. } => Some("/cosmwasm.wasm.v1.MsgInstantiateContractResponse"),
                 #[cfg(feature = "cosmwasm_1_2")]
-                WasmMsg::Instantiate2 { .. } => "/cosmwasm.wasm.v1.MsgInstantiateContract2Response",
-                WasmMsg::Execute { .. } => "/cosmwasm.wasm.v1.MsgExecuteContractResponse",
-                WasmMsg::Migrate { .. } => "/cosmwasm.wasm.v1.MsgMigrateContractResponse",
-                WasmMsg::UpdateAdmin { .. } => "/cosmwasm.wasm.v1.MsgUpdateAdminResponse",
-                WasmMsg::ClearAdmin { .. } => "/cosmwasm.wasm.v1.MsgClearAdminResponse",
-                _ => UNKNOWN,
+                WasmMsg::Instantiate2 { .. } => Some("/cosmwasm.wasm.v1.MsgInstantiateContract2Response"),
+                WasmMsg::Execute { .. } => Some("/cosmwasm.wasm.v1.MsgExecuteContractResponse"),
+                WasmMsg::Migrate { .. } => Some("/cosmwasm.wasm.v1.MsgMigrateContractResponse"),
+                WasmMsg::UpdateAdmin { .. } => Some("/cosmwasm.wasm.v1.MsgUpdateAdminResponse"),
+                WasmMsg::ClearAdmin { .. } => Some("/cosmwasm.wasm.v1.MsgClearAdminResponse"),
+                _ => None,
             },
             #[cfg(feature = "stargate")]
             CosmosMsg::Gov(gov_msg) => match gov_msg {
-                GovMsg::Vote { .. } => "/cosmos.gov.v1beta1.MsgVoteResponse",
+                GovMsg::Vote { .. } => Some("/cosmos.gov.v1beta1.MsgVoteResponse"),
                 #[cfg(feature = "cosmwasm_1_2")]
-                GovMsg::VoteWeighted { .. } => "/cosmos.gov.v1beta1.MsgVoteWeightedResponse",
+                GovMsg::VoteWeighted { .. } => Some("/cosmos.gov.v1beta1.MsgVoteWeightedResponse"),
             },
-            _ => UNKNOWN,
+            _ => None,
         }
-        .to_string()
     }
 }
 
@@ -1398,6 +1399,7 @@ fn encode_response_data(data: Option<Binary>) -> Option<Binary> {
 
 #[cfg(test)]
 mod test {
+    use std::slice;
     use super::*;
     use crate::app::Router;
     use crate::bank::BankKeeper;
@@ -1778,7 +1780,7 @@ mod test {
         match &res.messages[0].msg {
             CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
-                assert_eq!(amount.as_slice(), &[payout.clone()]);
+                assert_eq!(amount.as_slice(), slice::from_ref(&payout));
             }
             m => panic!("Unexpected message {m:?}"),
         }
@@ -1820,7 +1822,7 @@ mod test {
         match &res.messages[0].msg {
             CosmosMsg::Bank(BankMsg::Send { to_address, amount }) => {
                 assert_eq!(to_address.as_str(), user_addr.as_str());
-                assert_eq!(amount.as_slice(), &[payout.clone()]);
+                assert_eq!(amount.as_slice(), slice::from_ref(payout));
             }
             m => panic!("Unexpected message {m:?}"),
         }

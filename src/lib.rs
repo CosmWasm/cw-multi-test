@@ -189,7 +189,7 @@ pub use crate::addresses::{
 };
 pub use crate::api::{MockApiBech32, MockApiBech32m};
 pub use crate::app::{
-    custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg,
+    custom_app, next_block, no_init, App, BasicApp, CosmosRouter, Router, SudoMsg, MockRouter
 };
 pub use crate::app_builder::{AppBuilder, BasicAppBuilder};
 pub use crate::bank::{Bank, BankKeeper, BankSudo};
