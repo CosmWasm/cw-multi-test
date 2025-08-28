@@ -881,10 +881,7 @@ where
                         SubMsgResponse {
                             events: r.events.clone(),
                             data: r.data.clone(),
-                            msg_responses: vec![MsgResponse {
-                                type_url,
-                                value: r.data.unwrap_or_default(),
-                            }],
+                            msg_responses: r.msg_responses.clone(),
                         },
                     ),
                 };
@@ -982,6 +979,7 @@ where
         let app_response = AppResponse {
             events: app_events,
             data,
+            msg_responses: vec![]
         };
         (app_response, messages)
     }
@@ -1021,7 +1019,7 @@ where
         // Return the response with updated data, events and message responses taken from
         // all processed sub messages. Note that events and message responses are collected,
         // but the data is replaced with the data from the last processes submessage.
-        Ok(AppResponse { events, data })
+        Ok(AppResponse { events, data, msg_responses: vec![] })
     }
 
     /// Creates a contract address and empty storage instance.

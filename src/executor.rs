@@ -1,8 +1,5 @@
 use crate::error::AnyResult;
-use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
-    SubMsgResponse, WasmMsg,
-};
+use cosmwasm_std::{to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event, MsgResponse, SubMsgResponse, WasmMsg};
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
 use std::fmt::Debug;
@@ -15,6 +12,8 @@ pub struct AppResponse {
     pub events: Vec<Event>,
     /// The binary payload to include in the response.
     pub data: Option<Binary>,
+    /// The responses from processing messages emitted by the submessage.
+    pub msg_responses: Vec<MsgResponse>,
 }
 
 impl AppResponse {
@@ -58,9 +57,10 @@ impl AppResponse {
 impl From<SubMsgResponse> for AppResponse {
     fn from(reply: SubMsgResponse) -> Self {
         AppResponse {
+            events: reply.events,
             #[allow(deprecated)]
             data: reply.data,
-            events: reply.events,
+            msg_responses: reply.msg_responses
         }
     }
 }
