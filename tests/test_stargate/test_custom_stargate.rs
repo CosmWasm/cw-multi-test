@@ -1,9 +1,9 @@
 use crate::test_stargate::test_contracts::{MsgCreateDenom, MsgCreateDenomResponse};
 use cosmwasm_std::{
-    from_json, Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, GrpcQuery,
-    MsgResponse, Querier, Storage, SubMsgResponse,
+    from_json, Addr, AnyMsg, Api, Binary, BlockInfo, CustomMsg, CustomQuery, Empty, MsgResponse,
+    Storage, SubMsgResponse,
 };
-use cw_multi_test::error::{bail, AnyResult};
+use cw_multi_test::error::AnyResult;
 use cw_multi_test::{
     no_init, AppBuilder, AppResponse, Contract, ContractWrapper, CosmosRouter, Executor, IntoAddr,
     Stargate,
@@ -11,42 +11,9 @@ use cw_multi_test::{
 use prost::Message;
 use serde::de::DeserializeOwned;
 
-const MSG_STARGATE_EXECUTE: &str = "stargate execute called";
-const MSG_STARGATE_QUERY: &str = "stargate query called";
-const MSG_GRPC_QUERY: &str = "grpc query called";
-
 struct StargateKeeper;
 
 impl Stargate for StargateKeeper {
-    fn execute_stargate<ExecC, QueryC>(
-        &self,
-        _api: &dyn Api,
-        _storage: &mut dyn Storage,
-        _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
-        _block: &BlockInfo,
-        _sender: Addr,
-        _type_url: String,
-        _value: Binary,
-    ) -> AnyResult<AppResponse>
-    where
-        ExecC: CustomMsg + DeserializeOwned + 'static,
-        QueryC: CustomQuery + DeserializeOwned + 'static,
-    {
-        bail!(MSG_STARGATE_EXECUTE)
-    }
-
-    fn query_stargate(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _path: String,
-        _data: Binary,
-    ) -> AnyResult<Binary> {
-        bail!(MSG_STARGATE_QUERY)
-    }
-
     fn execute_any<ExecC, QueryC>(
         &self,
         _api: &dyn Api,
@@ -75,17 +42,6 @@ impl Stargate for StargateKeeper {
             msg_responses: vec![msg_response],
         };
         Ok(sub_response.into())
-    }
-
-    fn query_grpc(
-        &self,
-        _api: &dyn Api,
-        _storage: &dyn Storage,
-        _querier: &dyn Querier,
-        _block: &BlockInfo,
-        _request: GrpcQuery,
-    ) -> AnyResult<Binary> {
-        bail!(MSG_GRPC_QUERY)
     }
 }
 
