@@ -14,6 +14,7 @@ mod test_payload;
 mod test_prefixed_storage;
 mod test_responses;
 mod test_staking;
+mod test_stargate;
 mod test_wasm;
 
 mod test_contracts {
