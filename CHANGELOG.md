@@ -1,6 +1,6 @@
 # Changelog
 
-## [v2.5.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.5.0) (2025-08-28)
+## [v2.5.1](https://github.com/CosmWasm/cw-multi-test/tree/v2.5.1) (2025-08-28)
 
 [Full Changelog](https://github.com/CosmWasm/cw-multi-test/compare/v2.5.0...v2.5.1)
 
