@@ -68,9 +68,9 @@ impl Stargate for StargateKeeper {
             type_url: MsgCreateDenomResponse::TYPE_URL.to_string(),
             value: Binary::from(msg_create_denom_response.encode_to_vec()),
         };
+        #[allow(deprecated)]
         let sub_response = SubMsgResponse {
             events: vec![],
-            #[allow(deprecated)]
             data: None,
             msg_responses: vec![msg_response],
         };

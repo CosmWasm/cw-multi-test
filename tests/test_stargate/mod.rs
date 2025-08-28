@@ -1,4 +1,4 @@
-#![cfg(feature = "stargate")]
+#![cfg(feature = "cosmwasm_2_0")]
 
 mod test_custom_stargate;
 
@@ -9,10 +9,10 @@ mod test_contracts {
     #[derive(Clone, PartialEq, Eq, ::prost::Message, Serialize, Deserialize, JsonSchema)]
     pub struct MsgCreateDenom {
         #[prost(string, tag = "1")]
-        pub sender: ::prost::alloc::string::String,
+        pub sender: String,
         /// subdenom can be up to 44 "alphanumeric" characters long.
         #[prost(string, tag = "2")]
-        pub subdenom: ::prost::alloc::string::String,
+        pub subdenom: String,
     }
 
     impl MsgCreateDenom {
@@ -22,7 +22,7 @@ mod test_contracts {
     #[derive(Clone, PartialEq, Eq, ::prost::Message, Serialize, Deserialize, JsonSchema)]
     pub struct MsgCreateDenomResponse {
         #[prost(string, tag = "1")]
-        pub new_token_denom: ::prost::alloc::string::String,
+        pub new_token_denom: String,
     }
 
     impl MsgCreateDenomResponse {
