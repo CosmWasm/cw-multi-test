@@ -877,7 +877,7 @@ where
                     if msg_responses.is_empty() {
                         msg_responses.push(MsgResponse {
                             type_url: type_url_ref.to_string(),
-                            value: r.data.clone().unwrap_or_default()
+                            value: r.data.clone().unwrap_or_default(),
                         })
                     }
                 }
@@ -988,7 +988,7 @@ where
         let app_response = AppResponse {
             events: app_events,
             data,
-            msg_responses: vec![]
+            msg_responses: vec![],
         };
         (app_response, messages)
     }
@@ -1028,7 +1028,11 @@ where
         // Return the response with updated data, events and message responses taken from
         // all processed sub messages. Note that events and message responses are collected,
         // but the data is replaced with the data from the last processes submessage.
-        Ok(AppResponse { events, data, msg_responses: vec![] })
+        Ok(AppResponse {
+            events,
+            data,
+            msg_responses: vec![],
+        })
     }
 
     /// Creates a contract address and empty storage instance.
@@ -1399,7 +1403,6 @@ fn encode_response_data(data: Option<Binary>) -> Option<Binary> {
 
 #[cfg(test)]
 mod test {
-    use std::slice;
     use super::*;
     use crate::app::Router;
     use crate::bank::BankKeeper;
@@ -1414,6 +1417,7 @@ mod test {
     use cosmwasm_std::{
         coin, from_json, to_json_vec, CanonicalAddr, CosmosMsg, Empty, HexBinary, StdError,
     };
+    use std::slice;
 
     /// Type alias for default build `Router` to make its reference in typical scenario
     type BasicRouter<ExecC = Empty, QueryC = Empty> = Router<

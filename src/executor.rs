@@ -1,5 +1,8 @@
 use crate::error::AnyResult;
-use cosmwasm_std::{to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event, MsgResponse, SubMsgResponse, WasmMsg};
+use cosmwasm_std::{
+    to_json_binary, Addr, Attribute, BankMsg, Binary, Coin, CosmosMsg, CustomMsg, Event,
+    MsgResponse, SubMsgResponse, WasmMsg,
+};
 use cw_utils::{parse_execute_response_data, parse_instantiate_response_data};
 use serde::Serialize;
 use std::fmt::Debug;
@@ -60,7 +63,7 @@ impl From<SubMsgResponse> for AppResponse {
             events: reply.events,
             #[allow(deprecated)]
             data: reply.data,
-            msg_responses: reply.msg_responses
+            msg_responses: reply.msg_responses,
         }
     }
 }
