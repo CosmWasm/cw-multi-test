@@ -5,7 +5,7 @@ Please see the [Advisories] for its security policy.
 
 [Advisories]: https://github.com/CosmWasm/advisories/blob/main/SECURITY.md
 
-> [!WARNING]  
+> [!CAUTION]
 > The code in this repository **IS NOT INTENDED FOR PRODUCTION USE**.
 > Specifically, [cw-multi-test] should be used only as a [DEVELOPMENT DEPENDENCY].
 > As such, it is not covered by any bug bounty program and is not held
