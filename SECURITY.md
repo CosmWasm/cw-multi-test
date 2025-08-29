@@ -10,6 +10,7 @@ Please see the [Advisories] for its security policy.
 > Specifically, [cw-multi-test] should be used only as a [DEVELOPMENT DEPENDENCY].
 > As such, it is not covered by any bug bounty program and is not held
 > to the same strict standards as other components regarding bugs.
+> 
 > However, if you believe you have found a security-critical issue,
 > please refer to the contact information in the [Advisories].
 
