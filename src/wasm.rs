@@ -225,15 +225,7 @@ where
         sender: Addr,
         msg: WasmMsg,
     ) -> StdResult<AppResponse> {
-        self.execute_wasm(api, storage, router, block, sender.clone(), msg.clone())
-            .map_err(|e| {
-                std_error!(
-                    "Error executing WasmMsg:\n  sender: {}\n  {:?}\n{}",
-                    sender,
-                    msg,
-                    e
-                )
-            })
+        self.execute_wasm(api, storage, router, block, sender, msg)
     }
 
     fn query(

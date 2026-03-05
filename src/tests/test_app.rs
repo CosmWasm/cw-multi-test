@@ -515,8 +515,8 @@ fn reflect_error() {
 
     let err_str = err.to_string();
     assert!(
-        err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-            && err_str.contains("Cannot Sub with given operands")
+        err_str.contains("Cannot Sub with given operands")
+            && !err_str.contains("Error executing WasmMsg")
     );
 
     // first one should have been rolled-back on error (no second payment)
@@ -1505,8 +1505,8 @@ mod response_validation {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Empty attribute key. Value: value")
+            err_str.contains("Empty attribute key. Value: value")
+                && !err_str.contains("Error executing WasmMsg")
         );
     }
 
@@ -1567,8 +1567,8 @@ mod response_validation {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Empty attribute key. Value: value")
+            err_str.contains("Empty attribute key. Value: value")
+                && !err_str.contains("Error executing WasmMsg")
         );
     }
 
@@ -1626,8 +1626,8 @@ mod response_validation {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Event type too short: e")
+            err_str.contains("Event type too short: e")
+                && !err_str.contains("Error executing WasmMsg")
         );
     }
 }
@@ -1916,8 +1916,8 @@ mod errors {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Init failed")
+            err_str.contains("Init failed")
+                && !err_str.contains("Error executing WasmMsg")
         );
     }
 
@@ -1943,8 +1943,8 @@ mod errors {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Handle failed")
+            err_str.contains("Handle failed")
+                && !err_str.contains("Error executing WasmMsg")
         );
     }
 
@@ -1979,8 +1979,8 @@ mod errors {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Handle failed")
+            err_str.contains("Handle failed")
+                && !err_str.contains("Error executing WasmMsg")
         );
     }
 
@@ -2037,8 +2037,39 @@ mod errors {
 
         let err_str = err.to_string();
         assert!(
-            err_str.starts_with("kind: Other, error: Error executing WasmMsg")
-                && err_str.contains("Handle failed")
+            err_str.contains("Handle failed")
+                && !err_str.contains("Error executing WasmMsg")
+        );
+    }
+
+    #[test]
+    fn execute_error_is_not_wrapped() {
+        let mut app = App::default();
+
+        let owner = app.api().addr_make("owner");
+        let random_addr = app.api().addr_make("random");
+
+        let code_id = app.store_code(error::contract(true));
+
+        let contract_addr = app
+            .instantiate_contract(code_id, owner, &Empty {}, &[], "error", None)
+            .unwrap();
+
+        let err = app
+            .execute_contract(random_addr, contract_addr, &Empty {}, &[])
+            .unwrap_err();
+
+        // The error must propagate directly from the contract without being
+        // re-wrapped in an "Error executing WasmMsg" string, so that callers
+        // can inspect (or downcast) the original error.
+        let err_str = err.to_string();
+        assert!(
+            err_str.contains("Handle failed"),
+            "expected original error message, got: {err_str}"
+        );
+        assert!(
+            !err_str.contains("Error executing WasmMsg"),
+            "error should not be wrapped in 'Error executing WasmMsg', got: {err_str}"
         );
     }
 }
